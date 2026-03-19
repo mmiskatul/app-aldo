@@ -12,8 +12,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import Header from "../../../components/ui/Header";
 import DatePicker from "../../../components/ui/DatePicker";
 
 export default function AddExpenseScreen() {
@@ -21,17 +21,8 @@ export default function AddExpenseScreen() {
   const [date, setDate] = useState(new Date("2026-03-12T00:00:00"));
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Expenses</Text>
-        <View style={{ width: moderateScale(40) }} />
-      </View>
+    <View style={styles.safeArea}>
+      <Header title="Add Expenses" showBack={true} />
 
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
@@ -96,7 +87,7 @@ export default function AddExpenseScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

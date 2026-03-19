@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import Header from "../../../components/ui/Header";
 
 import DataHistoryList from "../../../components/home/data-management/DataHistoryList";
 import DataMetrics from "../../../components/home/data-management/DataMetrics";
@@ -19,20 +19,8 @@ export default function DataManagementScreen() {
   const navigation = useNavigation();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Data Management</Text>
-        <TouchableOpacity style={styles.bellButton}>
-          <Feather name="bell" size={moderateScale(18)} color="#111827" />
-          <View style={styles.notificationDot} />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.safeArea}>
+      <Header title="Data Management" showBack={true} showBell={true} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -62,7 +50,7 @@ export default function DataManagementScreen() {
           <Text style={styles.fabText}>Add Daily Data</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

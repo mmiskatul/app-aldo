@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import Header from "../../../components/ui/Header";
 
 import ExpenseDistribution from "../../../components/home/expenses/ExpenseDistribution";
 import QuickSummary from "../../../components/home/expenses/QuickSummary";
@@ -20,19 +20,10 @@ export default function ExpensesScreen() {
   const [activeFilter, setActiveFilter] = useState("Today");
 
   const filters = ["Today", "This Week", "This Month", "This Year"];
-
+  
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Expenses</Text>
-        <View style={{ width: moderateScale(40) }} />
-      </View>
+    <View style={styles.safeArea}>
+      <Header title="Expenses" showBack={true} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -75,7 +66,7 @@ export default function ExpensesScreen() {
         <ExpenseDistribution />
         <RecentTransactions />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

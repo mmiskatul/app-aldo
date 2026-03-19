@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import Header from "../../../components/ui/Header";
 
 import CashMetrics from "../../../components/home/cash/CashMetrics";
 import RecentDeposits from "../../../components/home/cash/RecentDeposits";
@@ -21,17 +21,8 @@ export default function CashManagementScreen() {
   const filters = ["Today", "This Week", "This Month", "This Year"];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cash Management</Text>
-        <View style={{ width: moderateScale(40) }} />
-      </View>
+    <View style={styles.safeArea}>
+      <Header title="Cash Management" showBack={true} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -73,7 +64,7 @@ export default function CashManagementScreen() {
         <CashMetrics />
         <RecentDeposits />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -2,8 +2,8 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import Header from "../../../components/ui/Header";
 
 import DatePicker from '../../../components/ui/DatePicker';
 
@@ -11,21 +11,12 @@ export default function AddInventoryItemScreen() {
   const [purchaseDate, setPurchaseDate] = useState(new Date());
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <View style={styles.safe}>
+      <Header title="Add Inventory" showBack={true} />
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Add Inventory</Text>
-          </View>
-          <View style={{ width: moderateScale(40) }} />
-        </View>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.pageTitle}>Add Inventory Item</Text>
@@ -95,7 +86,7 @@ export default function AddInventoryItemScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

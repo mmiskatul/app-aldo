@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
-
+import Header from "../../../components/ui/Header";
 import BottomActions from "../../../components/home/upload-invoice/BottomActions";
 import ExtractionStatus from "../../../components/home/upload-invoice/ExtractionStatus";
 import LineItems from "../../../components/home/upload-invoice/LineItems";
@@ -58,12 +58,13 @@ export default function UploadInvoiceScreen() {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.headerTitle}>Upload Invoice</Text>
-      <Text style={styles.headerSubtitle}>
-        Upload supplier invoices and let AI extract important data
-        automatically.
-      </Text>
+    <View style={styles.container}>
+      <Header title="Upload Invoice" />
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.headerSubtitle}>
+          Upload supplier invoices and let AI extract important data
+          automatically.
+        </Text>
 
       {!selectedFile ? (
         <UploadActions onFileSelected={setSelectedFile} />
@@ -116,7 +117,8 @@ export default function UploadInvoiceScreen() {
           router.replace("/(tabs)/documents");
         }}
       />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

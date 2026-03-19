@@ -12,8 +12,8 @@ import {
   UIManager,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import Header from "../../../components/ui/Header";
 
 import { FilterChips } from '../../../components/inventory/Inventory/FilterChips';
 import { InventoryCard } from '../../../components/inventory/Inventory/InventoryCard';
@@ -129,15 +129,8 @@ export default function InventoryScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={{ width: moderateScale(22) }} />
-        <Text style={styles.headerTitle}>Inventory</Text>
-        <TouchableOpacity>
-          <Feather name="bell" size={moderateScale(22)} color="#111827" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.safe}>
+      <Header title="Inventory" showBell={true} />
 
       {/* Search */}
       <View style={styles.searchRow}>
@@ -201,7 +194,7 @@ export default function InventoryScreen() {
       >
         <Feather name="plus" size={moderateScale(24)} color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 

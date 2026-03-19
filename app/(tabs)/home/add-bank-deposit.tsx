@@ -11,9 +11,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { BuildingLibraryIcon } from "react-native-heroicons/outline";
+import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import Header from "../../../components/ui/Header";
 import DatePicker from "../../../components/ui/DatePicker";
 
 export default function AddBankDepositScreen() {
@@ -21,20 +21,11 @@ export default function AddBankDepositScreen() {
   const [date, setDate] = useState(new Date("2023-10-27T00:00:00"));
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Bank Deposit</Text>
-        <View style={{ width: moderateScale(40) }} />
-      </View>
+    <View style={styles.safeArea}>
+      <Header title="Add Bank Deposit" showBack={true} />
 
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
@@ -53,7 +44,7 @@ export default function AddBankDepositScreen() {
           </View>
 
           {/* Date */}
-          <DatePicker 
+          <DatePicker
             label="Deposit Date"
             value={date}
             onChange={setDate}
@@ -65,9 +56,9 @@ export default function AddBankDepositScreen() {
             <Text style={styles.label}>Amount Deposited</Text>
             <View style={styles.textInputContainer}>
               <Text style={styles.prefix}>€ </Text>
-              <TextInput 
-                style={styles.textInput} 
-                placeholder="0.00" 
+              <TextInput
+                style={styles.textInput}
+                placeholder="0.00"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="numeric"
               />
@@ -86,9 +77,9 @@ export default function AddBankDepositScreen() {
           {/* Notes */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Notes (Optional)</Text>
-            <TextInput 
-              style={styles.textArea} 
-              placeholder="e.g. End of shift deposit for Friday night..." 
+            <TextInput
+              style={styles.textArea}
+              placeholder="e.g. End of shift deposit for Friday night..."
               placeholderTextColor="#9CA3AF"
               multiline
               textAlignVertical="top"
@@ -103,7 +94,7 @@ export default function AddBankDepositScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

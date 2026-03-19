@@ -1,8 +1,5 @@
-import React from 'react';
-import { StyleSheet, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import ChatHeader from '../../components/chat/ChatHeader';
+import { StyleSheet, ScrollView, Platform, KeyboardAvoidingView, View } from 'react-native';
+import Header from '../../components/ui/Header';
 import QuickPrompts from '../../components/chat/QuickPrompts';
 import ChatMessage from '../../components/chat/ChatMessage';
 import InsightCard from '../../components/chat/InsightCard';
@@ -10,12 +7,12 @@ import ChatInput from '../../components/chat/ChatInput';
 
 export default function ChatScreen() {
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <KeyboardAvoidingView 
         style={styles.keyboardAvoiding}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ChatHeader />
+        <Header title="AI Chat" showBell={true} />
         
         <ScrollView 
           style={styles.scrollView}
@@ -47,7 +44,7 @@ export default function ChatScreen() {
 
         <ChatInput />
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

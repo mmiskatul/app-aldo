@@ -3,7 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { CpuChipIcon, ArrowRightIcon } from 'react-native-heroicons/outline';
 
+import { useRouter } from 'expo-router';
+
 export default function AIInsightBox() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -15,7 +19,10 @@ export default function AIInsightBox() {
         Food cost increased by 12% this week compared to the previous period.
       </Text>
       
-      <TouchableOpacity style={styles.actionButton}>
+      <TouchableOpacity 
+        style={styles.actionButton}
+        onPress={() => router.push("/(tabs)/home/view-insight")}
+      >
         <Text style={styles.actionText}>View Insight</Text>
         <ArrowRightIcon size={moderateScale(14)} color="#FFFFFF" style={styles.arrow} />
       </TouchableOpacity>

@@ -8,18 +8,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
-
+import Header from "../../../components/ui/Header";
 import AIExtractionBanner from "../../../components/documents/AIExtractionBanner";
-import DocumentsHeader from "../../../components/documents/DocumentsHeader";
 import RecentDocumentsList from "../../../components/documents/RecentDocumentsList";
 
 export default function DocumentsScreen() {
   const router = useRouter();
   return (
-    <SafeAreaView style={styles.container}>
-      <DocumentsHeader />
+    <View style={styles.container}>
+      <Header title="Documents" showBell={true} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -42,7 +40,7 @@ export default function DocumentsScreen() {
         <AIExtractionBanner />
         <RecentDocumentsList />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

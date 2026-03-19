@@ -10,8 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import Header from "../../../components/ui/Header";
 
 import Method1Form from "../../../components/home/add-daily-data/Method1Form";
 import Method2Form from "../../../components/home/add-daily-data/Method2Form";
@@ -23,20 +23,8 @@ export default function AddDailyDataScreen() {
   const [selectedMethod, setSelectedMethod] = useState<"method1" | "method2">("method1");
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Daily Data</Text>
-        <TouchableOpacity style={styles.bellButton}>
-          <Feather name="bell" size={moderateScale(18)} color="#111827" />
-          <View style={styles.notificationDot} />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.safeArea}>
+      <Header title="Add Daily Data" showBack={true} showBell={true} />
 
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
@@ -63,7 +51,7 @@ export default function AddDailyDataScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

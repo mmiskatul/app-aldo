@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Header from '../../../components/ui/Header';
 
 import DocumentPreview from '../../../components/documents/document-details/DocumentPreview';
 import DocumentInformation from '../../../components/documents/document-details/DocumentInformation';
@@ -63,15 +63,8 @@ export default function DocumentDetailsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Document Details</Text>
-          <View style={{ width: moderateScale(40) }} />{/* Spacer for centering */}
-        </View>
+    <View style={styles.safeArea}>
+      <Header title="Document Details" showBack={true} />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <DocumentPreview status={data.status} />
@@ -87,8 +80,7 @@ export default function DocumentDetailsScreen() {
           
           <DetailsActions />
         </ScrollView>
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
 

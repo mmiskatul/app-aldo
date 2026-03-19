@@ -6,6 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { Cash01Icon, Invoice03Icon } from "@hugeicons/core-free-icons";
 import * as HugeiconsModule from "@hugeicons/react-native";
+import Header from '../../../components/ui/Header';
 import VatBalance from '../../../components/home/VatBalance'; 
 
 // @ts-ignore
@@ -44,7 +45,9 @@ export default function VatScreen() {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      <Header title="VAT" showBack={true} />
+      <ScrollView contentContainerStyle={styles.content}>
       {/* VAT Card */}
       <VatBalance />
 
@@ -97,7 +100,8 @@ export default function VatScreen() {
         <Feather name="download" size={moderateScale(18)} color="#FFFFFF" />
         <Text style={styles.downloadButtonText}>Download VAT Report</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

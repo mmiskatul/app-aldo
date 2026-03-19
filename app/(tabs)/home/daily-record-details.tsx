@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import Header from "../../../components/ui/Header";
 
 import CoversCard from "../../../components/home/data-management/daily-record-details/CoversCard";
 import NetProfitCard from "../../../components/home/data-management/daily-record-details/NetProfitCard";
@@ -21,19 +21,16 @@ export default function DailyRecordDetailsScreen() {
   const navigation = useNavigation();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Daily Record Details</Text>
-        <TouchableOpacity style={styles.editButton}>
-          <Feather name="edit-2" size={moderateScale(18)} color="#111827" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.safeArea}>
+      <Header 
+        title="Daily Record Details" 
+        showBack={true} 
+        rightComponent={
+          <TouchableOpacity style={styles.editButton}>
+            <Feather name="edit-2" size={moderateScale(18)} color="#111827" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -67,7 +64,7 @@ export default function DailyRecordDetailsScreen() {
           <Text style={styles.exportButtonText}>Export</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

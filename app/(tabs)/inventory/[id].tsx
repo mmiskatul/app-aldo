@@ -2,8 +2,8 @@ import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import Header from "../../../components/ui/Header";
 
 import { HistoryList } from '../../../components/inventory/view-stock/HistoryList';
 import { StockUpdate } from '../../../components/inventory/view-stock/StockUpdate';
@@ -15,18 +15,12 @@ export default function ItemDetailScreen() {
   const item = INVENTORY_ITEMS.find((i) => i.id === id) || INVENTORY_ITEMS[0];
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>{item.name}</Text>
-          <Text style={styles.headerSubtitle}>{item.category.toUpperCase()}</Text>
-        </View>
-        <View style={{ width: moderateScale(40) }} />
-      </View>
+    <View style={styles.safe}>
+      <Header 
+        title={item.name} 
+        subtitle={item.category.toUpperCase()} 
+        showBack={true} 
+      />
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Current Stock Banner */}
@@ -60,7 +54,7 @@ export default function ItemDetailScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
