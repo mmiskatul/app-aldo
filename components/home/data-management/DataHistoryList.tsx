@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
-
+import { useRouter } from 'expo-router';
 interface DataEntry {
   id: string;
   label: string;
@@ -19,6 +19,7 @@ const MOCK_HISTORY: DataEntry[] = [
 ];
 
 export default function DataHistoryList() {
+  const router = useRouter();
   const [selectedSegment, setSelectedSegment] = useState<'Date' | 'Week' | 'Month'>('Date');
 
   return (
@@ -50,7 +51,7 @@ export default function DataHistoryList() {
               <Text style={styles.entryDate}>{entry.date}</Text>
             </View>
             <View style={styles.cardActions}>
-              <TouchableOpacity style={styles.actionIcon}>
+              <TouchableOpacity style={styles.actionIcon} onPress={() => router.push('/(tabs)/home/daily-record-details')}>
                 <Feather name="eye" size={moderateScale(16)} color="#374151" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionIcon}>

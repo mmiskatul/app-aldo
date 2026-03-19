@@ -1,7 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import { useNavigation, useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,12 +13,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
-import DataHistoryList from "../../../components/home/data-management/DataHistoryList";
-import DataMetrics from "../../../components/home/data-management/DataMetrics";
+import Method1Form from "../../../components/home/add-daily-data/Method1Form";
+import Method2Form from "../../../components/home/add-daily-data/Method2Form";
+import MethodSelector from "../../../components/home/add-daily-data/MethodSelector";
 
-export default function DataManagementScreen() {
+export default function AddDailyDataScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const [selectedMethod, setSelectedMethod] = useState<"method1" | "method2">("method1");
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -27,41 +31,38 @@ export default function DataManagementScreen() {
         >
           <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Data Management</Text>
+        <Text style={styles.headerTitle}>Add Daily Data</Text>
         <TouchableOpacity style={styles.bellButton}>
           <Feather name="bell" size={moderateScale(18)} color="#111827" />
           <View style={styles.notificationDot} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Text style={styles.pageTitle}>Daily Data Management</Text>
-        <Text style={styles.pageSubtitle}>
-          Track and manage your restaurant performance
-        </Text>
-
-        <DataMetrics />
-        <DataHistoryList />
-      </ScrollView>
-
-      {/* Sticky Add Data Button */}
-      <View style={styles.floatingButtonContainer}>
-        <TouchableOpacity 
-          style={styles.fab} 
-          onPress={() => router.push('/(tabs)/home/add-daily-data')}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
         >
-          <Feather
-            name="plus"
-            size={moderateScale(18)}
-            color="#FFFFFF"
-            style={{ marginRight: scale(6) }}
-          />
-          <Text style={styles.fabText}>Add Daily Data</Text>
-        </TouchableOpacity>
-      </View>
+          <Text style={styles.pageTitle}>Add Daily Business Data</Text>
+          <Text style={styles.pageSubtitle}>
+            Enter today's revenue and expenses to track your restaurant performance.
+          </Text>
+
+          <MethodSelector selected={selectedMethod} onSelect={setSelectedMethod} />
+
+          {selectedMethod === "method1" ? <Method1Form /> : <Method2Form />}
+        </ScrollView>
+
+        <View style={styles.bottomFooter}>
+          <TouchableOpacity style={styles.saveButton}>
+            <Feather name="save" size={moderateScale(18)} color="#FFFFFF" style={styles.saveIcon} />
+            <Text style={styles.saveButtonText}>Save Daley Data</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -121,31 +122,36 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(4),
   },
   pageSubtitle: {
-    fontSize: moderateScale(12, 0.3),
+    fontSize: moderateScale(14, 0.3),
     color: "#6B7280",
     marginBottom: verticalScale(24),
+    lineHeight: moderateScale(20),
   },
-  floatingButtonContainer: {
+  bottomFooter: {
     position: "absolute",
-    bottom: verticalScale(40),
-    right: scale(20),
-  },
-  fab: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FA8C4C",
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(14),
-    borderRadius: scale(12),
-    shadowColor: "#FA8C4C",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingVertical: verticalScale(20),
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
   },
-  fabText: {
-    fontSize: moderateScale(14, 0.3),
-    fontWeight: "700",
+  saveButton: {
+    flexDirection: "row",
+    backgroundColor: "#FA8C4C",
+    borderRadius: scale(12),
+    paddingVertical: verticalScale(14),
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  saveIcon: {
+    marginRight: scale(8),
+  },
+  saveButtonText: {
     color: "#FFFFFF",
+    fontSize: moderateScale(16, 0.3),
+    fontWeight: "700",
   },
 });

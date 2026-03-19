@@ -36,6 +36,22 @@ export default function HomeLayout() {
           animation: 'slide_from_right'
         }} 
       />
+      <Stack.Screen 
+        name="add-daily-data" 
+        options={{ 
+          headerShown: false,
+          presentation: 'card', 
+          animation: 'slide_from_right'
+        }} 
+      />
+      <Stack.Screen 
+        name="daily-record-details" 
+        options={{ 
+          headerShown: false,
+          presentation: 'card', 
+          animation: 'slide_from_right'
+        }} 
+      />
     </Stack>
   );
 }
