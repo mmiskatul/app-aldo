@@ -12,8 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
-import DataHistoryList from "../../../components/home/add-daily-data/DataHistoryList";
-import DataMetrics from "../../../components/home/add-daily-data/DataMetrics";
+import DataHistoryList from "../../../components/home/data-management/DataHistoryList";
+import DataMetrics from "../../../components/home/data-management/DataMetrics";
 
 export default function DataManagementScreen() {
   const router = useRouter();

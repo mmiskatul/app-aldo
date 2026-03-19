@@ -31,7 +31,7 @@ export default function QuickActions() {
       onPress: () => router.push('/(tabs)/home/upload-invoice'),
     },
     { 
-      title: 'Add Daily Data', 
+      title: 'Data Management', 
       IconComponent: PencilSquareIcon,
       onPress: () => router.push('/(tabs)/home/data-management'),
     },
