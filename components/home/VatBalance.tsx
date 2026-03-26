@@ -3,7 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export default function VatBalance({ onPress }: { onPress?: () => void }) {
+interface VatBalanceProps {
+  balance?: number;
+  onPress?: () => void;
+}
+
+export default function VatBalance({ balance, onPress }: VatBalanceProps) {
   const Container = onPress ? TouchableOpacity : React.Fragment;
 
   return (
@@ -15,7 +20,7 @@ export default function VatBalance({ onPress }: { onPress?: () => void }) {
         style={styles.container}
       >
         <Text style={styles.subtitle}>ESTIMATED VAT BALANCE</Text>
-        <Text style={styles.balanceText}>€80</Text>
+        <Text style={styles.balanceText}>€{balance !== undefined ? balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : 80}</Text>
         
         <View style={styles.syncContainer}>
           <View style={styles.syncDot} />

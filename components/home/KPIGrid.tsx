@@ -35,23 +35,54 @@ const KPICard = ({ title, value, trend, isPositive, IconComponent, iconColor, ic
   );
 };
 
-export default function KPIGrid() {
-  const kpiData: KPIItemProps[] = [
-    { title: 'Revenue', value: '$12,450', trend: '5.2%', isPositive: true, IconComponent: EyeIcon, iconColor: '#FA8C4C', iconBgColor: '#FFF0E5' },
-    { title: 'Expenses', value: '$8,120', trend: '2.1%', isPositive: false, IconComponent: ClipboardDocumentListIcon, iconColor: '#EF4444', iconBgColor: '#FEE2E2' },
-    { title: 'Food Cost', value: '$32', trend: '1.5%', isPositive: false, IconComponent: ShoppingBagIcon, iconColor: '#D97706', iconBgColor: '#FEF3C7' },
-    { title: 'Profit', value: '$4,330', trend: '8.4%', isPositive: true, IconComponent: ChartPieIcon, iconColor: '#10B981', iconBgColor: '#D1FAE5' },
+interface KPIGridProps {
+  metrics?: {
+    label: string;
+    value: number;
+    change_percent: number;
+    currency: string;
+  }[];
+}
+
+export default function KPIGrid({ metrics }: KPIGridProps) {
+  const getIconData = (label: string) => {
+    switch (label.toLowerCase()) {
+      case 'revenue': return { IconComponent: EyeIcon, iconColor: '#FA8C4C', iconBgColor: '#FFF0E5' };
+      case 'expenses': return { IconComponent: ClipboardDocumentListIcon, iconColor: '#EF4444', iconBgColor: '#FEE2E2' };
+      case 'food cost': return { IconComponent: ShoppingBagIcon, iconColor: '#D97706', iconBgColor: '#FEF3C7' };
+      case 'profit': return { IconComponent: ChartPieIcon, iconColor: '#10B981', iconBgColor: '#D1FAE5' };
+      default: return { IconComponent: EyeIcon, iconColor: '#9CA3AF', iconBgColor: '#F3F4F6' };
+    }
+  };
+
+  const parseCurrency = (c: string) => c === "USD" ? "$" : (c === "EUR" ? "€" : "");
+
+  const getFallbackData = (): KPIItemProps[] => [
+    { title: 'Revenue', value: '$0.00', trend: '0.0%', isPositive: true, ...getIconData('Revenue') },
+    { title: 'Expenses', value: '$0.00', trend: '0.0%', isPositive: false, ...getIconData('Expenses') },
+    { title: 'Food Cost', value: '$0.00', trend: '0.0%', isPositive: false, ...getIconData('Food Cost') },
+    { title: 'Profit', value: '$0.00', trend: '0.0%', isPositive: true, ...getIconData('Profit') },
   ];
+
+  const kpiData: KPIItemProps[] = metrics && metrics.length > 0
+    ? metrics.map(m => ({
+        title: m.label,
+        value: `${parseCurrency(m.currency)}${m.value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`,
+        trend: `${Math.abs(m.change_percent)}%`,
+        isPositive: m.change_percent >= 0,
+        ...getIconData(m.label)
+      }))
+    : getFallbackData();
 
   return (
     <View style={styles.gridContainer}>
       <View style={styles.row}>
-        <KPICard {...kpiData[0]} />
-        <KPICard {...kpiData[1]} />
+        {kpiData[0] && <KPICard {...kpiData[0]} />}
+        {kpiData[1] && <KPICard {...kpiData[1]} />}
       </View>
       <View style={styles.row}>
-        <KPICard {...kpiData[2]} />
-        <KPICard {...kpiData[3]} />
+        {kpiData[2] && <KPICard {...kpiData[2]} />}
+        {kpiData[3] && <KPICard {...kpiData[3]} />}
       </View>
     </View>
   );

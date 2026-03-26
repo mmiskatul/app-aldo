@@ -8,9 +8,16 @@ interface ChartDataPoint {
   filledHeight: number; // 0-100 percentage (must be <= totalHeight)
 }
 
-export default function RevenueChart() {
+interface RevenueChartProps {
+  weeklyRevenue?: {
+    label: string;
+    value: number;
+  }[];
+}
+
+export default function RevenueChart({ weeklyRevenue }: RevenueChartProps) {
   // Mock data to match the screenshot roughly
-  const data: ChartDataPoint[] = [
+  const fallbackData: ChartDataPoint[] = [
     { day: 'MON', totalHeight: 35, filledHeight: 25 },
     { day: 'TUE', totalHeight: 45, filledHeight: 35 },
     { day: 'WED', totalHeight: 30, filledHeight: 20 },
@@ -19,6 +26,15 @@ export default function RevenueChart() {
     { day: 'SAT', totalHeight: 85, filledHeight: 80 },
     { day: 'SUN', totalHeight: 75, filledHeight: 65 },
   ];
+
+  const maxVal = Math.max(...(weeklyRevenue?.map(d => d.value) || [1]));
+  const data: ChartDataPoint[] = weeklyRevenue && weeklyRevenue.length > 0
+    ? weeklyRevenue.map(d => ({
+        day: d.label.toUpperCase().substring(0, 3),
+        totalHeight: 85, 
+        filledHeight: maxVal > 0 ? (d.value / maxVal) * 85 : 0
+      }))
+    : fallbackData;
 
   return (
     <View style={styles.container}>

@@ -26,23 +26,46 @@ const CashItem = ({ title, value, IconComponent }: CashItemProps) => {
   );
 };
 
-export default function CashManagement() {
-  const cashData: CashItemProps[] = [
-    { title: 'Total Cash Collected', value: '$3,840.00', IconComponent: CreditCardIcon },
-    { title: 'Cash Available', value: '$1,240.50', IconComponent: BanknotesIcon },
-    { title: 'Cash Deposited to Bank', value: '$2,600.00', IconComponent: BuildingLibraryIcon },
-  ];
+interface CashManagementProps {
+  cashData?: {
+    label: string;
+    amount: number;
+    subtitle: string;
+  }[];
+}
+
+export default function CashManagement({ cashData }: CashManagementProps) {
+  const getIconData = (label: string) => {
+    switch (label.toLowerCase()) {
+      case 'total cash collected': return CreditCardIcon;
+      case 'cash available': return BanknotesIcon;
+      case 'cash deposited': return BuildingLibraryIcon;
+      default: return BanknotesIcon;
+    }
+  };
+
+  const parsedCashData: CashItemProps[] = cashData && cashData.length > 0
+    ? cashData.map(c => ({
+        title: c.label,
+        value: `€${c.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        IconComponent: getIconData(c.label),
+      }))
+    : [
+        { title: 'Total Cash Collected', value: '€0.00', IconComponent: CreditCardIcon },
+        { title: 'Cash Available', value: '€0.00', IconComponent: BanknotesIcon },
+        { title: 'Cash Deposited to Bank', value: '€0.00', IconComponent: BuildingLibraryIcon },
+      ];
 
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Cash Management</Text>
       
       <View style={styles.cardContainer}>
-        {cashData.map((item, index) => (
-          <React.Fragment key={item.title}>
+        {parsedCashData.map((item, index) => (
+          <View key={item.title + index}>
             <CashItem {...item} />
-            {index < cashData.length - 1 && <View style={styles.divider} />}
-          </React.Fragment>
+            {index < parsedCashData.length - 1 && <View style={styles.divider} />}
+          </View>
         ))}
       </View>
     </View>

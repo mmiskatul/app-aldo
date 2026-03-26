@@ -29,12 +29,33 @@ const ActivityItem = ({ title, subtitle, timeText, IconComponent, iconBgColor, i
   );
 };
 
-export default function RecentActivity() {
-  const activities: ActivityItemProps[] = [
-    { title: 'Invoice uploaded', subtitle: 'Sysco Food Services Ltd.', timeText: '2H AGO', IconComponent: DocumentArrowUpIcon, iconBgColor: '#FFF0E5', iconColor: '#FA8C4C' },
-    { title: 'Expense added', subtitle: 'Kitchen Utilities - Gas Bill', timeText: '5H AGO', IconComponent: ClipboardDocumentListIcon, iconBgColor: '#FEE2E2', iconColor: '#EF4444' },
-    { title: 'AI insight generated', subtitle: 'Labor efficiency report ready', timeText: '8H AGO', IconComponent: BoltIcon, iconBgColor: '#FEF3C7', iconColor: '#D97706' },
+interface RecentActivityProps {
+  activities?: any[];
+}
+
+export default function RecentActivity({ activities: apiActivities }: RecentActivityProps) {
+  const getIconForType = (type?: string) => {
+    switch (type?.toLowerCase()) {
+      case 'invoice': return { IconComponent: DocumentArrowUpIcon, iconBgColor: '#FFF0E5', iconColor: '#FA8C4C' };
+      case 'expense': return { IconComponent: ClipboardDocumentListIcon, iconBgColor: '#FEE2E2', iconColor: '#EF4444' };
+      default: return { IconComponent: BoltIcon, iconBgColor: '#FEF3C7', iconColor: '#D97706' };
+    }
+  };
+
+  const fallbackActivities: ActivityItemProps[] = [
+    { title: 'Invoice uploaded', subtitle: 'Sysco Food Services Ltd.', timeText: '2H AGO', ...getIconForType('invoice') },
+    { title: 'Expense added', subtitle: 'Kitchen Utilities - Gas Bill', timeText: '5H AGO', ...getIconForType('expense') },
+    { title: 'AI insight generated', subtitle: 'Labor efficiency report ready', timeText: '8H AGO', ...getIconForType('insight') },
   ];
+
+  const displayActivities: ActivityItemProps[] = apiActivities && apiActivities.length > 0
+    ? apiActivities.map(a => ({
+        title: a.title || 'Activity',
+        subtitle: a.subtitle || a.description || '',
+        timeText: a.timeText || a.time || 'JUST NOW',
+        ...getIconForType(a.type)
+      }))
+    : (apiActivities ? [] : fallbackActivities);
 
   return (
     <View style={styles.container}>
@@ -44,12 +65,16 @@ export default function RecentActivity() {
       </View>
       
       <View style={styles.cardContainer}>
-        {activities.map((item, index) => (
-          <React.Fragment key={item.title}>
-            <ActivityItem {...item} />
-            {index < activities.length - 1 && <View style={styles.divider} />}
-          </React.Fragment>
-        ))}
+        {displayActivities.length > 0 ? (
+          displayActivities.map((item, index) => (
+            <View key={item.title + index}>
+              <ActivityItem {...item} />
+              {index < displayActivities.length - 1 && <View style={styles.divider} />}
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyText}>No recent activity</Text>
+        )}
       </View>
     </View>
   );
@@ -125,5 +150,12 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#F3F4F6',
     marginVertical: verticalScale(4),
+  },
+  emptyText: {
+    fontSize: moderateScale(14, 0.3),
+    color: '#9CA3AF',
+    textAlign: 'center',
+    paddingVertical: verticalScale(20),
+    fontWeight: '500',
   },
 });

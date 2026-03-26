@@ -5,18 +5,25 @@ import { CpuChipIcon, ArrowRightIcon } from 'react-native-heroicons/outline';
 
 import { useRouter } from 'expo-router';
 
-export default function AIInsightBox() {
+interface AIInsightProps {
+  insight?: {
+    title: string;
+    summary: string;
+  };
+}
+
+export default function AIInsightBox({ insight }: AIInsightProps) {
   const router = useRouter();
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <CpuChipIcon size={moderateScale(14)} color="#FA8C4C" style={styles.icon} />
-        <Text style={styles.headerText}>RISTO AI INSIGHT</Text>
+        <Text style={styles.headerText}>{insight?.title?.toUpperCase() || "RISTO AI INSIGHT"}</Text>
       </View>
       
       <Text style={styles.insightText}>
-        Food cost increased by 12% this week compared to the previous period.
+        {insight?.summary || "Food cost increased by 12% this week compared to the previous period."}
       </Text>
       
       <TouchableOpacity 

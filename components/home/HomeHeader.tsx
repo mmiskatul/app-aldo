@@ -4,9 +4,17 @@ import { BellIcon, ChevronDownIcon } from "react-native-heroicons/outline";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import LanguageModal from "./LanguageModal";
 
-export default function HomeHeader() {
+interface HomeHeaderProps {
+  greetingName?: string;
+  restaurantName?: string;
+  preferredLanguage?: string;
+}
+
+export default function HomeHeader({ greetingName, restaurantName, preferredLanguage }: HomeHeaderProps) {
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
-  const [selectedLang, setSelectedLang] = useState<"Eng" | "Ita">("Eng");
+  const [selectedLang, setSelectedLang] = useState<"Eng" | "Ita">(
+    preferredLanguage === "it" ? "Ita" : "Eng"
+  );
 
   return (
     <View style={styles.container}>
@@ -19,13 +27,13 @@ export default function HomeHeader() {
         />
         <View style={styles.textContainer}>
           <Text style={styles.restaurantName} numberOfLines={1}>
-            THE GOLDEN BISTRO
+            {restaurantName ? restaurantName.toUpperCase() : "THE GOLDEN BISTRO"}
           </Text>
           <Text style={styles.greeting} numberOfLines={1}>
             Good Morning,
           </Text>
           <Text style={styles.greeting} numberOfLines={1}>
-            Marco
+            {greetingName || "Marco"}
           </Text>
         </View>
       </View>
