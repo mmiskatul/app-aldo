@@ -2,20 +2,26 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
-export default function SupplierInfo() {
+interface SupplierInfoProps {
+  name?: string | null;
+  invoiceNumber?: string | null;
+  invoiceDate?: string | null;
+}
+
+export default function SupplierInfo({ name, invoiceNumber, invoiceDate }: SupplierInfoProps) {
   return (
     <View style={styles.infoCard}>
       <Text style={styles.infoLabel}>SUPPLIER NAME</Text>
-      <Text style={styles.infoValueMain}>Fresh Food Supplier Ltd</Text>
+      <Text style={styles.infoValueMain}>{name || 'Fresh Food Supplier Ltd'}</Text>
       
       <View style={styles.infoRow}>
         <View style={styles.infoCol}>
           <Text style={styles.infoLabel}>INVOICE NUMBER</Text>
-          <Text style={styles.infoValue}>INV-2045</Text>
+          <Text style={styles.infoValue}>{invoiceNumber || 'INV-2045'}</Text>
         </View>
         <View style={styles.infoCol}>
           <Text style={styles.infoLabel}>INVOICE DATE</Text>
-          <Text style={styles.infoValue}>10 March 2026</Text>
+          <Text style={styles.infoValue}>{invoiceDate || '10 March 2026'}</Text>
         </View>
       </View>
     </View>

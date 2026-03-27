@@ -1,10 +1,28 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export default function ExtractionStatus() {
+interface ExtractionStatusProps {
+  progress: number; // 0 to 100
+}
+
+export default function ExtractionStatus({ progress }: ExtractionStatusProps) {
+  const animatedWidth = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(animatedWidth, {
+      toValue: progress,
+      duration: 500,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
+
+  const widthInterpolate = animatedWidth.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
   return (
     <LinearGradient
       colors={['#1F1612', '#C28522']}
@@ -20,7 +38,7 @@ export default function ExtractionStatus() {
       </View>
       {/* Simple Progress Bar Mockup */}
       <View style={styles.progressBarTrack}>
-        <View style={styles.progressBarFill} />
+        <Animated.View style={[styles.progressBarFill, { width: widthInterpolate }]} />
       </View>
     </LinearGradient>
   );
@@ -63,7 +81,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   progressBarFill: {
-    width: '60%', 
     height: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: scale(2),

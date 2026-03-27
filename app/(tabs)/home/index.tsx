@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, View, ActivityIndicator, RefreshControl } from 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale, verticalScale } from "react-native-size-matters";
 import { useRouter } from "expo-router";
-import axios from "axios";
+import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore";
 
 // Home Components
@@ -40,15 +40,8 @@ export default function TabsIndex() {
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchHomeData = async () => {
-    if (!tokens?.access_token) {
-      setLoading(false);
-      return;
-    }
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://risto-ai.vercel.app";
-      const res = await axios.get(`${apiUrl}/api/v1/restaurant/home`, {
-        headers: { Authorization: `Bearer ${tokens.access_token}` },
-      });
+      const res = await apiClient.get("/api/v1/restaurant/home");
       setData(res.data);
     } catch (error: any) {
       console.log("Home API Error:", error.response?.data || error.message);
@@ -60,7 +53,7 @@ export default function TabsIndex() {
 
   useEffect(() => {
     fetchHomeData();
-  }, [tokens]);
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);

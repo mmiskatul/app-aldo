@@ -4,19 +4,19 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
 interface LineItemsProps {
   isEditing?: boolean;
+  items: any[];
+  onItemsChange: (items: any[]) => void;
+  subtotal?: number;
+  vat?: number;
+  total?: number;
 }
 
-export default function LineItems({ isEditing = false }: LineItemsProps) {
-  const [items, setItems] = useState([
-    { id: 1, product: 'Tomato Sauce', qty: '10', price: '$5', total: '$50' },
-    { id: 2, product: 'Cheese', qty: '5', price: '$8', total: '$40' },
-    { id: 3, product: 'Chicken', qty: '10', price: '$6', total: '$60' },
-  ]);
+export default function LineItems({ isEditing = false, items, onItemsChange, subtotal: propsSubtotal, vat: propsVat, total: propsTotal }: LineItemsProps) {
 
   const updateItem = (index: number, field: string, value: string) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
-    setItems(newItems);
+    onItemsChange(newItems);
   };
 
   return (
@@ -27,41 +27,41 @@ export default function LineItems({ isEditing = false }: LineItemsProps) {
         <Text style={[styles.tableHeadText, { flex: 1, textAlign: 'right' }]}>PRICE</Text>
         <Text style={[styles.tableHeadText, { flex: 1, textAlign: 'right' }]}>TOTAL</Text>
       </View>
-      {items.map((item, index) => {
-        const isLast = index === items.length - 1;
-        return (
-          <View key={item.id} style={[styles.tableRow, isLast && styles.lastRow]}>
-            {isEditing ? (
-              <>
-                <TextInput style={[styles.inputCell, { flex: 3 }]} value={item.product} onChangeText={(t) => updateItem(index, 'product', t)} />
-                <TextInput style={[styles.inputCell, { flex: 1, textAlign: 'center' }]} value={item.qty} onChangeText={(t) => updateItem(index, 'qty', t)} keyboardType="numeric" />
-                <TextInput style={[styles.inputCell, { flex: 1, textAlign: 'right' }]} value={item.price} onChangeText={(t) => updateItem(index, 'price', t)} />
-                <TextInput style={[styles.inputCellBold, { flex: 1, textAlign: 'right' }]} value={item.total} onChangeText={(t) => updateItem(index, 'total', t)} />
-              </>
-            ) : (
-              <>
-                <Text style={[styles.tableCellMain, { flex: 3 }]}>{item.product}</Text>
-                <Text style={[styles.tableCellSub, { flex: 1, textAlign: 'center' }]}>{item.qty}</Text>
-                <Text style={[styles.tableCellSub, { flex: 1, textAlign: 'right' }]}>{item.price}</Text>
-                <Text style={[styles.tableCellBold, { flex: 1, textAlign: 'right' }]}>{item.total}</Text>
-              </>
-            )}
-          </View>
-        );
-      })}
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
+          return (
+            <View key={`item-${item.id}-${index}`} style={[styles.tableRow, isLast && styles.lastRow]}>
+              {isEditing ? (
+                <>
+                  <TextInput style={[styles.inputCell, { flex: 3 }]} value={item.product} onChangeText={(t) => updateItem(index, 'product', t)} />
+                  <TextInput style={[styles.inputCell, { flex: 1, textAlign: 'center' }]} value={item.qty} onChangeText={(t) => updateItem(index, 'qty', t)} keyboardType="numeric" />
+                  <TextInput style={[styles.inputCell, { flex: 1, textAlign: 'right' }]} value={item.price} onChangeText={(t) => updateItem(index, 'price', t)} keyboardType="numeric" />
+                  <TextInput style={[styles.inputCellBold, { flex: 1, textAlign: 'right' }]} value={item.total} onChangeText={(t) => updateItem(index, 'total', t)} keyboardType="numeric" />
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.tableCellMain, { flex: 3 }]}>{item.product}</Text>
+                  <Text style={[styles.tableCellSub, { flex: 1, textAlign: 'center' }]}>{item.qty}</Text>
+                  <Text style={[styles.tableCellSub, { flex: 1, textAlign: 'right' }]}>€{item.price}</Text>
+                  <Text style={[styles.tableCellBold, { flex: 1, textAlign: 'right' }]}>€{item.total}</Text>
+                </>
+              )}
+            </View>
+          );
+        })}
 
       {/* Totals */}
       <View style={styles.summaryRow}>
         <Text style={styles.summaryLabel}>Subtotal</Text>
-        <Text style={styles.summaryValueMain}>$150.00</Text>
+        <Text style={styles.summaryValueMain}>€{propsSubtotal?.toFixed(2) || '0.00'}</Text>
       </View>
       <View style={styles.summaryRow}>
         <Text style={styles.summaryLabel}>VAT (10%)</Text>
-        <Text style={styles.summaryValueMain}>$15.00</Text>
+        <Text style={styles.summaryValueMain}>€{propsVat?.toFixed(2) || '0.00'}</Text>
       </View>
       <View style={[styles.summaryRow, { marginTop: verticalScale(8) }]}>
         <Text style={styles.grandTotalLabel}>Total</Text>
-        <Text style={styles.grandTotalValue}>$165.00</Text>
+        <Text style={styles.grandTotalValue}>€{propsTotal?.toFixed(2) || '0.00'}</Text>
       </View>
     </View>
   );

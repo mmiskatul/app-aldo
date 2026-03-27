@@ -19,70 +19,65 @@ export default function HomeLayout() {
       <Stack.Screen
         name="upload-invoice"
         options={{
-          headerShown: true,
-          headerTitle: "Upload Invoice",
-          headerTitleAlign: "center",
-          headerShadowVisible: false,
-          headerStyle: { backgroundColor: "#FFFFFF" },
-          headerTintColor: "#111827",
+          headerShown: false,
           animation: "slide_from_right",
         }}
       />
-      <Stack.Screen 
-        name="data-management" 
-        options={{ 
+      <Stack.Screen
+        name="data-management"
+        options={{
           headerShown: false,
-          presentation: 'card', 
+          presentation: 'card',
           animation: 'slide_from_right'
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="add-daily-data" 
-        options={{ 
+      <Stack.Screen
+        name="add-daily-data"
+        options={{
           headerShown: false,
-          presentation: 'card', 
+          presentation: 'card',
           animation: 'slide_from_right'
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="daily-record-details" 
-        options={{ 
+      <Stack.Screen
+        name="daily-record-details"
+        options={{
           headerShown: false,
-          presentation: 'card', 
+          presentation: 'card',
           animation: 'slide_from_right'
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="expenses" 
-        options={{ 
+      <Stack.Screen
+        name="expenses"
+        options={{
           headerShown: false,
-          presentation: 'card', 
+          presentation: 'card',
           animation: 'slide_from_right'
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="add-expense" 
-        options={{ 
+      <Stack.Screen
+        name="add-expense"
+        options={{
           headerShown: false,
-          presentation: 'card', 
+          presentation: 'card',
           animation: 'slide_from_right'
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="cash-management" 
-        options={{ 
+      <Stack.Screen
+        name="cash-management"
+        options={{
           headerShown: false,
-          presentation: 'card', 
+          presentation: 'card',
           animation: 'slide_from_right'
-        }} 
+        }}
       />
-      <Stack.Screen 
-        name="add-bank-deposit" 
-        options={{ 
+      <Stack.Screen
+        name="add-bank-deposit"
+        options={{
           headerShown: false,
-          presentation: 'card', 
+          presentation: 'card',
           animation: 'slide_from_right'
-        }} 
+        }}
       />
     </Stack>
   );

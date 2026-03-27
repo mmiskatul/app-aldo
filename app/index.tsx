@@ -55,7 +55,7 @@ export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const slidesRef = useRef<FlatList>(null);
+  const slidesRef = useRef<FlatList<any>>(null);
   const router = useRouter();
   
   const user = useAppStore((state) => state.user);
@@ -124,7 +124,7 @@ export default function OnboardingScreen() {
         </View>
       </View>
 
-      <FlatList
+      <FlatList<any>
         data={slides}
         renderItem={({ item }) => (
           <View style={[styles.slide, { width }]}>
@@ -192,7 +192,7 @@ const Paginator = ({
     <View style={styles.paginatorContainer}>
       {data.map((_, i) => (
         <View
-          key={i}
+          key={`dot-${i}`}
           style={[
             styles.dot,
             {

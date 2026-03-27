@@ -67,7 +67,7 @@ export default function RecentActivity({ activities: apiActivities }: RecentActi
       <View style={styles.cardContainer}>
         {displayActivities.length > 0 ? (
           displayActivities.map((item, index) => (
-            <View key={item.title + index}>
+            <View key={`${item.title}-${index}`}>
               <ActivityItem {...item} />
               {index < displayActivities.length - 1 && <View style={styles.divider} />}
             </View>

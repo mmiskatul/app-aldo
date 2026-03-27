@@ -11,22 +11,126 @@ import {
   View,
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
-import Header from "../../../components/ui/Header";
 import BottomActions from "../../../components/home/upload-invoice/BottomActions";
 import ExtractionStatus from "../../../components/home/upload-invoice/ExtractionStatus";
 import LineItems from "../../../components/home/upload-invoice/LineItems";
 import SupplierInfo from "../../../components/home/upload-invoice/SupplierInfo";
 import UploadActions from "../../../components/home/upload-invoice/UploadActions";
+import { useAppStore } from "../../../store/useAppStore";
+import apiClient from "../../../api/apiClient";
+import Header from "../../../components/ui/Header";
 
 export default function UploadInvoiceScreen() {
   const navigation = useNavigation();
   const router = useRouter();
+  const tokens = useAppStore((state) => state.tokens);
+
   const [selectedFile, setSelectedFile] = useState<{
     uri: string;
     type: "image" | "pdf";
     name: string;
   } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [extractionData, setExtractionData] = useState<any>(null);
+  const [lineItems, setLineItems] = useState<any[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleFileUpload = async (file: { uri: string; type: string; name: string }) => {
+    if (!tokens?.access_token) return;
+
+    setIsExtracting(true);
+    setUploadProgress(10); // Start progress indicating something is happening
+
+    const formData = new FormData();
+    // @ts-ignore - FormData expects an object with uri, type, name for React Native file uploads
+    formData.append("file", {
+      uri: file.uri,
+      type: file.type === "pdf" ? "application/pdf" : "image/jpeg",
+      name: file.name,
+    });
+
+    try {
+      const response = await apiClient.post(
+        "/api/v1/restaurant/documents/upload-extract",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          onUploadProgress: (progressEvent) => {
+            const progress = progressEvent.total
+              ? Math.round((progressEvent.loaded * 70) / progressEvent.total)
+              : 30; // 70% for upload, 30% for AI processing
+            setUploadProgress(10 + progress);
+          },
+        }
+      );
+
+      setExtractionData(response.data);
+      if (response.data.line_items) {
+        const mapped = response.data.line_items.map((item: any, idx: number) => ({
+          id: idx + 1,
+          product: item.product_name || '',
+          qty: String(item.quantity || ''),
+          price: String(item.unit_price || ''),
+          total: String(item.total_price || ''),
+        }));
+        setLineItems(mapped);
+      }
+      setUploadProgress(100);
+      setIsExtracting(false);
+    } catch (error: any) {
+      console.log("Upload Error:", error.response?.data || error.message);
+      setIsExtracting(false);
+      alert("Failed to extract data from invoice. Please try again.");
+    }
+  };
+
+  const handleConfirmSave = async () => {
+    if (!extractionData || !tokens?.access_token) return;
+
+    setIsSaving(true);
+    try {
+      const payload = {
+        supplier_name: extractionData.supplier_name,
+        invoice_number: extractionData.invoice_number,
+        invoice_date: extractionData.invoice_date || new Date().toISOString().split('T')[0],
+        total_amount: extractionData.total_amount || 0,
+        line_items: lineItems.map(item => ({
+          product_name: item.product,
+          quantity: parseFloat(item.qty) || 0,
+          unit_price: parseFloat(item.price) || 0,
+          total_price: parseFloat(item.total) || 0,
+        })),
+        source_file_name: selectedFile?.name || "unnamed_file",
+        ai_provider: extractionData.ai_provider || "openai",
+        ai_summary: extractionData.ai_summary || ""
+      };
+
+      await apiClient.post("/api/v1/restaurant/documents/confirm-save", payload);
+      
+      alert("Invoice saved successfully!");
+      if (router.canGoBack()) {
+        router.dismissAll();
+      }
+      router.replace("/(tabs)/documents");
+    } catch (error: any) {
+      console.log("Save Error:", error.response?.data || error.message);
+      alert("Failed to save invoice. Please check the data and try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onFileSelected = (file: { uri: string; type: "image" | "pdf"; name: string } | null) => {
+    setSelectedFile(file);
+    setExtractionData(null);
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -59,64 +163,83 @@ export default function UploadInvoiceScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Upload Invoice" />
+      <Header title="Upload Invoice" showBack={true} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.headerSubtitle}>
+        <Text style={styles.description}>
           Upload supplier invoices and let AI extract important data
           automatically.
         </Text>
 
-      {!selectedFile ? (
-        <UploadActions onFileSelected={setSelectedFile} />
-      ) : (
-        <View style={styles.previewContainer}>
-          {selectedFile.type === "image" ? (
-            <Image
-              source={{ uri: selectedFile.uri }}
-              style={styles.imagePreview}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.pdfPreview}>
-              <Feather
-                name="file-text"
-                size={moderateScale(32)}
-                color="#111827"
+        {!selectedFile ? (
+          <UploadActions onFileSelected={onFileSelected} />
+        ) : (
+          <View style={styles.previewContainer}>
+            {selectedFile.type === "image" ? (
+              <Image
+                source={{ uri: selectedFile.uri }}
+                style={styles.imagePreview}
+                resizeMode="cover"
               />
-              <Text style={styles.pdfName} numberOfLines={1}>
-                {selectedFile.name}
-              </Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={styles.removeButton}
-            onPress={() => setSelectedFile(null)}
-          >
-            <Feather name="x" size={moderateScale(16)} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      )}
+            ) : (
+              <View style={styles.pdfPreview}>
+                <Feather
+                  name="file-text"
+                  size={moderateScale(32)}
+                  color="#111827"
+                />
+                <Text style={styles.pdfName} numberOfLines={1}>
+                  {selectedFile.name}
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.removeButton}
+              onPress={() => {
+                setSelectedFile(null);
+                setExtractionData(null);
+                setIsExtracting(false);
+              }}
+            >
+              <Feather name="x" size={moderateScale(16)} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        )}
 
-      <ExtractionStatus />
+        {(isExtracting || extractionData) && (
+          <>
+            {isExtracting && <ExtractionStatus progress={uploadProgress} />}
 
-      <Text style={styles.sectionTitle}>Supplier Information</Text>
-      <SupplierInfo />
+            {extractionData && (
+              <>
+                <Text style={styles.sectionTitle}>Supplier Information</Text>
+                <SupplierInfo
+                  name={extractionData.supplier_name}
+                  invoiceNumber={extractionData.invoice_number}
+                  invoiceDate={extractionData.invoice_date}
+                />
 
-      <Text style={styles.sectionTitle}>Line Items</Text>
-      <LineItems isEditing={isEditing} />
+                <Text style={styles.sectionTitle}>Line Items</Text>
+                <LineItems
+                   isEditing={isEditing}
+                   items={lineItems}
+                   onItemsChange={setLineItems}
+                   total={extractionData.total_amount}
+                   subtotal={extractionData.total_amount ? extractionData.total_amount * 0.9 : 0}
+                   vat={extractionData.total_amount ? extractionData.total_amount * 0.1 : 0}
+                />
 
-      <View style={styles.spacer} />
+                <View style={styles.spacer} />
 
-      <BottomActions
-        isEditing={isEditing}
-        onEditPress={() => setIsEditing(!isEditing)}
-        onConfirmPress={() => {
-          if (router.canGoBack()) {
-            router.dismissAll();
-          }
-          router.replace("/(tabs)/documents");
-        }}
-      />
+                <BottomActions
+                  isEditing={isEditing}
+                  isLoading={isSaving}
+                  onEditPress={() => setIsEditing(!isEditing)}
+                  onConfirmPress={handleConfirmSave}
+                />
+              </>
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -132,13 +255,7 @@ const styles = StyleSheet.create({
     paddingTop: verticalScale(16),
     paddingBottom: verticalScale(40),
   },
-  headerTitle: {
-    fontSize: moderateScale(28, 0.3),
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: verticalScale(8),
-  },
-  headerSubtitle: {
+  description: {
     fontSize: moderateScale(14, 0.3),
     color: "#6B7280",
     lineHeight: moderateScale(22, 0.3),

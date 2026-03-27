@@ -23,6 +23,7 @@ interface AppState {
   user: User | null;
   tokens: Tokens | null;
   setUser: (user: User | null, tokens?: Tokens | null) => void;
+  setTokens: (tokens: Tokens | null) => void;
   logout: () => void;
 }
 
@@ -35,6 +36,7 @@ export const useAppStore = create<AppState>()(
       user: null,
       tokens: null,
       setUser: (user, tokens = null) => set({ user, tokens }),
+      setTokens: (tokens: Tokens | null) => set({ tokens }),
       logout: () => set({ user: null, tokens: null }),
     }),
     {
