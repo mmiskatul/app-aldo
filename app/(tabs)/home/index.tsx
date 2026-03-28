@@ -17,6 +17,7 @@ import RecentActivity from "../../../components/home/RecentActivity";
 import RevenueChart from "../../../components/home/RevenueChart";
 import VatBalance from "../../../components/home/VatBalance";
 
+
 interface HomeDashboardData {
   greeting_name: string;
   restaurant_name: string;
@@ -41,10 +42,14 @@ export default function TabsIndex() {
 
   const fetchHomeData = async () => {
     try {
-      const res = await apiClient.get("/api/v1/restaurant/home");
-      setData(res.data);
+      const [homeRes, docsRes] = await Promise.all([
+        apiClient.get("/api/v1/restaurant/home"),
+        apiClient.get("/api/v1/restaurant/documents")
+      ]);
+      setData(homeRes.data);
+      // Fetched in parallel for background processing
     } catch (error: any) {
-      console.log("Home API Error:", error.response?.data || error.message);
+      console.log("API Error:", error.response?.data || error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);

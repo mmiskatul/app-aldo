@@ -88,6 +88,10 @@ export default function UploadInvoiceScreen() {
     }
   };
 
+  const subtotal = lineItems.reduce((acc, item) => acc + (parseFloat(item.total) || 0), 0);
+  const vat = subtotal * 0.1;
+  const totalAmount = subtotal + vat;
+
   const handleConfirmSave = async () => {
     if (!extractionData || !tokens?.access_token) return;
 
@@ -97,7 +101,7 @@ export default function UploadInvoiceScreen() {
         supplier_name: extractionData.supplier_name,
         invoice_number: extractionData.invoice_number,
         invoice_date: extractionData.invoice_date || new Date().toISOString().split('T')[0],
-        total_amount: extractionData.total_amount || 0,
+        total_amount: totalAmount,
         line_items: lineItems.map(item => ({
           product_name: item.product,
           quantity: parseFloat(item.qty) || 0,
@@ -223,9 +227,9 @@ export default function UploadInvoiceScreen() {
                    isEditing={isEditing}
                    items={lineItems}
                    onItemsChange={setLineItems}
-                   total={extractionData.total_amount}
-                   subtotal={extractionData.total_amount ? extractionData.total_amount * 0.9 : 0}
-                   vat={extractionData.total_amount ? extractionData.total_amount * 0.1 : 0}
+                   total={totalAmount}
+                   subtotal={subtotal}
+                   vat={vat}
                 />
 
                 <View style={styles.spacer} />

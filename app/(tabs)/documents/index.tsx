@@ -1,26 +1,68 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  RefreshControl,
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
 import AIExtractionBanner from "../../../components/documents/AIExtractionBanner";
 import RecentDocumentsList from "../../../components/documents/RecentDocumentsList";
+import apiClient from "../../../api/apiClient";
 
 export default function DocumentsScreen() {
   const router = useRouter();
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [bannerData, setBannerData] = useState({ title: "", subtitle: "" });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchDocuments = async () => {
+    try {
+      const response = await apiClient.get("/api/v1/restaurant/documents");
+      setDocuments(response.data.items || []);
+      setBannerData({
+        title: response.data.ai_banner_title,
+        subtitle: response.data.ai_banner_subtitle,
+      });
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchDocuments();
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchDocuments();
+  };
+
   return (
     <View style={styles.container}>
       <Header title="Documents" showBell={true} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#FA8C4C"]}
+          />
+        }
       >
         <View style={styles.actionRowContainer}>
           <TouchableOpacity
@@ -37,8 +79,11 @@ export default function DocumentsScreen() {
           </TouchableOpacity>
         </View>
 
-        <AIExtractionBanner />
-        <RecentDocumentsList />
+        <AIExtractionBanner
+          title={bannerData.title}
+          subtitle={bannerData.subtitle}
+        />
+        <RecentDocumentsList documents={documents} loading={loading} />
       </ScrollView>
     </View>
   );

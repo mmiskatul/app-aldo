@@ -8,7 +8,15 @@ import * as HugeiconsModule from "@hugeicons/react-native";
 // @ts-ignore
 const HugeiconsIcon = HugeiconsModule.HugeiconsIcon || HugeiconsModule.default?.HugeiconsIcon || (HugeiconsModule as any);
 
-export default function AIExtractionBanner() {
+interface AIExtractionBannerProps {
+  title?: string;
+  subtitle?: string;
+}
+
+export default function AIExtractionBanner({
+  title = "AI Data Extraction Active",
+  subtitle = "Risto AI automatically extracts supplier, date, line items, quantities, and unit prices from your uploads.",
+}: AIExtractionBannerProps) {
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -21,10 +29,8 @@ export default function AIExtractionBanner() {
           <HugeiconsIcon icon={MagicWand01Icon} size={moderateScale(20)} color="#FA8C4C" />
         </View>
         <View style={styles.textContent}>
-          <Text style={styles.title}>AI Data Extraction Active</Text>
-          <Text style={styles.subtitle}>
-            Risto AI automatically extracts supplier, date, line items, quantities, and unit prices from your uploads.
-          </Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
       </LinearGradient>
     </View>

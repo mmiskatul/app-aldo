@@ -56,7 +56,7 @@ const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
       <View style={styles.cardHeader}>
         <View>
           <Text style={styles.supplierName}>{doc.supplier}</Text>
-          <Text style={styles.invoiceDetails}>Inv {doc.invoiceNumber} • {doc.date}</Text>
+          <Text style={styles.invoiceDetails}>{doc.invoiceNumber} • {doc.date}</Text>
         </View>
         <View style={[styles.statusBadge, isPending ? styles.statusWarning : styles.statusSuccess]}>
           <Text style={[styles.statusText, isPending ? styles.statusWarningText : styles.statusSuccessText]}>
@@ -90,28 +90,64 @@ const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
             <Feather name="eye" size={moderateScale(14)} color="#4B5563" style={{ marginRight: scale(6)}} />
             <Text style={styles.actionButtonText}>View</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Feather name="edit-2" size={moderateScale(14)} color="#4B5563" style={{ marginRight: scale(6)}} />
-            <Text style={styles.actionButtonText}>Edit</Text>
-          </TouchableOpacity>
         </View>
       )}
     </View>
   );
 };
 
-export default function RecentDocumentsList() {
+interface RecentDocumentsListProps {
+  documents?: any[];
+  loading?: boolean;
+}
+
+export default function RecentDocumentsList({ documents, loading }: RecentDocumentsListProps) {
   const router = useRouter();
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="small" color="#FA8C4C" />
+      </View>
+    );
+  }
+
+  const getStatus = (status: string): 'Processed' | 'Pending Review' => {
+    return status === 'processed' ? 'Processed' : 'Pending Review';
+  };
+
+  const displayDocs: DocumentProp[] = (documents || []).map(item => ({
+    id: item.id,
+    supplier: item.supplier_name || 'Unknown Supplier',
+    invoiceNumber: item.invoice_number || 'N/A',
+    date: item.invoice_date_formatted || 'N/A',
+    amount: `€${(item.total_amount || 0).toFixed(2)}`,
+    itemCount: item.line_item_count || 0,
+    status: getStatus(item.status),
+    tag: item.status === 'processed' ? 'AUTO-EXTRACTED' : 'PENDING',
+  }));
+
+  const docsToRender = displayDocs;
 
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Recent Documents</Text>
-      {MOCK_DOCS.map(doc => (
-        <DocumentCard key={doc.id} doc={doc} router={router} />
-      ))}
+      {docsToRender.length > 0 ? (
+        docsToRender.map(doc => (
+          <DocumentCard key={doc.id} doc={doc} router={router} />
+        ))
+      ) : (
+        <View style={styles.emptyStateContainer}>
+          <Feather name="file-text" size={moderateScale(48)} color="#E5E7EB" />
+          <Text style={styles.emptyStateText}>No documents found</Text>
+          <Text style={styles.emptyStateSubtext}>Upload an invoice to get started</Text>
+        </View>
+      )}
     </View>
   );
 }
+
+import { ActivityIndicator } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {
@@ -253,5 +289,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     paddingVertical: verticalScale(10),
     borderRadius: scale(12),
+  },
+  emptyStateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: verticalScale(40),
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(16),
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    borderStyle: 'dashed',
+  },
+  emptyStateText: {
+    fontSize: moderateScale(16, 0.3),
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: verticalScale(12),
+  },
+  emptyStateSubtext: {
+    fontSize: moderateScale(13, 0.3),
+    color: '#6B7280',
+    marginTop: verticalScale(4),
   },
 });

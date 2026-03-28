@@ -3,25 +3,59 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 
-export default function DetailsActions() {
+interface DetailsActionsProps {
+  onDownload?: () => void;
+  onDelete?: () => void;
+  isEditing?: boolean;
+  onEdit?: () => void;
+  onCancel?: () => void;
+  onUpdate?: () => void;
+}
+
+export default function DetailsActions({ 
+  onDownload, 
+  onDelete, 
+  isEditing, 
+  onEdit, 
+  onCancel, 
+  onUpdate 
+}: DetailsActionsProps) {
   return (
     <View style={styles.container}>
       <View style={styles.topActions}>
-        <TouchableOpacity style={styles.editButton}>
-          <Feather name="edit-2" size={moderateScale(16)} color="#4B5563" style={{ marginRight: scale(8) }}/>
-          <Text style={styles.editButtonText}>Edit Data</Text>
+        <TouchableOpacity 
+          style={styles.editButton} 
+          onPress={isEditing ? onCancel : onEdit}
+        >
+          <Feather 
+            name={isEditing ? "x" : "edit-2"} 
+            size={moderateScale(16)} 
+            color="#4B5563" 
+            style={{ marginRight: scale(8) }}
+          />
+          <Text style={styles.editButtonText}>{isEditing ? "Cancel" : "Edit Data"}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.downloadButton}>
-          <Feather name="download" size={moderateScale(16)} color="#FFFFFF" style={{ marginRight: scale(8) }}/>
-          <Text style={styles.downloadText}>Download</Text>
+        <TouchableOpacity 
+          style={styles.downloadButton} 
+          onPress={isEditing ? onUpdate : onDownload}
+        >
+          <Feather 
+            name={isEditing ? "check" : "download"} 
+            size={moderateScale(16)} 
+            color="#FFFFFF" 
+            style={{ marginRight: scale(8) }}
+          />
+          <Text style={styles.downloadText}>{isEditing ? "Update" : "Download"}</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.deleteButton}>
-        <Feather name="trash-2" size={moderateScale(16)} color="#EF4444" style={{ marginRight: scale(8) }}/>
-        <Text style={styles.deleteText}>Delete Document</Text>
-      </TouchableOpacity>
+      {!isEditing && (
+        <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+          <Feather name="trash-2" size={moderateScale(16)} color="#EF4444" style={{ marginRight: scale(8) }}/>
+          <Text style={styles.deleteText}>Delete Document</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

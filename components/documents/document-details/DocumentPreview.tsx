@@ -1,12 +1,15 @@
+import { Image } from 'expo-image';
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
-import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { StyleSheet, Text, View } from 'react-native';
+import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 interface DocumentPreviewProps {
   status: string;
+  imageUrl?: string;
+  token?: string;
 }
 
-export default function DocumentPreview({ status }: DocumentPreviewProps) {
+export default function DocumentPreview({ status, imageUrl, token }: DocumentPreviewProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -16,15 +19,27 @@ export default function DocumentPreview({ status }: DocumentPreviewProps) {
           <Text style={styles.statusText}>{status}</Text>
         </View>
       </View>
-      
+
       <View style={styles.previewCard}>
-        {/* Placeholder for the actual document image/pdf preview */}
-        <View style={styles.mockupDocument}>
-          <Text style={styles.mockupText}>INVOICE</Text>
-          <View style={styles.mockupLine} />
-          <View style={styles.mockupLine} />
-          <View style={[styles.mockupLine, { width: '60%' }]} />
-        </View>
+        {imageUrl ? (
+          <Image
+            source={{
+              uri: imageUrl,
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            }}
+            style={styles.imagePreview}
+            resizeMode="contain"
+          />
+        ) : (
+          <View style={styles.mockupDocument}>
+            <Text style={styles.mockupText}>INVOICE</Text>
+            <View style={styles.mockupLine} />
+            <View style={styles.mockupLine} />
+            <View style={[styles.mockupLine, { width: '60%' }]} />
+          </View>
+        )}
       </View>
     </View>
   );
@@ -68,9 +83,10 @@ const styles = StyleSheet.create({
   previewCard: {
     backgroundColor: '#F3F4F6',
     borderRadius: scale(16),
-    padding: scale(24),
+    padding: scale(8),
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   mockupDocument: {
     width: '100%',
@@ -97,5 +113,10 @@ const styles = StyleSheet.create({
     borderRadius: scale(2),
     marginBottom: verticalScale(8),
     width: '100%',
+  },
+  imagePreview: {
+    width: '100%',
+    aspectRatio: 1 / 0.85,
+    borderRadius: scale(8),
   },
 });

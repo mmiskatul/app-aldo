@@ -15,7 +15,16 @@ export default function LineItems({ isEditing = false, items, onItemsChange, sub
 
   const updateItem = (index: number, field: string, value: string) => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    const item = { ...newItems[index], [field]: value };
+
+    // Auto-calculate total if qty or price changed
+    if (field === 'qty' || field === 'price') {
+      const q = parseFloat(item.qty) || 0;
+      const p = parseFloat(item.price) || 0;
+      item.total = (q * p).toFixed(2);
+    }
+
+    newItems[index] = item;
     onItemsChange(newItems);
   };
 
