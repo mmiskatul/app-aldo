@@ -1,18 +1,18 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  RefreshControl,
-  ActivityIndicator
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
-import Header from "../../../components/ui/Header";
 import apiClient from "../../../api/apiClient";
+import Header from "../../../components/ui/Header";
 import { useAppStore } from "../../../store/useAppStore";
 
 import CashMetrics from "../../../components/home/cash/CashMetrics";
@@ -20,10 +20,10 @@ import RecentDeposits from "../../../components/home/cash/RecentDeposits";
 
 export default function CashManagementScreen() {
   const router = useRouter();
-  
+
   const cashOverviewData = useAppStore((state) => state.cashOverviewData);
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
-  
+
   const [activeFilter, setActiveFilter] = useState("Today");
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(!cashOverviewData);
@@ -31,17 +31,22 @@ export default function CashManagementScreen() {
   const filters = ["Today", "This Week", "This Month"];
 
   const filterToPeriodKey = (filter: string) => {
-    switch(filter) {
-      case "Today": return "today";
-      case "This Week": return "this_week";
-      case "This Month": return "this_month";
-      default: return "today";
+    switch (filter) {
+      case "Today":
+        return "today";
+      case "This Week":
+        return "this_week";
+      case "This Month":
+        return "this_month";
+      default:
+        return "today";
     }
   };
 
   const fetchCashOverview = useCallback(async () => {
     try {
       const res = await apiClient.get("/api/v1/restaurant/cash/overview");
+      console.log("CASH OVERVIEW API RESPONSE:", JSON.stringify(res.data, null, 2));
       setCashOverviewData(res.data);
     } catch (error) {
       console.error("Error fetching cash overview:", error);
@@ -68,7 +73,9 @@ export default function CashManagementScreen() {
       <Header title="Cash Management" showBack={true} />
 
       {loading && !cashOverviewData ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
           <ActivityIndicator size="large" color="#FA8C4C" />
         </View>
       ) : (
@@ -76,24 +83,34 @@ export default function CashManagementScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FA8C4C"]} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#FA8C4C"]}
+            />
           }
         >
           <Text style={styles.pageSubtitle}>
-            Track and manage your restaurant's physical cash flow and bank deposits.
+            Track and manage your restaurant's physical cash flow and bank
+            deposits.
           </Text>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.addDepositButton}
-            onPress={() => router.push('/(tabs)/home/add-bank-deposit')}
+            onPress={() => router.push("/(tabs)/home/add-bank-deposit")}
           >
-            <Feather name="plus" size={moderateScale(20)} color="#FFFFFF" style={{ marginRight: scale(8) }} />
+            <Feather
+              name="plus"
+              size={moderateScale(20)}
+              color="#FFFFFF"
+              style={{ marginRight: scale(8) }}
+            />
             <Text style={styles.addDepositButtonText}>Add Bank Deposit</Text>
           </TouchableOpacity>
 
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
             style={styles.filtersContainer}
           >
             {filters.map((filter) => {
@@ -101,10 +118,18 @@ export default function CashManagementScreen() {
               return (
                 <TouchableOpacity
                   key={filter}
-                  style={[styles.filterPill, isActive && styles.filterPillActive]}
+                  style={[
+                    styles.filterPill,
+                    isActive && styles.filterPillActive,
+                  ]}
                   onPress={() => setActiveFilter(filter)}
                 >
-                  <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
+                  <Text
+                    style={[
+                      styles.filterText,
+                      isActive && styles.filterTextActive,
+                    ]}
+                  >
                     {filter}
                   </Text>
                 </TouchableOpacity>
@@ -114,7 +139,10 @@ export default function CashManagementScreen() {
 
           {currentData && (
             <>
-              <CashMetrics summary={currentData.summary} status={currentData.status} />
+              <CashMetrics
+                summary={currentData.summary}
+                status={currentData.status}
+              />
               <RecentDeposits deposits={currentData.recent_deposits} />
             </>
           )}
@@ -183,21 +211,21 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(8),
     borderRadius: scale(20),
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
     marginRight: scale(8),
   },
   filterPillActive: {
-    backgroundColor: '#FA8C4C',
-    borderColor: '#FA8C4C',
+    backgroundColor: "#FA8C4C",
+    borderColor: "#FA8C4C",
   },
   filterText: {
-    color: '#6B7280',
+    color: "#6B7280",
     fontSize: moderateScale(13, 0.3),
     fontWeight: "500",
   },
   filterTextActive: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontWeight: "600",
   },
 });

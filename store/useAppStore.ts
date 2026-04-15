@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 export interface User {
   id: string;
@@ -25,7 +25,12 @@ export interface AnalyticsData {
   revenue_total: number;
   revenue_change_percent: number;
   weekly_revenue: Array<{ label: string; value: number }>;
-  metric_tiles: Array<{ label: string; value: any; change_percent?: number; subtitle?: string }>;
+  metric_tiles: Array<{
+    label: string;
+    value: any;
+    change_percent?: number;
+    subtitle?: string;
+  }>;
   summary_stats: Array<{ label: string; value: any }>;
   revenue_comparison: Array<{ label: string; value: number }>;
   covers_total: number;
@@ -56,7 +61,6 @@ export interface CashOverviewData {
   };
 }
 
-
 interface AppState {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
@@ -76,7 +80,7 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       isDarkMode: false,
       toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
-      
+
       user: null,
       tokens: null,
       analyticsData: null,
@@ -85,11 +89,17 @@ export const useAppStore = create<AppState>()(
       setTokens: (tokens: Tokens | null) => set({ tokens }),
       setAnalyticsData: (data) => set({ analyticsData: data }),
       setCashOverviewData: (data) => set({ cashOverviewData: data }),
-      logout: () => set({ user: null, tokens: null, analyticsData: null, cashOverviewData: null }),
+      logout: () =>
+        set({
+          user: null,
+          tokens: null,
+          analyticsData: null,
+          cashOverviewData: null,
+        }),
     }),
     {
-      name: 'app-storage',
+      name: "app-storage",
       storage: createJSONStorage(() => AsyncStorage),
-    }
-  )
+    },
+  ),
 );
