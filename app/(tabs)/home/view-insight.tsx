@@ -1,48 +1,110 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-import { ArrowDownTrayIcon } from 'react-native-heroicons/outline';
-import { Stack, useRouter } from 'expo-router';
+import { useFocusEffect } from "@react-navigation/native";
+import { Stack, useNavigation, useRouter } from "expo-router";
+import React from "react";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { ArrowDownTrayIcon, BellIcon } from "react-native-heroicons/outline";
+import { Feather } from "@expo/vector-icons";
+import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 // Components
-import Header from '../../../components/ui/Header';
-import { Feather } from "@expo/vector-icons";
-import InsightSummaryCard from '../../../components/home/view-insight/InsightSummaryCard';
-import RootCauses from '../../../components/home/view-insight/RootCauses';
-import RecommendedActions from '../../../components/home/view-insight/RecommendedActions';
-import OtherInsights from '../../../components/home/view-insight/OtherInsights';
+import InsightSummaryCard from "../../../components/home/view-insight/InsightSummaryCard";
+import OtherInsights from "../../../components/home/view-insight/OtherInsights";
+import RecommendedActions from "../../../components/home/view-insight/RecommendedActions";
+import RootCauses from "../../../components/home/view-insight/RootCauses";
 
 export default function ViewInsightScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const parent = navigation.getParent();
+      parent?.setOptions({
+        tabBarStyle: { display: "none" },
+      });
+      return () => {
+        parent?.setOptions({
+          tabBarStyle: {
+            display: "flex",
+            position: "absolute",
+            backgroundColor: "#FFF0E5",
+            borderTopLeftRadius: scale(20),
+            borderTopRightRadius: scale(20),
+            height: verticalScale(60),
+            paddingBottom: verticalScale(8),
+            paddingTop: verticalScale(8),
+            borderTopWidth: 0,
+            elevation: 10,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+          },
+        });
+      };
+    }, [navigation]),
+  );
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
-      
-      <ScrollView 
+      <Stack.Screen 
+        options={{ 
+          headerShown: true,
+          title: "AI Business Insight",
+          headerTitleAlign: "center",
+          headerTitleStyle: {
+            fontSize: moderateScale(18, 0.3),
+            fontWeight: "700",
+            color: "#111827",
+          },
+          headerStyle: {
+            backgroundColor: "#FFFFFF",
+          },
+          headerShadowVisible: false,
+          headerLeft: () => (
+            <TouchableOpacity 
+              style={[styles.headerIconButton, { marginLeft: scale(4) }]} 
+              onPress={() => router.back()}
+              activeOpacity={0.7}
+            >
+              <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity style={[styles.headerIconButton, { marginRight: scale(4) }]} activeOpacity={0.7}>
+              <BellIcon size={moderateScale(20)} color="#111827" />
+              <View style={styles.notificationDot} />
+            </TouchableOpacity>
+          )
+        }} 
+      />
+
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
-          { 
+          {
             paddingTop: verticalScale(16),
-            paddingBottom: verticalScale(120) 
-          }
+            paddingBottom: verticalScale(120),
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Header 
-          title="AI Business Insight" 
-          showBack={true} 
-          showBell={true} 
-          titleAlign="left"
-        />
         <InsightSummaryCard />
         <RootCauses />
         <RecommendedActions />
         <OtherInsights />
       </ScrollView>
 
-      <View style={[styles.bottomContainer, { paddingBottom: verticalScale(20) }]}>
+      <View
+        style={[styles.bottomContainer, { paddingBottom: verticalScale(20) }]}
+      >
         <TouchableOpacity style={styles.exportButton}>
           <ArrowDownTrayIcon size={moderateScale(20)} color="#FFFFFF" />
           <Text style={styles.exportText}>Export</Text>
@@ -55,7 +117,7 @@ export default function ViewInsightScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
@@ -66,10 +128,20 @@ const styles = StyleSheet.create({
   notificationButton: {
     padding: scale(8),
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: "#E5E7EB",
     borderRadius: scale(100),
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerIconButton: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    backgroundColor: "#F9FAFB",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   notificationDot: {
     position: "absolute",
@@ -100,28 +172,28 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   bottomContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: scale(20),
     paddingTop: verticalScale(16),
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: "#F3F4F6",
   },
   exportButton: {
-    backgroundColor: '#FA8C4C',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#FA8C4C",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     height: verticalScale(50),
     borderRadius: scale(12),
   },
   exportText: {
     fontSize: moderateScale(16, 0.3),
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
     marginLeft: scale(8),
   },
 });
