@@ -11,14 +11,14 @@ import {
   View,
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import apiClient from "../../../api/apiClient";
 import BottomActions from "../../../components/home/upload-invoice/BottomActions";
 import ExtractionStatus from "../../../components/home/upload-invoice/ExtractionStatus";
 import LineItems from "../../../components/home/upload-invoice/LineItems";
 import SupplierInfo from "../../../components/home/upload-invoice/SupplierInfo";
 import UploadActions from "../../../components/home/upload-invoice/UploadActions";
-import { useAppStore } from "../../../store/useAppStore";
-import apiClient from "../../../api/apiClient";
 import Header from "../../../components/ui/Header";
+import { useAppStore } from "../../../store/useAppStore";
 
 export default function UploadInvoiceScreen() {
   const navigation = useNavigation();
@@ -37,7 +37,11 @@ export default function UploadInvoiceScreen() {
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleFileUpload = async (file: { uri: string; type: string; name: string }) => {
+  const handleFileUpload = async (file: {
+    uri: string;
+    type: string;
+    name: string;
+  }) => {
     if (!tokens?.access_token) return;
 
     setIsExtracting(true);
@@ -65,18 +69,22 @@ export default function UploadInvoiceScreen() {
               : 30; // 70% for upload, 30% for AI processing
             setUploadProgress(10 + progress);
           },
-        }
+        },
       );
+
+      console.log("Uploaded Document Analysis Data:", JSON.stringify(response.data, null, 2));
 
       setExtractionData(response.data);
       if (response.data.line_items) {
-        const mapped = response.data.line_items.map((item: any, idx: number) => ({
-          id: idx + 1,
-          product: item.product_name || '',
-          qty: String(item.quantity || ''),
-          price: String(item.unit_price || ''),
-          total: String(item.total_price || ''),
-        }));
+        const mapped = response.data.line_items.map(
+          (item: any, idx: number) => ({
+            id: idx + 1,
+            product: item.product_name || "",
+            qty: String(item.quantity || ""),
+            price: String(item.unit_price || ""),
+            total: String(item.total_price || ""),
+          }),
+        );
         setLineItems(mapped);
       }
       setUploadProgress(100);
@@ -88,7 +96,10 @@ export default function UploadInvoiceScreen() {
     }
   };
 
-  const subtotal = lineItems.reduce((acc, item) => acc + (parseFloat(item.total) || 0), 0);
+  const subtotal = lineItems.reduce(
+    (acc, item) => acc + (parseFloat(item.total) || 0),
+    0,
+  );
   const vat = subtotal * 0.1;
   const totalAmount = subtotal + vat;
 
@@ -98,11 +109,12 @@ export default function UploadInvoiceScreen() {
     setIsSaving(true);
     try {
       const payload = {
-        supplier_name: extractionData.supplier_name,
-        invoice_number: extractionData.invoice_number,
-        invoice_date: extractionData.invoice_date || new Date().toISOString().split('T')[0],
+        supplier_name: extractionData.counterparty_name || "Unknown",
+        invoice_number: extractionData.document_number || "Unknown",
+        invoice_date:
+          extractionData.document_date || new Date().toISOString().split("T")[0],
         total_amount: totalAmount,
-        line_items: lineItems.map(item => ({
+        line_items: lineItems.map((item) => ({
           product_name: item.product,
           quantity: parseFloat(item.qty) || 0,
           unit_price: parseFloat(item.price) || 0,
@@ -110,11 +122,14 @@ export default function UploadInvoiceScreen() {
         })),
         source_file_name: selectedFile?.name || "unnamed_file",
         ai_provider: extractionData.ai_provider || "openai",
-        ai_summary: extractionData.ai_summary || ""
+        ai_summary: extractionData.ai_summary || "",
       };
 
-      await apiClient.post("/api/v1/restaurant/documents/confirm-save", payload);
-      
+      await apiClient.post(
+        "/api/v1/restaurant/documents/confirm-save",
+        payload,
+      );
+
       alert("Invoice saved successfully!");
       if (router.canGoBack()) {
         router.dismissAll();
@@ -128,7 +143,9 @@ export default function UploadInvoiceScreen() {
     }
   };
 
-  const onFileSelected = (file: { uri: string; type: "image" | "pdf"; name: string } | null) => {
+  const onFileSelected = (
+    file: { uri: string; type: "image" | "pdf"; name: string } | null,
+  ) => {
     setSelectedFile(file);
     setExtractionData(null);
     if (file) {
@@ -217,19 +234,19 @@ export default function UploadInvoiceScreen() {
               <>
                 <Text style={styles.sectionTitle}>Supplier Information</Text>
                 <SupplierInfo
-                  name={extractionData.supplier_name}
-                  invoiceNumber={extractionData.invoice_number}
-                  invoiceDate={extractionData.invoice_date}
+                  name={extractionData.counterparty_name}
+                  invoiceNumber={extractionData.document_number}
+                  invoiceDate={extractionData.document_date}
                 />
 
                 <Text style={styles.sectionTitle}>Line Items</Text>
                 <LineItems
-                   isEditing={isEditing}
-                   items={lineItems}
-                   onItemsChange={setLineItems}
-                   total={totalAmount}
-                   subtotal={subtotal}
-                   vat={vat}
+                  isEditing={isEditing}
+                  items={lineItems}
+                  onItemsChange={setLineItems}
+                  total={totalAmount}
+                  subtotal={subtotal}
+                  vat={vat}
                 />
 
                 <View style={styles.spacer} />

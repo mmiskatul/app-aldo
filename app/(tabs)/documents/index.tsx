@@ -26,6 +26,7 @@ export default function DocumentsScreen() {
   const fetchDocuments = async () => {
     try {
       const response = await apiClient.get("/api/v1/restaurant/documents");
+      console.log("Documents Fetch Response [0]:", JSON.stringify(response.data.items?.[0], null, 2));
       setDocuments(response.data.items || []);
       setBannerData({
         title: response.data.ai_banner_title,

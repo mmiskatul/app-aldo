@@ -118,9 +118,9 @@ export default function RecentDocumentsList({ documents, loading }: RecentDocume
 
   const displayDocs: DocumentProp[] = (documents || []).map(item => ({
     id: item.id,
-    supplier: item.supplier_name || 'Unknown Supplier',
-    invoiceNumber: item.invoice_number || 'N/A',
-    date: item.invoice_date_formatted || 'N/A',
+    supplier: item.counterparty_name || item.supplier_name || 'Unknown Supplier',
+    invoiceNumber: item.document_number || item.invoice_number || 'N/A',
+    date: item.document_date || item.invoice_date_formatted || item.invoice_date || 'N/A',
     amount: `€${(item.total_amount || 0).toFixed(2)}`,
     itemCount: item.line_item_count || 0,
     status: getStatus(item.status),

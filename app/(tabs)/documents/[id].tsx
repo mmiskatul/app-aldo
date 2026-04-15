@@ -68,6 +68,9 @@ export default function DocumentDetailsScreen() {
 
     setEditableData({
       ...data,
+      supplier_name: data.counterparty_name || data.supplier_name || "",
+      invoice_number: data.document_number || data.invoice_number || "",
+      invoice_date: data.document_date || data.invoice_date || "",
       vat_amount: vatAmount,
       total_amount: totalAmount,
     });
@@ -314,12 +317,15 @@ export default function DocumentDetailsScreen() {
 
         <DocumentInformation
           supplierName={
-            isEditing ? editableData.supplier_name : data.supplier_name
+            isEditing 
+                ? editableData.supplier_name 
+                : (data.counterparty_name || data.supplier_name)
           }
           invoiceNumber={
             isEditing
               ? editableData.invoice_number
               : (
+                  data.document_number ||
                   data.invoice_number_display ||
                   data.invoice_number ||
                   "N/A"
@@ -333,7 +339,7 @@ export default function DocumentDetailsScreen() {
           invoiceDate={
             isEditing
               ? editableData.invoice_date
-              : data.invoice_date_formatted || data.invoice_date || "N/A"
+              : (data.document_date || data.invoice_date_formatted || data.invoice_date || "N/A")
           }
           uploadDate={
             (data.upload_date_formatted || data.upload_date || "N/A").split(
