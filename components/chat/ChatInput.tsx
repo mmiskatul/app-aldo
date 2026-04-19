@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
-import Voice from "@react-native-voice/voice";
+
 
 interface ChatInputProps {
   onSend?: (text: string) => void;
@@ -21,27 +21,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   const insets = useSafeAreaInsets();
   const [inputText, setInputText] = useState("");
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-  const [isRecordActive, setIsRecordActive] = useState(false);
-
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    Voice.onSpeechStart = () => setIsRecordActive(true);
-    Voice.onSpeechEnd = () => setIsRecordActive(false);
-    Voice.onSpeechResults = (e: any) => {
-      if (e.value && e.value.length > 0) {
-        setInputText(e.value[0]);
-      }
-    };
-    Voice.onSpeechError = (e: any) => {
-      console.error("Voice framework error:", e.error);
-      setIsRecordActive(false);
-    };
-
-    return () => {
-      Voice.destroy().then(Voice.removeAllListeners);
-    };
-  }, []);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
@@ -72,23 +52,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     }
   };
 
-  const handleMicPress = async () => {
-    if (isRecordActive) {
-      try {
-        await Voice.stop();
-      } catch (e) {
-        console.error(e);
-      }
-      return;
-    }
 
-    try {
-      await Voice.start("en-US");
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Permission Error", "Please ensure your device allows microphone access and speech recognition.");
-    }
-  };
 
   const dynamicBottomPadding = isKeyboardVisible 
     ? Platform.OS === 'android' ? keyboardHeight + verticalScale(5) : verticalScale(15)
@@ -110,16 +74,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
           onChangeText={setInputText}
         />
 
-        <TouchableOpacity 
-          style={[styles.micButton, isRecordActive && styles.micButtonActive]} 
-          onPress={handleMicPress}
-        >
-          <Feather 
-            name="mic" 
-            size={moderateScale(18)} 
-            color={isRecordActive ? "#FFFFFF" : "#6B7280"} 
-          />
-        </TouchableOpacity>
+
 
         <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
           <Feather
@@ -168,18 +123,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(1),
     maxHeight: verticalScale(100),
   },
-  micButton: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(18),
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: scale(8),
-  },
-  micButtonActive: {
-    backgroundColor: '#EF4444', // Red when actively recording
-  },
+
   sendButton: {
     width: moderateScale(36),
     height: moderateScale(36),

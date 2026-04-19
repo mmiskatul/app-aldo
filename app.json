@@ -35,13 +35,6 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      [
-        "@react-native-voice/voice",
-        {
-          "microphonePermission": "Allow Aldo to access your microphone for voice-to-text chat.",
-          "speechRecognitionPermission": "Allow Aldo to securely recognize user speech for chat input."
-        }
-      ]
     ],
     "experiments": {
       "typedRoutes": true,
