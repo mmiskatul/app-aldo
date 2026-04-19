@@ -1,12 +1,13 @@
 import React from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { useTranslation } from "../../utils/i18n";
 
 interface LanguageModalProps {
   visible: boolean;
   onClose: () => void;
-  selectedLang: "Eng" | "Ita";
-  onSelectLang: (lang: "Eng" | "Ita") => void;
+  selectedLang: "en" | "it";
+  onSelectLang: (lang: "en" | "it") => void;
 }
 
 export default function LanguageModal({
@@ -15,6 +16,7 @@ export default function LanguageModal({
   selectedLang,
   onSelectLang,
 }: LanguageModalProps) {
+  const { t } = useTranslation();
   return (
     <Modal
       visible={visible}
@@ -31,36 +33,36 @@ export default function LanguageModal({
           <TouchableOpacity
             style={[
               styles.langOptionBtn,
-              selectedLang === "Eng" ? styles.langOptionBtnActive : null,
+              selectedLang === "en" ? styles.langOptionBtnActive : null,
             ]}
-            onPress={() => onSelectLang("Eng")}
+            onPress={() => onSelectLang("en")}
           >
             <Text style={styles.flagEmoji}>🇺🇸</Text>
             <Text
               style={[
                 styles.langOptionText,
-                selectedLang === "Eng" ? styles.langOptionTextActive : null,
+                selectedLang === "en" ? styles.langOptionTextActive : null,
               ]}
             >
-              English
+              {t('english')}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.langOptionBtn,
-              selectedLang === "Ita" ? styles.langOptionBtnActive : null,
+              selectedLang === "it" ? styles.langOptionBtnActive : null,
             ]}
-            onPress={() => onSelectLang("Ita")}
+            onPress={() => onSelectLang("it")}
           >
             <Text style={styles.flagEmoji}>🇮🇹</Text>
             <Text
               style={[
                 styles.langOptionText,
-                selectedLang === "Ita" ? styles.langOptionTextActive : null,
+                selectedLang === "it" ? styles.langOptionTextActive : null,
               ]}
             >
-              Italian
+              {t('italian')}
             </Text>
           </TouchableOpacity>
         </View>

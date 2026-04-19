@@ -2,25 +2,30 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
+import { useAppStore } from '../../store/useAppStore';
+import { useTranslation } from '../../utils/i18n';
+
 export default function LanguageSelector() {
-  const [selected, setSelected] = useState<'en' | 'it'>('en');
+  const { t } = useTranslation();
+  const appLanguage = useAppStore((state) => state.appLanguage);
+  const setAppLanguage = useAppStore((state) => state.setAppLanguage);
 
   return (
     <View style={styles.container}>
       <TouchableOpacity 
-        style={[styles.option, selected === 'en' && styles.selectedOption]}
-        onPress={() => setSelected('en')}
+        style={[styles.option, appLanguage === 'en' && styles.selectedOption]}
+        onPress={() => setAppLanguage('en')}
       >
         <Text style={styles.flag}>🇺🇸</Text>
-        <Text style={[styles.label, selected === 'en' && styles.selectedLabel]}>English</Text>
+        <Text style={[styles.label, appLanguage === 'en' && styles.selectedLabel]}>{t('english')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity 
-        style={[styles.option, selected === 'it' && styles.selectedOption]}
-        onPress={() => setSelected('it')}
+        style={[styles.option, appLanguage === 'it' && styles.selectedOption]}
+        onPress={() => setAppLanguage('it')}
       >
         <Text style={styles.flag}>🇮🇹</Text>
-        <Text style={[styles.label, selected === 'it' && styles.selectedLabel]}>Italian</Text>
+        <Text style={[styles.label, appLanguage === 'it' && styles.selectedLabel]}>{t('italian')}</Text>
       </TouchableOpacity>
     </View>
   );

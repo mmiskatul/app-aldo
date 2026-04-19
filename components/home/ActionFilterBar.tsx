@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import {
-  ArrowDownTrayIcon,
-  ChevronDownIcon,
-} from "react-native-heroicons/outline";
+import { ArrowDownTrayIcon, ChevronDownIcon } from "react-native-heroicons/outline";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { useTranslation } from "../../utils/i18n";
 
 interface ActionFilterBarProps {
   activePeriod: string;
@@ -19,10 +17,11 @@ export default function ActionFilterBar({
   onPeriodChange,
   onExport,
 }: ActionFilterBarProps) {
+  const { t } = useTranslation();
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isPeriodMenuOpen, setIsPeriodMenuOpen] = useState(false);
 
-  const formatPeriod = (p: string) => p.charAt(0).toUpperCase() + p.slice(1);
+  const formatPeriod = (p: string) => t(p as any);
 
   return (
     <View style={styles.container}>
@@ -33,7 +32,7 @@ export default function ActionFilterBar({
           onPress={() => setIsExportMenuOpen(true)}
         >
           <ArrowDownTrayIcon size={moderateScale(14)} color="#111827" />
-          <Text style={styles.actionText}>Export Data</Text>
+          <Text style={styles.actionText}>{t('export_data')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

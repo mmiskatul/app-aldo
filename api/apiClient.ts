@@ -25,9 +25,12 @@ const processQueue = (error: any, token: string | null = null) => {
 // Request interceptor: Attach token
 apiClient.interceptors.request.use(
   (config) => {
-    const tokens = useAppStore.getState().tokens;
+    const { tokens, appLanguage } = useAppStore.getState();
     if (tokens?.access_token) {
       config.headers.Authorization = `Bearer ${tokens.access_token}`;
+    }
+    if (appLanguage) {
+      config.headers['Accept-Language'] = appLanguage;
     }
     return config;
   },

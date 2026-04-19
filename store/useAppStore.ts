@@ -82,6 +82,8 @@ interface AppState {
   setAnalyticsData: (data: AnalyticsData | null) => void;
   setCashOverviewData: (data: CashOverviewData | null) => void;
   setVatOverviewData: (data: VatOverviewData | null) => void;
+  appLanguage: 'en' | 'it';
+  setAppLanguage: (lang: 'en' | 'it') => void;
   logout: () => void;
 }
 
@@ -101,6 +103,8 @@ export const useAppStore = create<AppState>()(
       setAnalyticsData: (data) => set({ analyticsData: data }),
       setCashOverviewData: (data) => set({ cashOverviewData: data }),
       setVatOverviewData: (data) => set({ vatOverviewData: data }),
+      appLanguage: 'en',
+      setAppLanguage: (lang) => set({ appLanguage: lang }),
       logout: () =>
         set({
           user: null,

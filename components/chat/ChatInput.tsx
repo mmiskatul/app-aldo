@@ -13,11 +13,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import * as DocumentPicker from "expo-document-picker";
 import { Image, Text } from "react-native";
+import { useTranslation } from "../../utils/i18n";
 interface ChatInputProps {
   onSend?: (text: string, file?: any) => void;
 }
 
 export default function ChatInput({ onSend }: ChatInputProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [inputText, setInputText] = useState("");
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
@@ -103,7 +105,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
 
         <TextInput
           style={styles.textInput}
-          placeholder="Ask AI about your restaurant business..."
+          placeholder={t('chat_placeholder')}
           placeholderTextColor="#9CA3AF"
           multiline
           value={inputText}

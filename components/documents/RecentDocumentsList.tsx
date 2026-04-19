@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from '../../utils/i18n';
 
 interface DocumentProp {
   id: string;
@@ -49,6 +50,7 @@ const MOCK_DOCS: DocumentProp[] = [
 ];
 
 const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
+  const { t } = useTranslation();
   const isPending = doc.status === 'Pending Review';
 
   return (
@@ -60,7 +62,7 @@ const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
         </View>
         <View style={[styles.statusBadge, isPending ? styles.statusWarning : styles.statusSuccess]}>
           <Text style={[styles.statusText, isPending ? styles.statusWarningText : styles.statusSuccessText]}>
-            {doc.status}
+            {doc.status === 'Pending Review' ? t('status_pending') : t('status_processed')}
           </Text>
         </View>
       </View>
@@ -68,7 +70,7 @@ const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
       <View style={styles.amountRow}>
         <Text style={styles.amountText}>{doc.amount}</Text>
         <View style={styles.metaBox}>
-          <Text style={styles.itemCountText}>{doc.itemCount} ITEMS</Text>
+          <Text style={styles.itemCountText}>{doc.itemCount} {t('items')}</Text>
           <View style={styles.divider} />
           <Text style={[styles.tagText, isPending && styles.tagWarningText]}>{doc.tag}</Text>
         </View>
@@ -78,7 +80,7 @@ const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
         <View style={styles.actionRowWarning}>
           <TouchableOpacity style={styles.reviewButton} onPress={() => router.push(`/(tabs)/documents/${doc.id}`)}>
             <Feather name="file-text" size={moderateScale(14)} color="#FA8C4C" style={{ marginRight: scale(6)}} />
-            <Text style={styles.reviewButtonText}>Review</Text>
+            <Text style={styles.reviewButtonText}>{t('review')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.moreButton}>
             <Feather name="more-horizontal" size={moderateScale(16)} color="#4B5563" />
@@ -88,7 +90,7 @@ const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
         <View style={styles.actionRowPrimary}>
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push(`/(tabs)/documents/${doc.id}`)}>
             <Feather name="eye" size={moderateScale(14)} color="#4B5563" style={{ marginRight: scale(6)}} />
-            <Text style={styles.actionButtonText}>View</Text>
+            <Text style={styles.actionButtonText}>{t('view')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -103,6 +105,7 @@ interface RecentDocumentsListProps {
 
 export default function RecentDocumentsList({ documents, loading }: RecentDocumentsListProps) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   if (loading) {
     return (
@@ -131,7 +134,7 @@ export default function RecentDocumentsList({ documents, loading }: RecentDocume
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Recent Documents</Text>
+      <Text style={styles.sectionTitle}>{t('recent_documents')}</Text>
       {docsToRender.length > 0 ? (
         docsToRender.map(doc => (
           <DocumentCard key={doc.id} doc={doc} router={router} />
@@ -139,8 +142,8 @@ export default function RecentDocumentsList({ documents, loading }: RecentDocume
       ) : (
         <View style={styles.emptyStateContainer}>
           <Feather name="file-text" size={moderateScale(48)} color="#E5E7EB" />
-          <Text style={styles.emptyStateText}>No documents found</Text>
-          <Text style={styles.emptyStateSubtext}>Upload an invoice to get started</Text>
+          <Text style={styles.emptyStateText}>{t('no_documents')}</Text>
+          <Text style={styles.emptyStateSubtext}>{t('no_documents_subtext')}</Text>
         </View>
       )}
     </View>

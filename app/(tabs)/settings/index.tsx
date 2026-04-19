@@ -9,14 +9,16 @@ import ProfileCard from '../../../components/settings/ProfileCard';
 import SettingsList from '../../../components/settings/SettingsList';
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
+import { useTranslation } from '../../../utils/i18n';
 
 export default function SettingsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const logout = useAppStore((state) => state.logout);
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Settings" />
+      <Header title={t('settings_title')} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <ProfileCard
@@ -26,24 +28,24 @@ export default function SettingsScreen() {
         <LanguageSelector />
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ACCOUNT SETTINGS</Text>
+          <Text style={styles.sectionTitle}>{t('account_settings')}</Text>
           <SettingsList
             items={[
-              { icon: 'credit-card', label: 'Manage Subscription', iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
-              { icon: 'bell', label: 'Notification Settings', iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
-              { icon: 'lock', label: 'Change Password', iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
-              { icon: 'shield', label: 'Two-Factor Authentication', iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
+              { icon: 'credit-card', label: t('manage_subscription'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
+              { icon: 'bell', label: t('notification_settings'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
+              { icon: 'lock', label: t('change_password'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
+              { icon: 'shield', label: t('two_factor_auth'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
             ]}
           />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>SUPPORT & LEGAL</Text>
+          <Text style={styles.sectionTitle}>{t('support_legal')}</Text>
           <SettingsList
             items={[
-              { icon: 'file-text', label: 'Terms & Conditions', iconBg: '#F0F9FF', iconColor: '#0EA5E9' },
-              { icon: 'shield', label: 'Privacy Policy', iconBg: '#F0F9FF', iconColor: '#0EA5E9' },
-              { icon: 'help-circle', label: 'Help Center', iconBg: '#F0F9FF', iconColor: '#0EA5E9' },
+              { icon: 'file-text', label: t('terms_conditions'), iconBg: '#F0F9FF', iconColor: '#0EA5E9' },
+              { icon: 'shield', label: t('privacy_policy'), iconBg: '#F0F9FF', iconColor: '#0EA5E9' },
+              { icon: 'help-circle', label: t('help_center'), iconBg: '#F0F9FF', iconColor: '#0EA5E9' },
             ]}
           />
         </View>
@@ -56,7 +58,7 @@ export default function SettingsScreen() {
           }}
         >
           <Feather name="log-out" size={moderateScale(18)} color="#EF4444" />
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t('sign_out')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

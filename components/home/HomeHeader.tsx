@@ -3,6 +3,8 @@ import { Image, StyleSheet, Text, TouchableOpacity, View, TouchableWithoutFeedba
 import { BellIcon, ChevronDownIcon } from "react-native-heroicons/outline";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import LanguageModal from "./LanguageModal";
+import { useAppStore } from "../../store/useAppStore";
+import { useTranslation } from "../../utils/i18n";
 
 interface HomeHeaderProps {
   greetingName?: string;
@@ -11,10 +13,10 @@ interface HomeHeaderProps {
 }
 
 export default function HomeHeader({ greetingName, restaurantName, preferredLanguage }: HomeHeaderProps) {
+  const { t } = useTranslation();
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
-  const [selectedLang, setSelectedLang] = useState<"Eng" | "Ita">(
-    preferredLanguage === "it" ? "Ita" : "Eng"
-  );
+  const appLanguage = useAppStore((state) => state.appLanguage);
+  const setAppLanguage = useAppStore((state) => state.setAppLanguage);
 
   return (
     <View style={styles.container}>
@@ -27,10 +29,10 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
         />
         <View style={styles.textContainer}>
           <Text style={styles.restaurantName} numberOfLines={1}>
-            {restaurantName ? restaurantName.toUpperCase() : "THE GOLDEN BISTRO"}
+            {restaurantName ? restaurantName.toUpperCase() : t('restaurant_name_fallback')}
           </Text>
           <Text style={styles.greeting} numberOfLines={1}>
-            Good Morning,
+            {t('greeting')}
           </Text>
           <Text style={styles.greeting} numberOfLines={1}>
             {greetingName || "Marco"}
@@ -48,7 +50,9 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
           style={[styles.langSelector, isLangMenuOpen && styles.langSelectorActive]}
           onPress={() => setIsLangMenuOpen(true)}
         >
-          <Text style={[styles.langText, isLangMenuOpen && styles.langTextActive]}>{selectedLang}</Text>
+          <Text style={[styles.langText, isLangMenuOpen && styles.langTextActive]}>
+            {appLanguage === 'it' ? 'Ita' : 'Eng'}
+          </Text>
           <ChevronDownIcon size={moderateScale(16)} color={isLangMenuOpen ? "#FA8C4C" : "#111827"} />
         </TouchableOpacity>
       </View>
@@ -56,9 +60,9 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
       <LanguageModal
         visible={isLangMenuOpen}
         onClose={() => setIsLangMenuOpen(false)}
-        selectedLang={selectedLang}
+        selectedLang={appLanguage}
         onSelectLang={(lang) => {
-          setSelectedLang(lang);
+          setAppLanguage(lang);
           setIsLangMenuOpen(false);
         }}
       />

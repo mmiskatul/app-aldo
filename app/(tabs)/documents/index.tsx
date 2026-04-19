@@ -15,8 +15,10 @@ import Header from "../../../components/ui/Header";
 import AIExtractionBanner from "../../../components/documents/AIExtractionBanner";
 import RecentDocumentsList from "../../../components/documents/RecentDocumentsList";
 import apiClient from "../../../api/apiClient";
+import { useTranslation } from "../../../utils/i18n";
 
 export default function DocumentsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [documents, setDocuments] = useState<any[]>([]);
   const [bannerData, setBannerData] = useState({ title: "", subtitle: "" });
@@ -53,7 +55,7 @@ export default function DocumentsScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Documents" showBell={true} />
+      <Header title={t('documents_title')} showBell={true} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -76,7 +78,7 @@ export default function DocumentsScreen() {
               color="#FFFFFF"
               style={{ marginRight: scale(6) }}
             />
-            <Text style={styles.uploadBtnText}>Upload Invoice</Text>
+            <Text style={styles.uploadBtnText}>{t('upload_invoice')}</Text>
           </TouchableOpacity>
         </View>
 

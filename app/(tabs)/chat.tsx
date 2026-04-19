@@ -14,8 +14,10 @@ import ChatMessage from "../../components/chat/ChatMessage";
 import QuickPrompts from "../../components/chat/QuickPrompts";
 import Header from "../../components/ui/Header";
 import { useAppStore } from "../../store/useAppStore";
+import { useTranslation } from "../../utils/i18n";
 
 export default function ChatScreen() {
+  const { t } = useTranslation();
   const tokens = useAppStore((state) => state.tokens);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +155,7 @@ export default function ChatScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         enabled={Platform.OS === "ios"}
       >
-        <Header title="AI Chat" showBell={true} />
+        <Header title={t('chat_title')} showBell={true} />
 
         {loading ? (
           <View
