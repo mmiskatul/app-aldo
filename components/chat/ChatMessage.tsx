@@ -1,16 +1,25 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { BotIcon } from '@hugeicons/core-free-icons';
+import { Feather } from '@expo/vector-icons';
 
 interface ChatMessageProps {
-  message: string;
+  message?: string;
   sender: 'ai' | 'user';
+  attachment_name?: string | null;
+  attachment_source?: string | null;
+  isTyping?: boolean;
 }
 
-export default function ChatMessage({ message, sender }: ChatMessageProps) {
+export default function ChatMessage({ message, sender, attachment_name, attachment_source, isTyping }: ChatMessageProps) {
   const isUser = sender === 'user';
+  
+  // Determine if we should show an image preview (local URI or remote valid URL)
+  const isImageAttachment = attachment_name?.match(/\.(jpg|jpeg|png)$/i) || attachment_source?.match(/\.(jpg|jpeg|png)$/i);
+  // Remove wrapping quotes from message
+  const cleanMessage = message?.replace(/^"|"$/g, '');
 
   return (
     <View style={[styles.container, isUser ? styles.containerUser : styles.containerAi]}>
@@ -25,9 +34,32 @@ export default function ChatMessage({ message, sender }: ChatMessageProps) {
           {isUser ? 'YOU' : 'RISTO AI'}
         </Text>
         <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAi]}>
-          <Text style={[styles.messageText, isUser ? styles.textUser : styles.textAi]}>
-            {message}
-          </Text>
+          {(attachment_source || attachment_name) && (
+            <View style={styles.attachmentWrapper}>
+              {isImageAttachment && attachment_source ? (
+                <Image 
+                  source={{ uri: attachment_source }} 
+                  style={styles.attachmentImage} 
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.attachmentFileBadge}>
+                  <Feather name="file" size={moderateScale(14)} color={isUser ? "#FFFFFF" : "#FA8C4C"} />
+                  <Text style={[styles.attachmentFileName, isUser ? styles.textUser : styles.textAi]} numberOfLines={1}>
+                    {attachment_name || "Attached File"}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {isTyping ? (
+            <ActivityIndicator size="small" color="#FA8C4C" />
+          ) : cleanMessage ? (
+            <Text style={[styles.messageText, isUser ? styles.textUser : styles.textAi]}>
+              {cleanMessage}
+            </Text>
+          ) : null}
         </View>
       </View>
     </View>
@@ -101,5 +133,28 @@ const styles = StyleSheet.create({
   },
   textUser: {
     color: '#FFFFFF',
+  },
+  attachmentWrapper: {
+    marginBottom: verticalScale(6),
+  },
+  attachmentImage: {
+    width: moderateScale(150),
+    height: moderateScale(150),
+    borderRadius: scale(8),
+    marginBottom: verticalScale(4),
+  },
+  attachmentFileBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: verticalScale(6),
+    paddingHorizontal: scale(10),
+    borderRadius: scale(6),
+  },
+  attachmentFileName: {
+    fontSize: moderateScale(12, 0.3),
+    marginLeft: scale(6),
+    fontWeight: '500',
+    maxWidth: scale(140),
   },
 });

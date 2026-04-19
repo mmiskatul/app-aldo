@@ -11,16 +11,18 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
-
-
+import * as DocumentPicker from "expo-document-picker";
+import { Image, Text } from "react-native";
 interface ChatInputProps {
-  onSend?: (text: string) => void;
+  onSend?: (text: string, file?: any) => void;
 }
 
 export default function ChatInput({ onSend }: ChatInputProps) {
   const insets = useSafeAreaInsets();
   const [inputText, setInputText] = useState("");
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<any>(null);
+  
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
@@ -46,9 +48,25 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   }, []);
 
   const handleSend = () => {
-    if (inputText.trim() && onSend) {
-      onSend(inputText);
+    if ((inputText.trim() || selectedFile) && onSend) {
+      onSend(inputText, selectedFile);
       setInputText("");
+      setSelectedFile(null);
+    }
+  };
+
+  const handlePickFile = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["image/*", "application/pdf", "text/csv"],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedFile(result.assets[0]);
+      }
+    } catch (e) {
+      console.error("Error picking document:", e);
     }
   };
 
@@ -60,8 +78,26 @@ export default function ChatInput({ onSend }: ChatInputProps) {
 
   return (
     <View style={[styles.container, { paddingBottom: dynamicBottomPadding }]}>
+      {selectedFile && (
+        <View style={styles.attachmentPreviewContainer}>
+          {selectedFile.mimeType?.startsWith('image/') || selectedFile.name?.match(/\.(jpg|jpeg|png)$/i) ? (
+            <Image source={{ uri: selectedFile.uri }} style={styles.previewImage} />
+          ) : (
+            <View style={styles.fileIconPreview}>
+              <Feather name="file" size={moderateScale(24)} color="#FA8C4C" />
+            </View>
+          )}
+          <View style={styles.attachmentInfo}>
+            <Text style={styles.attachmentName} numberOfLines={1}>{selectedFile.name}</Text>
+          </View>
+          <TouchableOpacity style={styles.removeAttachment} onPress={() => setSelectedFile(null)}>
+            <Feather name="x" size={moderateScale(12)} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.inputWrapper}>
-        <TouchableOpacity style={styles.plusButton}>
+        <TouchableOpacity style={styles.plusButton} onPress={handlePickFile}>
           <Feather name="plus" size={moderateScale(20)} color="#111827" />
         </TouchableOpacity>
 
@@ -115,6 +151,47 @@ const styles = StyleSheet.create({
     height: moderateScale(36),
     justifyContent: "center",
     alignItems: "center",
+  },
+  attachmentPreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    padding: scale(8),
+    borderRadius: scale(8),
+    marginBottom: verticalScale(8),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  previewImage: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: scale(6),
+  },
+  fileIconPreview: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: scale(6),
+    backgroundColor: '#FEF3C7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attachmentInfo: {
+    flex: 1,
+    marginLeft: scale(10),
+  },
+  attachmentName: {
+    fontSize: moderateScale(12, 0.3),
+    color: '#374151',
+    fontWeight: '500',
+  },
+  removeAttachment: {
+    width: moderateScale(24),
+    height: moderateScale(24),
+    borderRadius: moderateScale(12),
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: scale(10),
   },
   textInput: {
     flex: 1,

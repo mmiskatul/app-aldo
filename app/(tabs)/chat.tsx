@@ -19,6 +19,7 @@ export default function ChatScreen() {
   const tokens = useAppStore((state) => state.tokens);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAiTyping, setIsAiTyping] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -55,6 +56,7 @@ export default function ChatScreen() {
     });
 
     socketRef.current.on("chat:conversation", (data: any) => {
+      setIsAiTyping(false);
       setMessages(data.messages || []);
       setTimeout(
         () => scrollViewRef.current?.scrollToEnd({ animated: true }),
@@ -71,8 +73,8 @@ export default function ChatScreen() {
     };
   }, [tokens]);
 
-  const handleSendMessage = (text: string) => {
-    if (!text.trim() || !socketRef.current) return;
+  const handleSendMessage = async (text: string, file?: any) => {
+    if (!text.trim() && !file) return;
 
     // Add locally to seem snappy while waiting for backend emit
     const optimisticMessage = {
@@ -80,6 +82,8 @@ export default function ChatScreen() {
       role: "user",
       message: text.trim(),
       created_at: new Date().toISOString(),
+      attachment_name: file?.name || null,
+      attachment_source: file?.uri || null, // Best-effort local preview
     };
     setMessages((prev) => [...prev, optimisticMessage]);
     setTimeout(
@@ -87,11 +91,58 @@ export default function ChatScreen() {
       100,
     );
 
-    // Send payload
-    socketRef.current.emit("chat:message", {
-      message: text.trim(),
-      attachment_source: null,
-    });
+    if (file) {
+      setIsAiTyping(true);
+      // If a file is selected, upload via REST multipart/form-data
+      try {
+        const formData = new FormData();
+        formData.append("message", text.trim());
+        
+        // Append the file properly for React Native FormData
+        formData.append("file", {
+          uri: file.uri,
+          name: file.name,
+          type: file.mimeType || "application/octet-stream",
+        } as any);
+
+        const response = await apiClient.post("/api/v1/restaurant/chat/messages/attachments", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        setIsAiTyping(false);
+        // The API returns the updated messages array directly
+        if (response.data && Array.isArray(response.data)) {
+          setMessages(response.data);
+          setTimeout(
+            () => scrollViewRef.current?.scrollToEnd({ animated: true }),
+            200,
+          );
+        } else if (response.data?.messages) {
+          setMessages(response.data.messages);
+          setTimeout(
+            () => scrollViewRef.current?.scrollToEnd({ animated: true }),
+            200,
+          );
+        }
+      } catch (error) {
+        setIsAiTyping(false);
+        console.error("Error uploading attachment:", error);
+      }
+    } else {
+      // Send standard text payload via WebSocket
+      if (!socketRef.current) return;
+      setIsAiTyping(true);
+      setTimeout(
+        () => scrollViewRef.current?.scrollToEnd({ animated: true }),
+        100,
+      );
+      socketRef.current.emit("chat:message", {
+        message: text.trim(),
+        attachment_source: null,
+      });
+    }
   };
 
   return (
@@ -130,8 +181,11 @@ export default function ChatScreen() {
                 key={msg.id || index}
                 sender={msg.role === "assistant" ? "ai" : msg.role}
                 message={msg.message}
+                attachment_name={msg.attachment_name}
+                attachment_source={msg.attachment_source}
               />
             ))}
+            {isAiTyping && <ChatMessage sender="ai" isTyping={true} />}
           </ScrollView>
         )}
 
