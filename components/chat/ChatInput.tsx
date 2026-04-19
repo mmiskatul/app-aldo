@@ -23,6 +23,8 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [isRecordActive, setIsRecordActive] = useState(false);
 
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   useEffect(() => {
     Voice.onSpeechStart = () => setIsRecordActive(true);
     Voice.onSpeechEnd = () => setIsRecordActive(false);
@@ -44,11 +46,17 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      () => setKeyboardVisible(true),
+      (e) => {
+        setKeyboardVisible(true);
+        setKeyboardHeight(e.endCoordinates.height);
+      },
     );
     const hideSubscription = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      () => setKeyboardVisible(false),
+      () => {
+        setKeyboardVisible(false);
+        setKeyboardHeight(0);
+      },
     );
 
     return () => {
@@ -82,7 +90,9 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     }
   };
 
-  const dynamicBottomPadding = isKeyboardVisible ? verticalScale(15) : verticalScale(65);
+  const dynamicBottomPadding = isKeyboardVisible 
+    ? Platform.OS === 'android' ? keyboardHeight + verticalScale(5) : verticalScale(15)
+    : verticalScale(65);
 
   return (
     <View style={[styles.container, { paddingBottom: dynamicBottomPadding }]}>

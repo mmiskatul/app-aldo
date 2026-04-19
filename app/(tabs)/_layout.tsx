@@ -27,6 +27,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: "#FA8C4C", // Active color from mockup
         tabBarInactiveTintColor: "#6B7280",
+        tabBarHideOnKeyboard: true,
         tabBarStyle: shouldHideTabBar ? { display: 'none', height: 0, opacity: 0 } : {
           position: "absolute", // Needed for border radii to sit above content seamlessly
           backgroundColor: "#FFF0E5", // Faint orange background from the mockup

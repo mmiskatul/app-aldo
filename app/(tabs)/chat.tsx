@@ -100,6 +100,7 @@ export default function ChatScreen() {
         style={styles.keyboardAvoiding}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        enabled={Platform.OS === "ios"}
       >
         <Header title="AI Chat" showBell={true} />
 
