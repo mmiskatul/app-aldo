@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from '../../utils/i18n';
 
 export interface PhotoPickerModalProps {
   visible: boolean;
@@ -11,6 +12,8 @@ export interface PhotoPickerModalProps {
 }
 
 export default function PhotoPickerModal({ visible, onClose, onSelectCamera, onSelectGallery }: PhotoPickerModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal
       visible={visible}
@@ -22,7 +25,7 @@ export default function PhotoPickerModal({ visible, onClose, onSelectCamera, onS
         <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Choose Profile Photo</Text>
+              <Text style={styles.modalTitle}>{t('choose_profile_photo')}</Text>
               
               <View style={styles.modalOptions}>
                 <TouchableOpacity 
@@ -35,7 +38,7 @@ export default function PhotoPickerModal({ visible, onClose, onSelectCamera, onS
                   <View style={[styles.iconContainer, { backgroundColor: '#F0F9FF' }]}>
                     <Feather name="camera" size={moderateScale(24)} color="#0EA5E9" />
                   </View>
-                  <Text style={styles.modalOptionText}>Camera</Text>
+                  <Text style={styles.modalOptionText}>{t('camera')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
@@ -48,12 +51,12 @@ export default function PhotoPickerModal({ visible, onClose, onSelectCamera, onS
                   <View style={[styles.iconContainer, { backgroundColor: '#FFF7ED' }]}>
                     <Feather name="image" size={moderateScale(24)} color="#FA8C4C" />
                   </View>
-                  <Text style={styles.modalOptionText}>Gallery</Text>
+                  <Text style={styles.modalOptionText}>{t('gallery')}</Text>
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
               </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>

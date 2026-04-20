@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
 import apiClient from '../../../api/apiClient';
+import { useTranslation } from '../../../utils/i18n';
 
 // Components
 import Header from '../../../components/ui/Header';
@@ -13,8 +14,10 @@ import FormInput from '../../../components/settings/edit-profile/FormInput';
 import RestaurantDetailsForm from '../../../components/settings/edit-profile/RestaurantDetailsForm';
 
 export default function EditProfileScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const profile = useAppStore((state) => state.profile);
+  const appLanguage = useAppStore((state) => state.appLanguage);
   const setProfile = useAppStore((state) => state.setProfile);
   const [loading, setLoading] = useState(false);
 
@@ -43,6 +46,7 @@ export default function EditProfileScreen() {
       if (formData.restaurant_type) data.append('restaurant_type', formData.restaurant_type);
       if (formData.city_location) data.append('city_location', formData.city_location);
       if (formData.number_of_seats) data.append('number_of_seats', formData.number_of_seats);
+      if (appLanguage) data.append('preferred_language', appLanguage);
 
       if (formData.profile_image) {
         const localUri = formData.profile_image;
@@ -51,6 +55,8 @@ export default function EditProfileScreen() {
         const type = match ? `image/${match[1]}` : `image/jpeg`;
         data.append('profile_image', { uri: localUri, name: filename, type } as any);
       }
+
+      console.log('Submitting FormData payload:', data);
 
       const response = await apiClient.put('/api/v1/restaurant/settings/profile', data, {
         headers: {
@@ -79,7 +85,7 @@ export default function EditProfileScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Edit User" showBack={true} />
+      <Header title={t('edit_profile')} showBack={true} />
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -93,18 +99,18 @@ export default function EditProfileScreen() {
 
           <View style={styles.formSection}>
             <FormInput 
-              label="User Name" 
+              label={t('user_name')} 
               value={formData.full_name} 
               onChangeText={(text) => updateField('full_name', text)} 
             />
             <FormInput 
-              label="Email Address" 
+              label={t('email_address')} 
               value={formData.email} 
               editable={false} 
               keyboardType="email-address" 
             />
             <FormInput 
-              label="Phone Number" 
+              label={t('phone_number')} 
               value={formData.phone} 
               onChangeText={(text) => updateField('phone', text)} 
               keyboardType="phone-pad" 
@@ -126,13 +132,13 @@ export default function EditProfileScreen() {
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} disabled={loading}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text style={styles.saveButtonText}>Save Changes</Text>
+                <Text style={styles.saveButtonText}>{t('save_changes')}</Text>
               )}
             </TouchableOpacity>
           </View>

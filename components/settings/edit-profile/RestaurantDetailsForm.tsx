@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import FormInput from './FormInput';
+import { useTranslation } from '../../../utils/i18n';
 
 interface RestaurantDetailsFormProps {
   restaurantName?: string;
@@ -24,18 +25,20 @@ export default function RestaurantDetailsForm({
   onChangeCityLocation,
   onChangeNumberOfSeats,
 }: RestaurantDetailsFormProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>RESTAURANT DETAILS</Text>
+      <Text style={styles.sectionTitle}>{t('restaurant_details')}</Text>
       
       <FormInput 
-        label="Restaurant Name" 
+        label={t('restaurant_name')} 
         defaultValue={restaurantName} 
         onChangeText={onChangeRestaurantName}
       />
 
       <FormInput 
-        label="Restaurant Type" 
+        label={t('restaurant_type')} 
         defaultValue={restaurantType} 
         onChangeText={onChangeRestaurantType}
       />
@@ -43,14 +46,14 @@ export default function RestaurantDetailsForm({
       <View style={styles.row}>
         <View style={{ flex: 1, marginRight: scale(8) }}>
           <FormInput 
-            label="City / Location" 
+            label={t('city_location')} 
             defaultValue={cityLocation} 
             onChangeText={onChangeCityLocation}
           />
         </View>
         <View style={{ flex: 1, marginLeft: scale(8) }}>
           <FormInput 
-            label="Number of Seats" 
+            label={t('number_of_seats')} 
             defaultValue={numberOfSeats} 
             keyboardType="numeric" 
             onChangeText={onChangeNumberOfSeats}

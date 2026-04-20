@@ -4,6 +4,7 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import PhotoPickerModal from '../../ui/PhotoPickerModal';
+import { useTranslation } from '../../../utils/i18n';
 
 interface ProfileImageEditProps {
   profileImageUrl?: string | null;
@@ -11,6 +12,7 @@ interface ProfileImageEditProps {
 }
 
 export default function ProfileImageEdit({ profileImageUrl, onImageChange }: ProfileImageEditProps) {
+  const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(profileImageUrl || null);
 
@@ -72,7 +74,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
         </TouchableOpacity>
       </View>
       <TouchableOpacity onPress={() => setModalVisible(true)}>
-        <Text style={styles.changeText}>Change Photo</Text>
+        <Text style={styles.changeText}>{t('change_photo')}</Text>
       </TouchableOpacity>
 
       <PhotoPickerModal

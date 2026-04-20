@@ -5,27 +5,35 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useAppStore } from '../../store/useAppStore';
 import { useTranslation } from '../../utils/i18n';
 
-export default function LanguageSelector() {
+interface LanguageSelectorProps {
+  value?: string;
+  onChange?: (lang: string) => void;
+}
+
+export default function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
   const { t } = useTranslation();
-  const appLanguage = useAppStore((state) => state.appLanguage);
-  const setAppLanguage = useAppStore((state) => state.setAppLanguage);
+  const globalAppLanguage = useAppStore((state) => state.appLanguage);
+  const globalSetAppLanguage = useAppStore((state) => state.setAppLanguage);
+
+  const currentLanguage = value !== undefined ? value : globalAppLanguage;
+  const setLanguage = onChange || globalSetAppLanguage;
 
   return (
     <View style={styles.container}>
       <TouchableOpacity 
-        style={[styles.option, appLanguage === 'en' && styles.selectedOption]}
-        onPress={() => setAppLanguage('en')}
+        style={[styles.option, currentLanguage === 'en' && styles.selectedOption]}
+        onPress={() => setLanguage('en')}
       >
         <Text style={styles.flag}>🇺🇸</Text>
-        <Text style={[styles.label, appLanguage === 'en' && styles.selectedLabel]}>{t('english')}</Text>
+        <Text style={[styles.label, currentLanguage === 'en' && styles.selectedLabel]}>{t('english')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity 
-        style={[styles.option, appLanguage === 'it' && styles.selectedOption]}
-        onPress={() => setAppLanguage('it')}
+        style={[styles.option, currentLanguage === 'it' && styles.selectedOption]}
+        onPress={() => setLanguage('it')}
       >
         <Text style={styles.flag}>🇮🇹</Text>
-        <Text style={[styles.label, appLanguage === 'it' && styles.selectedLabel]}>{t('italian')}</Text>
+        <Text style={[styles.label, currentLanguage === 'it' && styles.selectedLabel]}>{t('italian')}</Text>
       </TouchableOpacity>
     </View>
   );
