@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
+import apiClient from '../../../api/apiClient';
 
 // Components
 import Header from '../../../components/ui/Header';
@@ -13,6 +15,67 @@ import RestaurantDetailsForm from '../../../components/settings/edit-profile/Res
 export default function EditProfileScreen() {
   const router = useRouter();
   const profile = useAppStore((state) => state.profile);
+  const setProfile = useAppStore((state) => state.setProfile);
+  const [loading, setLoading] = useState(false);
+
+  const [formData, setFormData] = useState({
+    full_name: profile?.full_name || '',
+    email: profile?.email || '',
+    phone: profile?.phone || '',
+    restaurant_name: profile?.restaurant_name || '',
+    restaurant_type: profile?.restaurant_type || '',
+    city_location: profile?.city_location || '',
+    number_of_seats: profile?.number_of_seats?.toString() || '',
+    profile_image: null as string | null
+  });
+
+  const updateField = (field: string, value: string | null) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const data = new FormData();
+      data.append('full_name', formData.full_name);
+      if (formData.phone) data.append('phone', formData.phone);
+      if (formData.restaurant_name) data.append('restaurant_name', formData.restaurant_name);
+      if (formData.restaurant_type) data.append('restaurant_type', formData.restaurant_type);
+      if (formData.city_location) data.append('city_location', formData.city_location);
+      if (formData.number_of_seats) data.append('number_of_seats', formData.number_of_seats);
+
+      if (formData.profile_image) {
+        const localUri = formData.profile_image;
+        const filename = localUri.split('/').pop() || 'profile.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image/jpeg`;
+        data.append('profile_image', { uri: localUri, name: filename, type } as any);
+      }
+
+      const response = await apiClient.put('/api/v1/restaurant/settings/profile', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json',
+        },
+        transformRequest: (data) => data,
+      });
+
+      // Update the store
+      if (response.data) {
+        setProfile({
+          ...profile,
+          ...response.data
+        });
+      }
+
+      router.back();
+    } catch (error: any) {
+      console.error('Error saving profile:', error.response?.data || error.message);
+      Alert.alert('Error', 'Failed to save profile changes. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.safeArea}>
@@ -23,29 +86,54 @@ export default function EditProfileScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          <ProfileImageEdit profileImageUrl={profile?.profile_image_url || null} />
+          <ProfileImageEdit 
+            profileImageUrl={profile?.profile_image_url || null} 
+            onImageChange={(uri) => updateField('profile_image', uri)}
+          />
 
           <View style={styles.formSection}>
-            <FormInput label="User Name" defaultValue={profile?.full_name || ''} />
-            <FormInput label="Email Address" defaultValue={profile?.email || ''} keyboardType="email-address" />
-            <FormInput label="Phone Number" defaultValue={profile?.phone || ''} keyboardType="phone-pad" />
+            <FormInput 
+              label="User Name" 
+              value={formData.full_name} 
+              onChangeText={(text) => updateField('full_name', text)} 
+            />
+            <FormInput 
+              label="Email Address" 
+              value={formData.email} 
+              editable={false} 
+              keyboardType="email-address" 
+            />
+            <FormInput 
+              label="Phone Number" 
+              value={formData.phone} 
+              onChangeText={(text) => updateField('phone', text)} 
+              keyboardType="phone-pad" 
+            />
           </View>
 
           <View style={styles.separator} />
 
           <RestaurantDetailsForm 
-            restaurantName={profile?.restaurant_name || ''}
-            restaurantType={profile?.restaurant_type || ''}
-            cityLocation={profile?.city_location || ''}
-            numberOfSeats={profile?.number_of_seats?.toString() || ''}
+            restaurantName={formData.restaurant_name}
+            restaurantType={formData.restaurant_type}
+            cityLocation={formData.city_location}
+            numberOfSeats={formData.number_of_seats}
+            onChangeRestaurantName={(text) => updateField('restaurant_name', text)}
+            onChangeRestaurantType={(text) => updateField('restaurant_type', text)}
+            onChangeCityLocation={(text) => updateField('city_location', text)}
+            onChangeNumberOfSeats={(text) => updateField('number_of_seats', text)}
           />
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} disabled={loading}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={() => router.back()}>
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>

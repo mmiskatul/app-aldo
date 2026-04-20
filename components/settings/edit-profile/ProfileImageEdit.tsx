@@ -36,6 +36,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
 
     if (!result.canceled) {
       setLocalImageUri(result.assets[0].uri);
+      onImageChange?.(result.assets[0].uri);
     }
   };
 
@@ -55,6 +56,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
 
     if (!result.canceled) {
       setLocalImageUri(result.assets[0].uri);
+      onImageChange?.(result.assets[0].uri);
     }
   };
 
