@@ -46,7 +46,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>{t('account_settings')}</Text>
           <SettingsList
             items={[
-              { icon: 'credit-card', label: t('manage_subscription'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
+              { icon: 'credit-card', label: t('manage_subscription'), iconBg: '#FFF7ED', iconColor: '#FA8C4C', onPress: () => router.push('/(tabs)/settings/manage-subscription') },
               { icon: 'bell', label: t('notification_settings'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
               { icon: 'lock', label: t('change_password'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
               { icon: 'shield', label: t('two_factor_auth'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },

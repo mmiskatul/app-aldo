@@ -8,6 +8,7 @@ interface SettingsItem {
   label: string;
   iconBg: string;
   iconColor: string;
+  onPress?: () => void;
 }
 
 interface SettingsListProps {
@@ -22,6 +23,7 @@ export default function SettingsList({ items }: SettingsListProps) {
           key={index} 
           style={[styles.item, index === items.length - 1 && styles.lastItem]}
           activeOpacity={0.7}
+          onPress={() => item.onPress?.()}
         >
           <View style={styles.leftContent}>
             <View style={[styles.iconContainer, { backgroundColor: item.iconBg }]}>
