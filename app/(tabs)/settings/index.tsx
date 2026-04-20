@@ -47,9 +47,8 @@ export default function SettingsScreen() {
           <SettingsList
             items={[
               { icon: 'credit-card', label: t('manage_subscription'), iconBg: '#FFF7ED', iconColor: '#FA8C4C', onPress: () => router.push('/(tabs)/settings/manage-subscription') },
-              { icon: 'bell', label: t('notification_settings'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
-              { icon: 'lock', label: t('change_password'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
-              { icon: 'shield', label: t('two_factor_auth'), iconBg: '#FFF7ED', iconColor: '#FA8C4C' },
+              { icon: 'bell', label: t('notification_settings'), iconBg: '#FFF7ED', iconColor: '#FA8C4C', onPress: () => router.push('/(tabs)/settings/notification-settings') },
+              { icon: 'lock', label: t('change_password'), iconBg: '#FFF7ED', iconColor: '#FA8C4C', onPress: () => router.push('/(tabs)/settings/change-password') },
             ]}
           />
         </View>
@@ -58,9 +57,9 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>{t('support_legal')}</Text>
           <SettingsList
             items={[
-              { icon: 'file-text', label: t('terms_conditions'), iconBg: '#F0F9FF', iconColor: '#0EA5E9' },
-              { icon: 'shield', label: t('privacy_policy'), iconBg: '#F0F9FF', iconColor: '#0EA5E9' },
-              { icon: 'help-circle', label: t('help_center'), iconBg: '#F0F9FF', iconColor: '#0EA5E9' },
+              { icon: 'file-text', label: t('terms_conditions'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/terms-conditions') },
+              { icon: 'shield', label: t('privacy_policy'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/privacy-policy') },
+              { icon: 'help-circle', label: t('help_center'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/help-center') },
             ]}
           />
         </View>
