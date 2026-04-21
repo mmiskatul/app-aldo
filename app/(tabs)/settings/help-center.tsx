@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import React, { useState } from "react";
+import { useRouter } from "expo-router";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -19,6 +20,7 @@ import Header from "../../../components/ui/Header";
 import { createSupportTicket } from "../../../api/support";
 
 export default function HelpCenterScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [issue, setIssue] = useState("");
   const [description, setDescription] = useState("");
@@ -111,6 +113,7 @@ export default function HelpCenterScreen() {
               <TouchableOpacity
                 style={styles.viewTicketsButton}
                 activeOpacity={0.7}
+                onPress={() => router.push('/(tabs)/settings/tickets' as any)}
               >
                 <Text style={styles.viewTicketsText}>View All Tickets</Text>
               </TouchableOpacity>

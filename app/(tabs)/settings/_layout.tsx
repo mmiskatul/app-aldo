@@ -10,6 +10,18 @@ export default function SettingsLayout() {
           animation: 'slide_from_right' 
         }} 
       />
+      <Stack.Screen 
+        name="tickets" 
+        options={{ 
+          animation: 'slide_from_right' 
+        }} 
+      />
+      <Stack.Screen 
+        name="ticket-detail" 
+        options={{ 
+          animation: 'slide_from_right' 
+        }} 
+      />
     </Stack>
   );
 }
