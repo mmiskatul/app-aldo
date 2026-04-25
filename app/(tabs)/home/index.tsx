@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View, ActivityIndicator, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale, verticalScale } from "react-native-size-matters";
@@ -43,37 +43,64 @@ export default function TabsIndex() {
 
   const setAnalyticsData = useAppStore((state) => state.setAnalyticsData);
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
+  const setProfile = useAppStore((state) => state.setProfile);
   const [data, setData] = useState<HomeDashboardData | null>(null);
   const [activePeriod, setActivePeriod] = useState<string>("weekly");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchHomeData = async () => {
+  const hydrateSupportingData = useCallback(async () => {
+    const [analyticsRes, cashOverviewRes, profileRes] = await Promise.allSettled([
+      apiClient.get("/api/v1/restaurant/analytics/overview"),
+      apiClient.get("/api/v1/restaurant/cash/overview"),
+      apiClient.get("/api/v1/restaurant/settings/profile"),
+    ]);
+
+    if (analyticsRes.status === "fulfilled") {
+      setAnalyticsData(analyticsRes.value.data);
+    } else {
+      console.log("Analytics preload error:", analyticsRes.reason?.response?.data || analyticsRes.reason?.message);
+    }
+
+    if (cashOverviewRes.status === "fulfilled") {
+      setCashOverviewData(cashOverviewRes.value.data);
+    } else {
+      console.log("Cash overview preload error:", cashOverviewRes.reason?.response?.data || cashOverviewRes.reason?.message);
+    }
+
+    if (profileRes.status === "fulfilled") {
+      setProfile(profileRes.value.data);
+    } else {
+      console.log("Profile preload error:", profileRes.reason?.response?.data || profileRes.reason?.message);
+    }
+  }, [setAnalyticsData, setCashOverviewData, setProfile]);
+
+  const fetchHomeData = useCallback(async () => {
     try {
-      const [homeRes, analyticsRes, cashOverviewRes] = await Promise.all([
-        apiClient.get("/api/v1/restaurant/home"),
-        apiClient.get("/api/v1/restaurant/analytics/overview"),
-        apiClient.get("/api/v1/restaurant/cash/overview")
-      ]);
+      const homeRes = await apiClient.get("/api/v1/restaurant/home");
       
       setData(homeRes.data);
-      setAnalyticsData(analyticsRes.data);
-      setCashOverviewData(cashOverviewRes.data);
 
-      if (homeRes.data.available_periods?.length > 0 && !homeRes.data.available_periods.includes(activePeriod)) {
-        setActivePeriod(homeRes.data.available_periods[0]);
+      if (homeRes.data.available_periods?.length > 0) {
+        setActivePeriod((currentPeriod) =>
+          homeRes.data.available_periods.includes(currentPeriod)
+            ? currentPeriod
+            : homeRes.data.available_periods[0]
+        );
       }
+
+      void hydrateSupportingData();
     } catch (error: any) {
       console.log("API Error:", error.response?.data || error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [hydrateSupportingData]);
 
   useEffect(() => {
     fetchHomeData();
-  }, []);
+  }, [fetchHomeData]);
 
   const onRefresh = () => {
     setRefreshing(true);

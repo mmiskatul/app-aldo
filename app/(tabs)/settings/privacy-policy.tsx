@@ -1,55 +1,122 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView 
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Header from '../../../components/ui/Header';
+import { PublicLegalDocument, getPrivacyPolicy } from '../../../api/settings';
+
+const formatDate = (value: string | null) => {
+  if (!value) {
+    return 'Not available';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+};
 
 export default function PrivacyPolicyScreen() {
   const insets = useSafeAreaInsets();
+  const [document, setDocument] = useState<PublicLegalDocument | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDocument = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError(null);
+    try {
+      const data = await getPrivacyPolicy();
+      setDocument(data);
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ??
+          err?.message ??
+          'Failed to load privacy policy.'
+      );
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDocument();
+  }, [fetchDocument]);
 
   return (
     <View style={styles.safeArea}>
       <Header title="Privacy Policy" showBack={true} />
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={[styles.content, { paddingBottom: verticalScale(40) + insets.bottom }]}
-      >
-        <Text style={styles.lastUpdated}>Effective Date: April 2026</Text>
-
-        <Text style={styles.heroText}>
-          Your privacy is critically important to us. We have fundamental principles that we follow when it comes to preserving the integrity of your operational records.
-        </Text>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Information We Collect</Text>
-          <Text style={styles.paragraph}>
-            We only collect information about you if we have a reason to do so—for example, to provide our Services, to communicate with you, or to make our Services better. We collect information tracking your provided email, operational locations, and uploaded documents strictly explicitly managed via your Settings dashboard.
-          </Text>
+      {loading ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator size="large" color="#FA8C4C" />
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>How We Use Information</Text>
-          <Text style={styles.paragraph}>
-            <Text style={{ fontWeight: '600' }}>• Subscriptions & Usage:</Text> To bill you for active Pro tiers and manage backend payment gateways.{'\n\n'}
-            <Text style={{ fontWeight: '600' }}>• Artificial Intelligence:</Text> We aggregate analytical patterns via standard AI insight generators locally without compromising cross-account data isolation.
-          </Text>
+      ) : error ? (
+        <View style={styles.centerState}>
+          <Feather name="alert-circle" size={moderateScale(42)} color="#EF4444" />
+          <Text style={styles.stateTitle}>Unable to load privacy policy</Text>
+          <Text style={styles.stateDescription}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchDocument}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Security Commitments</Text>
-          <Text style={styles.paragraph}>
-            While no online service is 100% secure, we work very hard to protect information about you against unauthorized access, use, alteration, or destruction, and take reasonable measures to do so, such as monitoring our Services for potential vulnerabilities.
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: verticalScale(40) + insets.bottom },
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                void fetchDocument(true);
+              }}
+              colors={['#FA8C4C']}
+            />
+          }
+        >
+          <Text style={styles.documentTitle}>
+            {document?.title || 'Privacy Policy'}
           </Text>
-        </View>
+          <Text style={styles.lastUpdated}>
+            Effective date: {formatDate(document?.updated_at ?? null)}
+          </Text>
+          {document?.updated_by ? (
+            <Text style={styles.updatedBy}>Updated by: {document.updated_by}</Text>
+          ) : null}
 
-      </ScrollView>
+          {(document?.content ?? '')
+            .split(/\n{2,}/)
+            .map((paragraph) => paragraph.trim())
+            .filter(Boolean)
+            .map((paragraph, index) => (
+              <View key={`${index}-${paragraph.slice(0, 20)}`} style={styles.section}>
+                <Text style={styles.paragraph}>{paragraph}</Text>
+              </View>
+            ))}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -62,31 +129,60 @@ const styles = StyleSheet.create({
   content: {
     padding: scale(20),
   },
+  documentTitle: {
+    fontSize: moderateScale(24, 0.3),
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: verticalScale(12),
+  },
   lastUpdated: {
     fontSize: moderateScale(13, 0.3),
     color: '#6B7280',
     fontStyle: 'italic',
-    marginBottom: verticalScale(20),
+    marginBottom: verticalScale(6),
   },
-  heroText: {
-    fontSize: moderateScale(15, 0.3),
-    fontWeight: '600',
-    color: '#374151',
-    lineHeight: 24,
+  updatedBy: {
+    fontSize: moderateScale(13, 0.3),
+    color: '#9CA3AF',
     marginBottom: verticalScale(24),
   },
   section: {
-    marginBottom: verticalScale(24),
-  },
-  sectionHeader: {
-    fontSize: moderateScale(16, 0.3),
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: verticalScale(8),
+    marginBottom: verticalScale(20),
   },
   paragraph: {
     fontSize: moderateScale(14, 0.3),
     color: '#4B5563',
     lineHeight: 24,
+  },
+  centerState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: scale(24),
+  },
+  stateTitle: {
+    marginTop: verticalScale(12),
+    fontSize: moderateScale(18, 0.3),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  stateDescription: {
+    marginTop: verticalScale(8),
+    fontSize: moderateScale(14, 0.3),
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  retryButton: {
+    marginTop: verticalScale(20),
+    backgroundColor: '#FA8C4C',
+    borderRadius: scale(12),
+    paddingHorizontal: scale(24),
+    paddingVertical: verticalScale(12),
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: '700',
   },
 });

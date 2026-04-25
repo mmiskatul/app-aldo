@@ -1,76 +1,150 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import Svg, { Defs, Line, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from '../../utils/i18n';
 
-interface ChartDataPoint {
-  day: string;
-  totalHeight: number; // 0-100 percentage
-  filledHeight: number; // 0-100 percentage (must be <= totalHeight)
+interface RevenuePoint {
+  label: string;
+  value: number;
 }
 
 interface RevenueChartProps {
-  revenue?: {
-    label: string;
-    value: number;
-  }[];
+  revenue?: RevenuePoint[];
   period?: string;
 }
 
-export default function RevenueChart({ revenue, period = 'weekly' }: RevenueChartProps) {
+const CHART_WIDTH = scale(286);
+const CHART_HEIGHT = verticalScale(176);
+const PADDING_TOP = verticalScale(12);
+const PADDING_RIGHT = scale(12);
+const PADDING_BOTTOM = verticalScale(30);
+const PADDING_LEFT = scale(8);
+const GRID_LINES = 4;
+
+const formatCompactCurrency = (value: number) => {
+  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
+  return `$${Math.round(value)}`;
+};
+
+const normalizeLabel = (label: string, period: string) => {
+  if (period === 'monthly' && label.startsWith('Week ')) return label.replace('Week ', 'W');
+  return label.length > 4 && period === 'weekly' ? label.slice(0, 3) : label;
+};
+
+export default function RevenueChart({ revenue = [], period = 'weekly' }: RevenueChartProps) {
   const { t } = useTranslation();
-  // Mock data to match the screenshot roughly
-  const fallbackData: ChartDataPoint[] = [
-    { day: 'MON', totalHeight: 35, filledHeight: 25 },
-    { day: 'TUE', totalHeight: 45, filledHeight: 35 },
-    { day: 'WED', totalHeight: 30, filledHeight: 20 },
-    { day: 'THU', totalHeight: 65, filledHeight: 50 },
-    { day: 'FRI', totalHeight: 50, filledHeight: 35 },
-    { day: 'SAT', totalHeight: 85, filledHeight: 80 },
-    { day: 'SUN', totalHeight: 75, filledHeight: 65 },
-  ];
-
-  const maxVal = Math.max(...(revenue?.map(d => d.value) || [1]));
-  const data: ChartDataPoint[] = revenue && revenue.length > 0
-    ? revenue.map(d => ({
-        day: d.label.toUpperCase().substring(0, 3), // e.g., MON, TUE or WEE (for Week)
-        totalHeight: 85, 
-        filledHeight: maxVal > 0 ? (d.value / maxVal) * 85 : 0
-      }))
-    : fallbackData;
-
-  const isWeekly = period === 'weekly';
+  const safeRevenue = revenue.length > 0 ? revenue : [];
+  const maxValue = Math.max(...safeRevenue.map((item) => item.value), 0);
+  const chartMax = maxValue > 0 ? Math.ceil(maxValue / GRID_LINES) * GRID_LINES : 4;
+  const plotWidth = CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT;
+  const plotHeight = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
+  const barSlotWidth = safeRevenue.length > 0 ? plotWidth / safeRevenue.length : plotWidth;
+  const barWidth = Math.min(scale(22), Math.max(scale(12), barSlotWidth * 0.46));
+  const yAxisValues = Array.from({ length: GRID_LINES + 1 }, (_, index) => {
+    const step = chartMax / GRID_LINES;
+    return Math.max(chartMax - step * index, 0);
+  });
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{isWeekly ? t('weekly_revenue_trend') : t('monthly_revenue_trend')}</Text>
-        <Text style={styles.subtext}>{isWeekly ? t('last_7_days') : t('current_month')}</Text>
+        <Text style={styles.title}>
+          {period === 'weekly' ? t('weekly_revenue_trend') : t('monthly_revenue_trend')}
+        </Text>
+        <Text style={styles.subtext}>
+          {period === 'weekly' ? t('last_7_days') : t('current_month')}
+        </Text>
       </View>
 
-      <View style={styles.chartContainer}>
-        {data.map((item, index) => (
-          <View key={index} style={styles.barColumn}>
-            <View style={styles.barBackground}>
-              {/* The "unfilled" portion */}
-              <View 
-                style={[
-                  styles.barFillLight, 
-                  { height: `${item.totalHeight}%` }
-                ]} 
-              >
-                {/* The "filled" active portion */}
-                <View 
-                  style={[
-                    styles.barFillDark, 
-                    { height: `${(item.filledHeight / item.totalHeight) * 100}%` }
-                  ]} 
+      <View style={styles.chartRow}>
+        <View style={styles.yAxis}>
+          {yAxisValues.map((value) => (
+            <Text key={value} style={styles.axisLabel}>
+              {formatCompactCurrency(value)}
+            </Text>
+          ))}
+        </View>
+
+        <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
+          <Defs>
+            <LinearGradient id="homeBarFill" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor="#F97316" />
+              <Stop offset="100%" stopColor="#FDBA74" />
+            </LinearGradient>
+            <LinearGradient id="homeBarPeakFill" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor="#C2410C" />
+              <Stop offset="100%" stopColor="#F97316" />
+            </LinearGradient>
+          </Defs>
+
+          {yAxisValues.map((_, index) => {
+            const y = PADDING_TOP + (plotHeight / GRID_LINES) * index;
+            return (
+              <Line
+                key={`grid-${index}`}
+                x1={PADDING_LEFT}
+                y1={y}
+                x2={CHART_WIDTH - PADDING_RIGHT}
+                y2={y}
+                stroke="#F3F4F6"
+                strokeDasharray="4 4"
+                strokeWidth="1"
+              />
+            );
+          })}
+
+          {safeRevenue.map((item, index) => {
+            const barHeight = chartMax > 0 ? (item.value / chartMax) * plotHeight : 0;
+            const x = PADDING_LEFT + index * barSlotWidth + (barSlotWidth - barWidth) / 2;
+            const y = PADDING_TOP + plotHeight - barHeight;
+            const isPeak = item.value === maxValue && maxValue > 0;
+
+            return (
+              <React.Fragment key={`${item.label}-${index}`}>
+                <Rect
+                  x={x}
+                  y={PADDING_TOP}
+                  width={barWidth}
+                  height={plotHeight}
+                  rx={scale(7)}
+                  fill="#FFF7ED"
                 />
-              </View>
-            </View>
-            <Text style={styles.dayText}>{item.day}</Text>
-          </View>
-        ))}
+                <Rect
+                  x={x}
+                  y={barHeight > 0 ? y : PADDING_TOP + plotHeight - verticalScale(4)}
+                  width={barWidth}
+                  height={Math.max(barHeight, item.value > 0 ? verticalScale(4) : 0)}
+                  rx={scale(7)}
+                  fill={isPeak ? 'url(#homeBarPeakFill)' : 'url(#homeBarFill)'}
+                />
+                <SvgText
+                  x={x + barWidth / 2}
+                  y={CHART_HEIGHT - scale(6)}
+                  fontSize={moderateScale(9, 0.3)}
+                  fontWeight="700"
+                  fill={isPeak ? '#C2410C' : '#6B7280'}
+                  textAnchor="middle"
+                >
+                  {normalizeLabel(item.label, period)}
+                </SvgText>
+                {item.value > 0 ? (
+                  <SvgText
+                    x={x + barWidth / 2}
+                    y={Math.max(y - verticalScale(6), PADDING_TOP - verticalScale(2))}
+                    fontSize={moderateScale(8, 0.3)}
+                    fontWeight="700"
+                    fill="#6B7280"
+                    textAnchor="middle"
+                  >
+                    {formatCompactCurrency(item.value)}
+                  </SvgText>
+                ) : null}
+              </React.Fragment>
+            );
+          })}
+        </Svg>
       </View>
     </View>
   );
@@ -81,7 +155,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: scale(16),
     borderWidth: 1,
-    borderColor: '#000000', // Matches the heavy border from mockup
+    borderColor: '#E5E7EB',
     padding: scale(16),
     marginBottom: verticalScale(24),
   },
@@ -89,7 +163,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: verticalScale(16),
+    marginBottom: verticalScale(18),
   },
   title: {
     fontSize: moderateScale(14, 0.3),
@@ -101,38 +175,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#9CA3AF',
   },
-  chartContainer: {
+  chartRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  yAxis: {
+    height: CHART_HEIGHT - PADDING_BOTTOM + verticalScale(2),
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: verticalScale(140),
+    marginRight: scale(10),
   },
-  barColumn: {
-    alignItems: 'center',
-    width: scale(36), // Roughly evenly dividing the space
-  },
-  barBackground: {
-    width: scale(32),
-    height: verticalScale(120),
-    justifyContent: 'flex-end', // stack from bottom
-  },
-  barFillLight: {
-    width: '100%',
-    backgroundColor: '#FDE6D5', // Light orange
-    borderTopLeftRadius: scale(6),
-    borderTopRightRadius: scale(6),
-    justifyContent: 'flex-end',
-  },
-  barFillDark: {
-    width: '100%',
-    backgroundColor: '#FA8C4C', // Main brand orange
-    borderTopLeftRadius: scale(4),
-    borderTopRightRadius: scale(4),
-  },
-  dayText: {
-    marginTop: verticalScale(8),
+  axisLabel: {
     fontSize: moderateScale(9, 0.3),
-    fontWeight: '600',
     color: '#9CA3AF',
+    fontWeight: '600',
   },
 });

@@ -1,4 +1,4 @@
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import axios from "axios";
 import {
@@ -21,59 +21,40 @@ import OTPVerification from "../../components/ui/OTPVerification";
 // @ts-ignore
 import SecurityIcon from "../../assets/images/Security Icon.svg";
 import { useAppStore } from "../../store/useAppStore";
+import { getApiBaseUrl } from "../../utils/api";
 
 export default function VerifyIdentityScreen() {
   const router = useRouter();
-  const { email, restaurant_name, owner_full_name, password } = useLocalSearchParams<{ 
-    email: string;
-    restaurant_name: string;
-    owner_full_name: string;
-    password: string;
-  }>();
   const setUser = useAppStore((state) => state.setUser);
+  const pendingRegistration = useAppStore((state) => state.pendingRegistration);
+  const clearPendingRegistration = useAppStore((state) => state.setPendingRegistration);
   
   const [code, setCode] = useState(["", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isResending, setIsResending] = useState(false);
+
+  const email = pendingRegistration?.email;
+  const apiUrl = getApiBaseUrl();
+
+  const getApiErrorMessage = (error: any, fallback: string) =>
+    error.response?.data?.error?.message ||
+    error.response?.data?.message ||
+    error.response?.data?.detail ||
+    error.message ||
+    fallback;
 
   const handleResendCode = async () => {
-    if (!email || !restaurant_name || !owner_full_name || !password) {
+    if (!pendingRegistration) {
       Alert.alert("Error", "Missing registration details. Please restart the signup process.");
       return;
     }
     
-    setIsResending(true);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-      const response = await axios.post(`${apiUrl}/api/v1/auth/restaurant/register`, {
-        restaurant_name,
-        owner_full_name,
-        email,
-        password
-      });
+      const response = await axios.post(`${apiUrl}/api/v1/auth/restaurant/register`, pendingRegistration);
       console.log("Resend API Response:", response.data);
       Alert.alert("Success", response.data?.message || "Verification code resent to your email.");
     } catch (error: any) {
       console.log("Resend API Error:", error.response?.data || error.message);
-      const errData = error.response?.data;
-      let errorMessage = "An unexpected error occurred.";
-      if (errData) {
-        if (typeof errData === "string") {
-          try {
-            const parsed = JSON.parse(errData);
-            errorMessage = parsed.error?.message || parsed.message || parsed.detail || errData;
-          } catch {
-            errorMessage = errData;
-          }
-        } else {
-          errorMessage = errData.error?.message || errData.message || errData.detail || JSON.stringify(errData);
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      Alert.alert("Error", errorMessage);
-    } finally {
-      setIsResending(false);
+      Alert.alert("Error", getApiErrorMessage(error, "An unexpected error occurred."));
     }
   };
 
@@ -91,7 +72,6 @@ export default function VerifyIdentityScreen() {
 
     setIsLoading(true);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://risto-ai.vercel.app";
       const response = await axios.post(
         `${apiUrl}/api/v1/auth/restaurant/verify-registration`,
         {
@@ -102,17 +82,17 @@ export default function VerifyIdentityScreen() {
 
       const data = response.data;
       setUser(data.user, data.tokens);
+      clearPendingRegistration(null);
 
       Alert.alert("Success", "Email verified successfully!");
       router.replace("/(auth)/subscription" as any);
       
     } catch (error: any) {
       console.log("Verify API Error:", error.response?.data || error.message);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.detail ||
-        error.message ||
-        "An unexpected error occurred during verification.";
+      const errorMessage = getApiErrorMessage(
+        error,
+        "An unexpected error occurred during verification."
+      );
       Alert.alert("Verification Failed", errorMessage);
     } finally {
       setIsLoading(false);

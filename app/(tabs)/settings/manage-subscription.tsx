@@ -1,128 +1,355 @@
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image 
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import React, { useState } from 'react';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
+import {
+  BillingCycle,
+  RestaurantSubscriptionSettings,
+  UserSubscriptionPlan,
+  createCustomerPortalSession,
+  createSubscriptionCheckoutSession,
+  getRestaurantSubscriptionSettings,
+  getUserSubscriptionPlans,
+} from '../../../api/settings';
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
+
+const formatBackendDate = (value: string | null) => {
+  if (!value) {
+    return 'Not available';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+const billingCycleLabel = (value: BillingCycle | null) =>
+  value === '1_year' ? 'Yearly' : 'Monthly';
+
+const subscriptionStatusLabel = (value: RestaurantSubscriptionSettings['status']) =>
+  value ? value.replace('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase()) : 'Inactive';
 
 export default function ManageSubscriptionScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const profile = useAppStore((state) => state.profile);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('1_month');
+  const [subscription, setSubscription] =
+    useState<RestaurantSubscriptionSettings | null>(null);
+  const [plans, setPlans] = useState<UserSubscriptionPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<'checkout' | 'portal' | null>(
+    null
+  );
+
+  const fetchSubscriptionData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [subscriptionData, plansData] = await Promise.all([
+        getRestaurantSubscriptionSettings(),
+        getUserSubscriptionPlans(),
+      ]);
+      setSubscription(subscriptionData);
+      setPlans(plansData.plans);
+      if (subscriptionData.billing_cycle) {
+        setBillingCycle(subscriptionData.billing_cycle);
+      }
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ??
+          err?.message ??
+          'Failed to load subscription settings.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSubscriptionData();
+  }, [fetchSubscriptionData]);
+
+  const selectedPlan = useMemo<UserSubscriptionPlan | null>(() => {
+    if (plans.length === 0) {
+      return null;
+    }
+
+    if (subscription?.plan_name) {
+      const currentPlan = plans.find((plan) => plan.name === subscription.plan_name);
+      if (currentPlan) {
+        return currentPlan;
+      }
+    }
+
+    return plans.find((plan) => plan.is_best_plan) ?? plans[0];
+  }, [plans, subscription?.plan_name]);
+
+  const priceValue =
+    billingCycle === '1_year'
+      ? selectedPlan?.annual_price ?? 0
+      : selectedPlan?.monthly_price ?? 0;
+
+  const openUrl = async (url: string) => {
+    const supported = await Linking.canOpenURL(url);
+    if (!supported) {
+      throw new Error('The checkout link could not be opened on this device.');
+    }
+    await Linking.openURL(url);
+  };
+
+  const handleCheckout = async () => {
+    setActionLoading('checkout');
+    try {
+      const response = await createSubscriptionCheckoutSession(
+        billingCycle,
+        subscription?.selection_required ?? true,
+        selectedPlan?.id
+      );
+      await openUrl(response.checkout_url);
+    } catch (err: any) {
+      Alert.alert(
+        'Unable to open checkout',
+        err?.response?.data?.message ??
+          err?.message ??
+          'Please try again in a moment.'
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleOpenPortal = async () => {
+    setActionLoading('portal');
+    try {
+      const response = await createCustomerPortalSession();
+      await openUrl(response.portal_url);
+    } catch (err: any) {
+      Alert.alert(
+        'Unable to open billing portal',
+        err?.response?.data?.message ??
+          err?.message ??
+          'Please try again in a moment.'
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const AvatarRight = () => (
-    <Image 
-      source={{ uri: profile?.profile_image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200' }} 
-      style={styles.avatar} 
+    <Image
+      source={{
+        uri:
+          profile?.profile_image_url ||
+          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200',
+      }}
+      style={styles.avatar}
     />
   );
 
   return (
     <View style={styles.safeArea}>
-      <Header 
-        title="Manage Subscription" 
-        showBack={true} 
+      <Header
+        title="Manage Subscription"
+        showBack={true}
         rightComponent={<AvatarRight />}
       />
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={[styles.content, { paddingBottom: verticalScale(40) + insets.bottom }]}
-      >
-        {/* Toggle */}
-        <View style={styles.toggleContainer}>
-          <TouchableOpacity 
-            style={[styles.toggleButton, billingCycle === 'monthly' && styles.toggleButtonActive]}
-            onPress={() => setBillingCycle('monthly')}
+      {loading ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator size="large" color="#FA8B4C" />
+        </View>
+      ) : error ? (
+        <View style={styles.centerState}>
+          <Feather name="alert-circle" size={moderateScale(42)} color="#EF4444" />
+          <Text style={styles.stateTitle}>Unable to load subscription</Text>
+          <Text style={styles.stateDescription}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={fetchSubscriptionData}
             activeOpacity={0.8}
           >
-            <Text style={[styles.toggleText, billingCycle === 'monthly' && styles.toggleTextActive]}>
-              Monthly
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.toggleButton, billingCycle === 'yearly' && styles.toggleButtonActive]}
-            onPress={() => setBillingCycle('yearly')}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.toggleText, billingCycle === 'yearly' && styles.toggleTextActive]}>
-              Yearly (2 months free)
-            </Text>
+            <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Plan Card */}
-        <View style={styles.cardContainer}>
-          {/* BEST VALUE Badge overlaps top right */}
-          <View style={styles.bestValueBadge}>
-            <Text style={styles.bestValueText}>BEST VALUE</Text>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: verticalScale(40) + insets.bottom },
+          ]}
+        >
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                billingCycle === '1_month' && styles.toggleButtonActive,
+              ]}
+              onPress={() => setBillingCycle('1_month')}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.toggleText,
+                  billingCycle === '1_month' && styles.toggleTextActive,
+                ]}
+              >
+                Monthly
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                billingCycle === '1_year' && styles.toggleButtonActive,
+              ]}
+              onPress={() => setBillingCycle('1_year')}
+              activeOpacity={0.8}
+            >
+              <Text
+                style={[
+                  styles.toggleText,
+                  billingCycle === '1_year' && styles.toggleTextActive,
+                ]}
+              >
+                Yearly
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <Text style={styles.planTitle}>Pro Plan</Text>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceValue}>{billingCycle === 'monthly' ? '$29' : '$290'}</Text>
-            <Text style={styles.pricePeriod}>{billingCycle === 'monthly' ? '/ month' : '/ year'}</Text>
-          </View>
-          
-          <Text style={styles.trialText}>7-day free trial included</Text>
-
-          <View style={styles.featuresList}>
-            {[
-              'Unlimited invoice scanning',
-              'Advanced AI insights',
-              'Revenue and cost analytics',
-              'Performance reports',
-              'Supplier price alerts'
-            ].map((feature, idx) => (
-              <View key={idx} style={styles.featureItem}>
-                <View style={styles.checkIcon}>
-                  <Feather name="check" size={moderateScale(12)} color="#B45309" />
-                </View>
-                <Text style={styles.featureText}>{feature}</Text>
+          <View style={styles.cardContainer}>
+            {selectedPlan?.is_best_plan ? (
+              <View style={styles.bestValueBadge}>
+                <Text style={styles.bestValueText}>BEST VALUE</Text>
               </View>
-            ))}
+            ) : null}
+
+            <Text style={styles.planTitle}>
+              {subscription?.plan_name || selectedPlan?.name || 'Subscription Plan'}
+            </Text>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceValue}>{formatCurrency(priceValue)}</Text>
+              <Text style={styles.pricePeriod}>
+                {billingCycle === '1_year' ? '/ year' : '/ month'}
+              </Text>
+            </View>
+
+            <Text style={styles.trialText}>
+              {selectedPlan
+                ? `${selectedPlan.trial_days}-day free trial included`
+                : 'Your subscription details are ready to manage.'}
+            </Text>
+
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Status</Text>
+              <Text style={styles.metaValue}>
+                {subscriptionStatusLabel(subscription?.status ?? null)}
+              </Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Billing Cycle</Text>
+              <Text style={styles.metaValue}>
+                {billingCycleLabel(subscription?.billing_cycle ?? billingCycle)}
+              </Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Started</Text>
+              <Text style={styles.metaValue}>
+                {formatBackendDate(subscription?.started_at ?? null)}
+              </Text>
+            </View>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Renews / Expires</Text>
+              <Text style={styles.metaValue}>
+                {formatBackendDate(subscription?.expires_at ?? null)}
+              </Text>
+            </View>
+
+            <View style={styles.featuresList}>
+              {(selectedPlan?.features ?? []).map((feature) => (
+                <View key={feature} style={styles.featureItem}>
+                  <View style={styles.checkIcon}>
+                    <Feather
+                      name="check"
+                      size={moderateScale(12)}
+                      color="#B45309"
+                    />
+                  </View>
+                  <Text style={styles.featureText}>{feature}</Text>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={handleCheckout}
+              disabled={actionLoading !== null}
+            >
+              <Text style={styles.primaryButtonText}>
+                {actionLoading === 'checkout'
+                  ? 'Opening...'
+                  : subscription?.selection_required
+                    ? 'Start Subscription'
+                    : 'Update Subscription'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.secondaryButton,
+                (subscription?.selection_required || actionLoading !== null) &&
+                  styles.secondaryButtonDisabled,
+              ]}
+              disabled={subscription?.selection_required || actionLoading !== null}
+              onPress={handleOpenPortal}
+            >
+              <Text style={styles.secondaryButtonText}>
+                {actionLoading === 'portal'
+                  ? 'Opening Portal...'
+                  : 'Manage Billing'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Upgrade Plan</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>Manage Payment Methods</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Billing Transparency */}
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Billing Transparency</Text>
-          <Text style={styles.infoText}>
-            Subscriptions are billed {billingCycle === 'monthly' ? 'monthly' : 'annually'}. You will be notified 3 days before your trial ends on April 17, 2026.
-          </Text>
-        </View>
-
-        <TouchableOpacity style={styles.cancelButton}>
-          <Feather name="x-circle" size={moderateScale(18)} color="#DC2626" />
-          <Text style={styles.cancelButtonText}>Cancel Subscription</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>Need help with your plan? </Text>
-          <TouchableOpacity>
-            <Text style={styles.supportText}>Contact Support</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>Billing Transparency</Text>
+            <Text style={styles.infoText}>
+              {subscription?.selection_required
+                ? 'No active subscription is attached to this restaurant yet. Choose a cycle above to start one.'
+                : `Your current plan is ${subscription?.plan_name || 'active'} on ${billingCycleLabel(
+                    subscription?.billing_cycle ?? billingCycle
+                  ).toLowerCase()} billing. Open the billing portal to manage payment details.`}
+            </Text>
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -139,6 +366,37 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: scale(20),
+  },
+  centerState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: scale(24),
+  },
+  stateTitle: {
+    fontSize: moderateScale(18, 0.3),
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: verticalScale(12),
+  },
+  stateDescription: {
+    fontSize: moderateScale(14, 0.3),
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginTop: verticalScale(8),
+  },
+  retryButton: {
+    marginTop: verticalScale(20),
+    backgroundColor: '#FA8B4F',
+    paddingHorizontal: scale(32),
+    paddingVertical: verticalScale(12),
+    borderRadius: scale(12),
+  },
+  retryText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: moderateScale(14, 0.3),
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -176,7 +434,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#111827',
     marginBottom: verticalScale(24),
-    // Orange shadow layout
     shadowColor: '#F59E0B',
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 0.3,
@@ -208,7 +465,7 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: verticalScale(16),
+    marginBottom: verticalScale(12),
   },
   priceValue: {
     fontSize: moderateScale(36, 0.3),
@@ -225,11 +482,27 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 0.3),
     fontWeight: '700',
     color: '#FA8C4C',
-    marginBottom: verticalScale(24),
+    marginBottom: verticalScale(20),
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: verticalScale(8),
+  },
+  metaLabel: {
+    fontSize: moderateScale(13, 0.3),
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  metaValue: {
+    fontSize: moderateScale(13, 0.3),
+    color: '#111827',
+    fontWeight: '700',
   },
   featuresList: {
     gap: verticalScale(16),
-    marginBottom: verticalScale(32),
+    marginVertical: verticalScale(28),
   },
   featureItem: {
     flexDirection: 'row',
@@ -246,6 +519,7 @@ const styles = StyleSheet.create({
     marginRight: scale(12),
   },
   featureText: {
+    flex: 1,
     fontSize: moderateScale(14, 0.3),
     fontWeight: '500',
     color: '#4B5563',
@@ -270,6 +544,9 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(16),
     alignItems: 'center',
   },
+  secondaryButtonDisabled: {
+    opacity: 0.5,
+  },
   secondaryButtonText: {
     color: '#374151',
     fontSize: moderateScale(14, 0.3),
@@ -279,7 +556,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
     borderRadius: scale(12),
     padding: scale(20),
-    marginBottom: verticalScale(40),
+    marginBottom: verticalScale(20),
   },
   infoTitle: {
     fontSize: moderateScale(16, 0.3),
@@ -291,31 +568,5 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 0.3),
     color: '#6B7280',
     lineHeight: 22,
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: scale(8),
-    marginBottom: verticalScale(40),
-  },
-  cancelButtonText: {
-    color: '#DC2626',
-    fontSize: moderateScale(16, 0.3),
-    fontWeight: '700',
-  },
-  footerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: verticalScale(20)
-  },
-  footerText: {
-    color: '#9CA3AF',
-    fontSize: moderateScale(14, 0.3),
-  },
-  supportText: {
-    color: '#92400E',
-    fontWeight: '700',
-    fontSize: moderateScale(14, 0.3),
   },
 });

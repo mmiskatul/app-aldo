@@ -43,7 +43,7 @@ export const createSupportTicket = async (
   payload: CreateTicketPayload
 ): Promise<CreateTicketResponse> => {
   const response = await apiClient.post<CreateTicketResponse>(
-    '/api/v1/support/tickets',
+    '/api/v1/restaurant/help-center/tickets',
     payload
   );
   return response.data;
@@ -75,7 +75,7 @@ export const getUserTickets = async (
   pageSize = 10
 ): Promise<TicketsListResponse> => {
   const response = await apiClient.get<TicketsListResponse>(
-    `/api/v1/support/user/tickets`,
+    `/api/v1/restaurant/help-center/tickets`,
     { params: { page, page_size: pageSize } }
   );
   return response.data;
@@ -114,7 +114,7 @@ export interface TicketDetail {
 
 export const getTicketById = async (ticketId: string): Promise<TicketDetail> => {
   const response = await apiClient.get<TicketDetail>(
-    `/api/v1/support/user/tickets/${ticketId}`
+    `/api/v1/restaurant/help-center/tickets/${ticketId}`
   );
   return response.data;
 };

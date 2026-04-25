@@ -18,10 +18,15 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import Header from "../../../components/ui/Header";
 import { createSupportTicket } from "../../../api/support";
+import { getRestrictedAccessStatus, useAppStore } from "../../../store/useAppStore";
 
 export default function HelpCenterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const user = useAppStore((state) => state.user);
+  const accessStatus = getRestrictedAccessStatus(user);
+  const isRestrictedAccess = accessStatus !== null;
+  const accessStatusLabel = accessStatus === "suspended" ? "suspended" : "restricted";
   const [issue, setIssue] = useState("");
   const [description, setDescription] = useState("");
   const [attachedFile, setAttachedFile] = useState<any>(null);
@@ -108,16 +113,33 @@ export default function HelpCenterScreen() {
               {/* Titles */}
               <View>
                 <Text style={styles.mainTitle}>Help Center</Text>
-                <Text style={styles.subTitle}>How can we help you?</Text>
+                <Text style={styles.subTitle}>
+                  {isRestrictedAccess
+                    ? `Your account is ${accessStatusLabel}. Tell us the reason and our support team will review it.`
+                    : "How can we help you?"}
+                </Text>
               </View>
-              <TouchableOpacity
-                style={styles.viewTicketsButton}
-                activeOpacity={0.7}
-                onPress={() => router.push('/(tabs)/settings/tickets' as any)}
-              >
-                <Text style={styles.viewTicketsText}>View All Tickets</Text>
-              </TouchableOpacity>
+              {!isRestrictedAccess && (
+                <TouchableOpacity
+                  style={styles.viewTicketsButton}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/(tabs)/settings/tickets' as any)}
+                >
+                  <Text style={styles.viewTicketsText}>View All Tickets</Text>
+                </TouchableOpacity>
+              )}
             </View>
+
+            {isRestrictedAccess && (
+              <View style={styles.suspendedBanner}>
+                <Text style={styles.suspendedBannerTitle}>
+                  Account {accessStatus === "suspended" ? "Suspended" : "Restricted"}
+                </Text>
+                <Text style={styles.suspendedBannerText}>
+                  Only Help Center is available right now. Send your message and reason here, and the admin support team will receive it in the dashboard support panel.
+                </Text>
+              </View>
+            )}
 
             <View style={styles.formContainer}>
               {/* Issue Selection Input */}
@@ -126,7 +148,7 @@ export default function HelpCenterScreen() {
                 <View style={styles.inputWrapper}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Issue name"
+                    placeholder={isRestrictedAccess ? "Reason for review" : "Issue name"}
                     placeholderTextColor="#4B5563"
                     value={issue}
                     onChangeText={setIssue}
@@ -140,7 +162,7 @@ export default function HelpCenterScreen() {
                 <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
                   <TextInput
                     style={styles.textArea}
-                    placeholder="Explain your issue in detail..."
+                    placeholder={isRestrictedAccess ? "Explain why your account should be reviewed or restored..." : "Explain your issue in detail..."}
                     placeholderTextColor="#9CA3AF"
                     value={description}
                     onChangeText={setDescription}
@@ -277,6 +299,26 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     flex: 1,
+  },
+  suspendedBanner: {
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1,
+    borderColor: "#FED7AA",
+    borderRadius: scale(16),
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(14),
+    marginBottom: verticalScale(24),
+  },
+  suspendedBannerTitle: {
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: "800",
+    color: "#C25D11",
+    marginBottom: verticalScale(6),
+  },
+  suspendedBannerText: {
+    fontSize: moderateScale(13, 0.3),
+    lineHeight: moderateScale(20, 0.3),
+    color: "#9A3412",
   },
   inputGroup: {
     marginBottom: verticalScale(24),

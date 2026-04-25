@@ -1,7 +1,8 @@
 import axios from "axios";
 import { useAppStore } from "../store/useAppStore";
+import { getApiBaseUrl } from "../utils/api";
 
-const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+const apiUrl = getApiBaseUrl();
 
 const apiClient = axios.create({
   baseURL: apiUrl,
@@ -44,8 +45,17 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const accessToken = useAppStore.getState().tokens?.access_token;
+    const refreshToken = useAppStore.getState().tokens?.refresh_token;
+    const requestUrl = String(originalRequest?.url || "");
+    const isRefreshRequest = requestUrl.includes("/api/v1/auth/refresh");
+    const shouldAttemptRefresh =
+      error.response?.status === 401 &&
+      !originalRequest?._retry &&
+      !isRefreshRequest &&
+      !!accessToken;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (shouldAttemptRefresh) {
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
@@ -63,9 +73,8 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
       console.log("[apiClient] Token expired, attempting refresh...");
 
-      const refresh_token = useAppStore.getState().tokens?.refresh_token; 
-
-      if (!refresh_token) {
+      if (!refreshToken) {
+        processQueue(error, null);
         useAppStore.getState().logout();
         isRefreshing = false;
         return Promise.reject(error);
@@ -73,7 +82,7 @@ apiClient.interceptors.response.use(
 
       try {
         const res = await axios.post(`${apiUrl}/api/v1/auth/refresh`, {
-          refresh_token: refresh_token,
+          refresh_token: refreshToken,
         });
 
         const newTokens = res.data; // Expecting { access_token, refresh_token, token_type }
@@ -91,6 +100,10 @@ apiClient.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    if (error.response?.status === 401 && !accessToken) {
+      useAppStore.getState().logout();
     }
 
     return Promise.reject(error);

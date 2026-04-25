@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View, TouchableWithoutFeedback } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { BellIcon, ChevronDownIcon } from "react-native-heroicons/outline";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import LanguageModal from "./LanguageModal";
@@ -16,7 +16,16 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
   const { t } = useTranslation();
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const appLanguage = useAppStore((state) => state.appLanguage);
+  const profile = useAppStore((state) => state.profile);
   const setAppLanguage = useAppStore((state) => state.setAppLanguage);
+  const displayName =
+    greetingName ||
+    profile?.full_name?.trim() ||
+    t("restaurant_name_fallback");
+  const avatarName = encodeURIComponent(displayName);
+  const avatarUri =
+    profile?.profile_image_url ||
+    `https://ui-avatars.com/api/?name=${avatarName}&background=0D8ABC&color=fff&rounded=true`;
 
   return (
     <View style={styles.container}>
@@ -24,18 +33,20 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
         <Image
           style={styles.avatar}
           source={{
-            uri: "https://ui-avatars.com/api/?name=Marco&background=0D8ABC&color=fff&rounded=true",
+            uri: avatarUri,
           }}
         />
         <View style={styles.textContainer}>
           <Text style={styles.restaurantName} numberOfLines={1}>
-            {restaurantName ? restaurantName.toUpperCase() : t('restaurant_name_fallback')}
+            {(restaurantName || profile?.restaurant_name)
+              ? (restaurantName || profile?.restaurant_name || "").toUpperCase()
+              : t('restaurant_name_fallback')}
           </Text>
           <Text style={styles.greeting} numberOfLines={1}>
             {t('greeting')}
           </Text>
           <Text style={styles.greeting} numberOfLines={1}>
-            {greetingName || "Marco"}
+            {displayName}
           </Text>
         </View>
       </View>

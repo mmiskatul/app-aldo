@@ -14,7 +14,7 @@ import apiClient from "../../../api/apiClient";
 import Header from "../../../components/ui/Header";
 import { useAppStore } from "../../../store/useAppStore";
 
-import * as FileSystem from "expo-file-system/legacy";
+import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import DetailsActions from "../../../components/documents/document-details/DetailsActions";
 import DocumentInformation from "../../../components/documents/document-details/DocumentInformation";

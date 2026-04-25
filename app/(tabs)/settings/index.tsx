@@ -57,8 +57,8 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>{t('support_legal')}</Text>
           <SettingsList
             items={[
-              { icon: 'file-text', label: t('terms_conditions'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/terms-conditions') },
-              { icon: 'shield', label: t('privacy_policy'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/privacy-policy') },
+              { icon: 'file-text', label: 'Terms of Service', iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/terms-of-service') },
+              { icon: 'shield', label: 'Privacy Policy', iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/privacy') },
               { icon: 'help-circle', label: t('help_center'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/help-center') },
             ]}
           />

@@ -18,32 +18,8 @@ interface RecentDepositsProps {
   deposits?: Deposit[];
 }
 
-const DEPOSITS: Deposit[] = [
-  {
-    id: "1",
-    display_title: "Chase Bank - Main",
-    deposit_date_formatted: "Feb 24, 2026",
-    amount_formatted: "$450.00",
-    amount: 450.0,
-  },
-  {
-    id: "2",
-    display_title: "Wells Fargo - Savings",
-    deposit_date_formatted: "Feb 23, 2026",
-    amount_formatted: "$540.00",
-    amount: 540.0,
-  },
-  {
-    id: "3",
-    display_title: "Vendor Payout",
-    deposit_date_formatted: "Feb 22, 2026",
-    amount_formatted: "$120.00",
-    amount: -120.0,
-  },
-];
-
 export default function RecentDeposits({ deposits }: RecentDepositsProps) {
-  const displayDeposits = deposits?.length ? deposits : DEPOSITS;
+  const displayDeposits = deposits ?? [];
 
   return (
     <View style={styles.container}>
@@ -54,7 +30,11 @@ export default function RecentDeposits({ deposits }: RecentDepositsProps) {
         </TouchableOpacity>
       </View>
 
-      {displayDeposits.map((item) => {
+      {!displayDeposits.length ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateText}>No recent transactions yet</Text>
+        </View>
+      ) : displayDeposits.map((item) => {
         const isPositive = item.amount >= 0;
         const displayAmount = isPositive
           ? `+${item.amount_formatted}`
@@ -131,6 +111,18 @@ const styles = StyleSheet.create({
     padding: scale(16),
     marginBottom: verticalScale(12),
     alignItems: "center",
+  },
+  emptyState: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: scale(12),
+    paddingVertical: verticalScale(20),
+    paddingHorizontal: scale(16),
+    alignItems: "center",
+  },
+  emptyStateText: {
+    fontSize: moderateScale(14, 0.3),
+    color: "#6B7280",
+    fontWeight: "500",
   },
   iconContainer: {
     width: moderateScale(44),

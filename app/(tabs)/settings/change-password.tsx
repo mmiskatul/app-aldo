@@ -1,67 +1,108 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TextInput, 
-  TouchableOpacity,
+import {
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
-  Image
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
+import { changeRestaurantPassword } from '../../../api/settings';
 
 export default function ChangePasswordScreen() {
   const profile = useAppStore((state) => state.profile);
-
-  // Form State
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  // Visibility State
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Validations
+  const currentHasMinLength = currentPassword.length >= 8;
   const hasMinLength = newPassword.length >= 8;
   const hasNumber = /\d/.test(newPassword);
+  const hasLetter = /[A-Za-z]/.test(newPassword);
+  const passwordsMatch = newPassword === confirmPassword;
+  const isDifferentFromCurrent =
+    !!newPassword && !!currentPassword && newPassword !== currentPassword;
+  const canSubmit =
+    currentHasMinLength &&
+    hasMinLength &&
+    hasNumber &&
+    hasLetter &&
+    passwordsMatch &&
+    isDifferentFromCurrent &&
+    !isSaving;
+
+  const handleSave = async () => {
+    if (!canSubmit) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await changeRestaurantPassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+      Alert.alert('Password changed', response.message);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      Alert.alert(
+        'Unable to change password',
+        err?.message || 'Something went wrong. Please try again.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const AvatarRight = () => (
-    <Image 
-      source={{ uri: profile?.profile_image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200' }} 
-      style={styles.avatar} 
+    <Image
+      source={{
+        uri:
+          profile?.profile_image_url ||
+          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200',
+      }}
+      style={styles.avatar}
     />
   );
 
   return (
     <View style={styles.safeArea}>
-      <Header 
-        title="Change password" 
-        showBack={true} 
+      <Header
+        title="Change Password"
+        showBack={true}
         rightComponent={<AvatarRight />}
       />
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+        style={styles.flex}
       >
-        <ScrollView 
-          showsVerticalScrollIndicator={false} 
+        <ScrollView
+          showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
           <Text style={styles.heroTitle}>Secure Your Account</Text>
           <Text style={styles.heroDesc}>
-            Choose a strong, unique password to protect your restaurant's financial data and staff information.
+            Choose a strong, unique password to protect your restaurant data and
+            staff information.
           </Text>
 
-          {/* Current Password */}
           <View style={styles.inputBlock}>
             <Text style={styles.inputLabel}>Current Password</Text>
             <View style={styles.inputContainer}>
@@ -70,16 +111,23 @@ export default function ChangePasswordScreen() {
                 secureTextEntry={!showCurrent}
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
-                placeholder="........"
+                placeholder="Enter current password"
                 placeholderTextColor="#9CA3AF"
+                autoCapitalize="none"
               />
-              <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)} style={styles.eyeBtn}>
-                <Feather name={showCurrent ? "eye" : "eye-off"} size={moderateScale(18)} color="#9CA3AF" />
+              <TouchableOpacity
+                onPress={() => setShowCurrent(!showCurrent)}
+                style={styles.eyeBtn}
+              >
+                <Feather
+                  name={showCurrent ? 'eye' : 'eye-off'}
+                  size={moderateScale(18)}
+                  color="#9CA3AF"
+                />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* New Password */}
           <View style={styles.inputBlock}>
             <Text style={styles.inputLabel}>New Password</Text>
             <View style={styles.inputContainer}>
@@ -88,40 +136,58 @@ export default function ChangePasswordScreen() {
                 secureTextEntry={!showNew}
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="........"
+                placeholder="Enter new password"
                 placeholderTextColor="#9CA3AF"
+                autoCapitalize="none"
               />
-              <TouchableOpacity onPress={() => setShowNew(!showNew)} style={styles.eyeBtn}>
-                <Feather name={showNew ? "eye" : "eye-off"} size={moderateScale(18)} color="#9CA3AF" />
+              <TouchableOpacity
+                onPress={() => setShowNew(!showNew)}
+                style={styles.eyeBtn}
+              >
+                <Feather
+                  name={showNew ? 'eye' : 'eye-off'}
+                  size={moderateScale(18)}
+                  color="#9CA3AF"
+                />
               </TouchableOpacity>
             </View>
-            
-            {/* Validation Checklist */}
+
             <View style={styles.validationBox}>
               <View style={styles.valRow}>
-                <Feather 
-                  name={hasMinLength ? "check-circle" : "circle"} 
-                  size={moderateScale(14)} 
-                  color={hasMinLength ? "#10B981" : "#9CA3AF"} 
+                <Feather
+                  name={hasMinLength ? 'check-circle' : 'circle'}
+                  size={moderateScale(14)}
+                  color={hasMinLength ? '#10B981' : '#9CA3AF'}
                 />
-                <Text style={[styles.valText, hasMinLength && { color: '#10B981' }]}>
+                <Text
+                  style={[styles.valText, hasMinLength && styles.validText]}
+                >
                   Minimum 8 characters
                 </Text>
               </View>
               <View style={styles.valRow}>
-                <Feather 
-                  name={hasNumber ? "check-circle" : "circle"} 
-                  size={moderateScale(14)} 
-                  color={hasNumber ? "#10B981" : "#9CA3AF"} 
+                <Feather
+                  name={hasNumber ? 'check-circle' : 'circle'}
+                  size={moderateScale(14)}
+                  color={hasNumber ? '#10B981' : '#9CA3AF'}
                 />
-                <Text style={[styles.valText, hasNumber && { color: '#10B981' }]}>
+                <Text style={[styles.valText, hasNumber && styles.validText]}>
                   At least one number
+                </Text>
+              </View>
+              <View style={styles.valRow}>
+                <Feather
+                  name={hasLetter ? 'check-circle' : 'circle'}
+                  size={moderateScale(14)}
+                  color={hasLetter ? '#10B981' : '#9CA3AF'}
+                />
+                <Text style={[styles.valText, hasLetter && styles.validText]}>
+                  At least one letter
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* Confirm Password */}
           <View style={styles.inputBlock}>
             <Text style={styles.inputLabel}>Confirm Password</Text>
             <View style={styles.inputContainer}>
@@ -130,24 +196,41 @@ export default function ChangePasswordScreen() {
                 secureTextEntry={!showConfirm}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="........"
+                placeholder="Confirm new password"
                 placeholderTextColor="#9CA3AF"
+                autoCapitalize="none"
               />
-              <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeBtn}>
-                <Feather name={showConfirm ? "eye" : "eye-off"} size={moderateScale(18)} color="#9CA3AF" />
+              <TouchableOpacity
+                onPress={() => setShowConfirm(!showConfirm)}
+                style={styles.eyeBtn}
+              >
+                <Feather
+                  name={showConfirm ? 'eye' : 'eye-off'}
+                  size={moderateScale(18)}
+                  color="#9CA3AF"
+                />
               </TouchableOpacity>
             </View>
+            {!passwordsMatch && confirmPassword.length > 0 ? (
+              <Text style={styles.errorText}>Passwords do not match.</Text>
+            ) : null}
+            {passwordsMatch && !isDifferentFromCurrent && confirmPassword.length > 0 ? (
+              <Text style={styles.errorText}>
+                New password must be different from current password.
+              </Text>
+            ) : null}
           </View>
 
-          {/* Save Button */}
-          <TouchableOpacity 
-            style={[styles.saveButton, (!hasMinLength || !hasNumber || !currentPassword || newPassword !== confirmPassword) && styles.saveButtonDisabled]}
-            disabled={!hasMinLength || !hasNumber || !currentPassword || newPassword !== confirmPassword}
+          <TouchableOpacity
+            style={[styles.saveButton, !canSubmit && styles.saveButtonDisabled]}
+            disabled={!canSubmit}
             activeOpacity={0.8}
+            onPress={handleSave}
           >
-            <Text style={styles.saveButtonText}>Save Changes</Text>
+            <Text style={styles.saveButtonText}>
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Text>
           </TouchableOpacity>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -158,6 +241,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  flex: {
+    flex: 1,
   },
   avatar: {
     width: moderateScale(36),
@@ -203,7 +289,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: moderateScale(15, 0.3),
     color: '#111827',
-    letterSpacing: 2,
   },
   eyeBtn: {
     padding: scale(4),
@@ -222,6 +307,15 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontWeight: '500',
   },
+  validText: {
+    color: '#10B981',
+  },
+  errorText: {
+    marginTop: verticalScale(8),
+    color: '#DC2626',
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: '500',
+  },
   saveButton: {
     backgroundColor: '#FA8C4C',
     borderRadius: scale(12),
@@ -235,7 +329,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   saveButtonDisabled: {
-    backgroundColor: '#FCA5A5', // Visual muted queue or keep FA8C4C with lower opacity
     opacity: 0.6,
   },
   saveButtonText: {

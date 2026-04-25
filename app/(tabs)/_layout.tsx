@@ -7,18 +7,31 @@ import {
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import * as HugeiconsModule from "@hugeicons/react-native";
-import { Tabs, useSegments } from "expo-router";
+import { Redirect, Tabs, useSegments } from "expo-router";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
 
 const HugeiconsIcon = HugeiconsModule.HugeiconsIcon || HugeiconsModule.default?.HugeiconsIcon || (HugeiconsModule as any);
 
 export default function TabLayout() {
   const segments = useSegments();
+  const user = useAppStore((state) => state.user);
+  const tokens = useAppStore((state) => state.tokens);
+  const isRestrictedAccess = getRestrictedAccessStatus(user) !== null;
+  const currentLeaf = (segments as string[])[2];
+
+  if (!user || !tokens?.access_token) {
+    return <Redirect href="/(auth)" />;
+  }
+
+  if (isRestrictedAccess && currentLeaf !== "help-center" && currentLeaf !== "restricted-access") {
+    return <Redirect href="/(tabs)/settings/restricted-access" />;
+  }
   
   // Conditionally hide tab bar on specific screens that are deep in stacks
   // Only show tab bar if we are on the exact root of a tab (e.g. ['(tabs)', 'home'] or ['(tabs)', 'home', 'index'])
   const isRootScreen = segments.length <= 2 || (segments.length === 3 && (segments as any[])[2] === 'index');
-  const shouldHideTabBar = !isRootScreen;
+  const shouldHideTabBar = isRestrictedAccess || !isRootScreen;
 
   console.log("Current segments:", segments, "Should Hide:", shouldHideTabBar);
   return (

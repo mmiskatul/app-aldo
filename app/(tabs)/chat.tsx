@@ -7,6 +7,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import { useIsFocused } from "@react-navigation/native";
 import { io, Socket } from "socket.io-client";
 import apiClient from "../../api/apiClient";
 import ChatInput from "../../components/chat/ChatInput";
@@ -19,38 +20,57 @@ import { useTranslation } from "../../utils/i18n";
 export default function ChatScreen() {
   const { t } = useTranslation();
   const tokens = useAppStore((state) => state.tokens);
+  const isFocused = useIsFocused();
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  const scrollToBottom = () => {
+    setTimeout(
+      () => scrollViewRef.current?.scrollToEnd({ animated: true }),
+      200,
+    );
+  };
+
   useEffect(() => {
-    if (!tokens?.access_token) return;
+    if (!tokens?.access_token || !isFocused) {
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+      return;
+    }
 
     const apiUrl =
-      process.env.EXPO_PUBLIC_API_URL || "https://risto-ai.vercel.app";
+      apiClient.defaults.baseURL ||
+      process.env.EXPO_PUBLIC_API_URL ||
+      "https://risto-ai.vercel.app";
+    let isMounted = true;
 
     // First, fetch initial messages using the REST API
     apiClient
       .get("/api/v1/restaurant/chat/messages")
       .then((response) => {
+        if (!isMounted) return;
         setMessages(response.data.messages || []);
         setLoading(false);
-        setTimeout(
-          () => scrollViewRef.current?.scrollToEnd({ animated: true }),
-          200,
-        );
+        scrollToBottom();
       })
       .catch((error) => {
         console.error("Error fetching chat messages via REST:", error);
+        if (!isMounted) return;
         setLoading(false);
       });
 
-    // Then, initialize Socket.io connection for real-time interaction
+    // Then, initialize Socket.IO connection for real-time interaction.
+    socketRef.current?.disconnect();
     socketRef.current = io(`${apiUrl}/restaurant-chat`, {
+      path: "/socket.io",
       auth: { token: tokens.access_token },
-      transports: ["polling"], // Force standard HTTP long-polling securely if websockets are completely unsupported by the deployment
+      transports: ["polling"],
+      upgrade: false,
+      reconnection: true,
+      timeout: 15000,
     });
 
     socketRef.current.on("connect", () => {
@@ -60,20 +80,24 @@ export default function ChatScreen() {
     socketRef.current.on("chat:conversation", (data: any) => {
       setIsAiTyping(false);
       setMessages(data.messages || []);
-      setTimeout(
-        () => scrollViewRef.current?.scrollToEnd({ animated: true }),
-        200,
-      );
+      scrollToBottom();
     });
 
     socketRef.current.on("connect_error", (error) => {
       console.error("Chat connection error:", error);
+      setIsAiTyping(false);
+    });
+
+    socketRef.current.on("disconnect", (reason) => {
+      console.log("Chat socket disconnected:", reason);
     });
 
     return () => {
+      isMounted = false;
       socketRef.current?.disconnect();
+      socketRef.current = null;
     };
-  }, [tokens]);
+  }, [tokens?.access_token, isFocused]);
 
   const handleSendMessage = async (text: string, file?: any) => {
     if (!text.trim() && !file) return;
@@ -88,10 +112,7 @@ export default function ChatScreen() {
       attachment_source: file?.uri || null, // Best-effort local preview
     };
     setMessages((prev) => [...prev, optimisticMessage]);
-    setTimeout(
-      () => scrollViewRef.current?.scrollToEnd({ animated: true }),
-      100,
-    );
+    scrollToBottom();
 
     if (file) {
       setIsAiTyping(true);
@@ -117,33 +138,40 @@ export default function ChatScreen() {
         // The API returns the updated messages array directly
         if (response.data && Array.isArray(response.data)) {
           setMessages(response.data);
-          setTimeout(
-            () => scrollViewRef.current?.scrollToEnd({ animated: true }),
-            200,
-          );
+          scrollToBottom();
         } else if (response.data?.messages) {
           setMessages(response.data.messages);
-          setTimeout(
-            () => scrollViewRef.current?.scrollToEnd({ animated: true }),
-            200,
-          );
+          scrollToBottom();
         }
       } catch (error) {
         setIsAiTyping(false);
         console.error("Error uploading attachment:", error);
       }
     } else {
-      // Send standard text payload via WebSocket
-      if (!socketRef.current) return;
+      // Prefer realtime when connected, but fall back to REST if the socket
+      // transport is unavailable in the current deployment.
       setIsAiTyping(true);
-      setTimeout(
-        () => scrollViewRef.current?.scrollToEnd({ animated: true }),
-        100,
-      );
-      socketRef.current.emit("chat:message", {
-        message: text.trim(),
-        attachment_source: null,
-      });
+      scrollToBottom();
+
+      if (socketRef.current?.connected) {
+        socketRef.current.emit("chat:message", {
+          message: text.trim(),
+          attachment_source: null,
+        });
+        return;
+      }
+
+      try {
+        const response = await apiClient.post("/api/v1/restaurant/chat/messages", {
+          message: text.trim(),
+        });
+        setIsAiTyping(false);
+        setMessages(response.data.messages || []);
+        scrollToBottom();
+      } catch (error) {
+        setIsAiTyping(false);
+        console.error("Error sending chat message:", error);
+      }
     }
   };
 

@@ -8,8 +8,26 @@ export interface User {
   full_name: string;
   role: string;
   restaurant_name: string;
+  account_status?: string | null;
   [key: string]: any; // Allow other fields from the API
 }
+
+export const getRestrictedAccessStatus = (user: User | null): "restricted" | "suspended" | null => {
+  if (!user || user.is_active !== false) {
+    return null;
+  }
+
+  if (user.account_status === "restricted" || user.account_status === "suspended") {
+    return user.account_status;
+  }
+
+  // Backward compatibility for older persisted sessions that only stored subscription_status.
+  if (user.subscription_status === "suspended") {
+    return "suspended";
+  }
+
+  return null;
+};
 
 export interface Profile {
   full_name: string;
@@ -28,6 +46,13 @@ export interface Tokens {
   access_token: string;
   refresh_token: string;
   token_type: string;
+}
+
+export interface PendingRegistration {
+  restaurant_name: string;
+  owner_full_name: string;
+  email: string;
+  password: string;
 }
 
 export interface AnalyticsData {
@@ -91,12 +116,14 @@ interface AppState {
   cashOverviewData: CashOverviewData | null;
   vatOverviewData: VatOverviewData | null;
   profile: Profile | null;
+  pendingRegistration: PendingRegistration | null;
   setUser: (user: User | null, tokens?: Tokens | null) => void;
   setTokens: (tokens: Tokens | null) => void;
   setAnalyticsData: (data: AnalyticsData | null) => void;
   setCashOverviewData: (data: CashOverviewData | null) => void;
   setVatOverviewData: (data: VatOverviewData | null) => void;
   setProfile: (profile: Profile | null) => void;
+  setPendingRegistration: (payload: PendingRegistration | null) => void;
   appLanguage: 'en' | 'it';
   setAppLanguage: (lang: 'en' | 'it') => void;
   logout: () => void;
@@ -114,12 +141,14 @@ export const useAppStore = create<AppState>()(
       cashOverviewData: null,
       vatOverviewData: null,
       profile: null,
+      pendingRegistration: null,
       setUser: (user, tokens = null) => set({ user, tokens }),
       setTokens: (tokens: Tokens | null) => set({ tokens }),
       setAnalyticsData: (data) => set({ analyticsData: data }),
       setCashOverviewData: (data) => set({ cashOverviewData: data }),
       setVatOverviewData: (data) => set({ vatOverviewData: data }),
       setProfile: (profile) => set({ profile }),
+      setPendingRegistration: (payload) => set({ pendingRegistration: payload }),
       appLanguage: 'en',
       setAppLanguage: (lang) => set({ appLanguage: lang }),
       logout: () =>
@@ -130,6 +159,7 @@ export const useAppStore = create<AppState>()(
           cashOverviewData: null,
           vatOverviewData: null,
           profile: null,
+          pendingRegistration: null,
         }),
     }),
     {

@@ -11,8 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
-import { useEffect } from "react";
-import { useAppStore } from "../store/useAppStore";
+import { getRestrictedAccessStatus, useAppStore } from "../store/useAppStore";
 
 // @ts-ignore
 import BackgroundSVG from "../assets/images/onboarding/Background+Border+Shadow.svg";
@@ -57,13 +56,6 @@ export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const slidesRef = useRef<FlatList<any>>(null);
   const router = useRouter();
-  
-  const user = useAppStore((state) => state.user);
-
-  if (user) {
-    return <Redirect href="/(tabs)/home" />;
-  }
-
   const viewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems && viewableItems.length > 0) {
       setCurrentIndex(viewableItems[0].index);
@@ -71,6 +63,15 @@ export default function OnboardingScreen() {
   }).current;
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+  const user = useAppStore((state) => state.user);
+  const hasRestrictedAccess = getRestrictedAccessStatus(user) !== null;
+
+  if (user) {
+    if (hasRestrictedAccess) {
+      return <Redirect href="/(tabs)/settings/restricted-access" />;
+    }
+    return <Redirect href="/(tabs)/home" />;
+  }
 
   const scrollToNext = () => {
     if (currentIndex < slides.length - 1) {

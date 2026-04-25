@@ -1,4 +1,3 @@
-import { FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import axios from "axios";
@@ -18,7 +17,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Input from "../../components/ui/Input";
-import { useAppStore } from "../../store/useAppStore";
+import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
+import { getApiBaseUrl } from "../../utils/api";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -33,18 +33,27 @@ export default function AuthLoginScreen() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const getApiErrorMessage = (error: any, fallback: string) =>
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.message ||
+    error?.response?.data?.detail ||
+    error?.message ||
+    fallback;
+
   const handleLogin = async () => {
-    if (!email || !password) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
     setIsLoading(true);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://risto-ai.vercel.app";
+      const apiUrl = getApiBaseUrl();
       const response = await axios.post(
         `${apiUrl}/api/v1/auth/restaurant/login`,
-        { email, password }
+        { email: normalizedEmail, password }
       );
 
       const data = response.data;
@@ -54,16 +63,19 @@ export default function AuthLoginScreen() {
       // Save user and tokens to store
       setUser(data.user, data.tokens);
 
-      // Navigate to the tabs flow
-      router.replace("/(tabs)/home" as any);
+      if (getRestrictedAccessStatus(data.user) !== null) {
+        router.replace("/(tabs)/settings/restricted-access" as any);
+      } else {
+        // Navigate to the tabs flow
+        router.replace("/(tabs)/home" as any);
+      }
     } catch (error: any) {
       console.log("Login API Error:", error.response?.data || error.message);
-      
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.detail ||
-        error.message ||
-        "An unexpected error occurred";
+
+      const errorMessage = getApiErrorMessage(
+        error,
+        "An unexpected error occurred"
+      );
       Alert.alert("Login Failed", errorMessage);
     } finally {
       setIsLoading(false);
@@ -142,44 +154,10 @@ export default function AuthLoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Social Logins */}
-          <View style={styles.socialContainer}>
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.socialButtonsRow}>
-              <TouchableOpacity style={styles.socialButton}>
-                <View style={styles.socialIconContainer}>
-                  {/* Simplified Google Icon rendering for now */}
-                  <FontAwesome5
-                    name="google"
-                    size={moderateScale(18)}
-                    color="#DB4437"
-                  />
-                </View>
-                <Text style={styles.socialButtonText}>Google</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.socialButton}>
-                <View style={styles.socialIconContainer}>
-                  <FontAwesome5
-                    name="apple"
-                    size={moderateScale(20)}
-                    color="#000000"
-                  />
-                </View>
-                <Text style={styles.socialButtonText}>Apple</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
           {/* Footer */}
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Text
                 style={styles.footerHighlight}
                 onPress={() => router.push("/(auth)/signup" as any)}
@@ -255,50 +233,6 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(18, 0.3),
     fontWeight: "700",
     color: "#FFFFFF",
-  },
-  socialContainer: {
-    marginBottom: verticalScale(30),
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: verticalScale(24),
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E5E7EB",
-  },
-  dividerText: {
-    marginHorizontal: scale(16),
-    fontSize: moderateScale(12, 0.3),
-    fontWeight: "600",
-    color: "#9CA3AF",
-    letterSpacing: 0.5,
-  },
-  socialButtonsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  socialButton: {
-    flex: 1,
-    flexDirection: "row",
-    height: verticalScale(52),
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: scale(12),
-    justifyContent: "center",
-    alignItems: "center",
-    marginHorizontal: scale(6),
-    backgroundColor: "#FFFFFF",
-  },
-  socialIconContainer: {
-    marginRight: scale(10),
-  },
-  socialButtonText: {
-    fontSize: moderateScale(15, 0.3),
-    fontWeight: "600",
-    color: "#374151",
   },
   footerContainer: {
     alignItems: "center",

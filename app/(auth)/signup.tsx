@@ -1,4 +1,4 @@
-import { Feather, FontAwesome5 } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import axios from "axios";
@@ -22,10 +22,24 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
 import Input from "../../components/ui/Input";
+import { useAppStore } from "../../store/useAppStore";
+import { getApiBaseUrl } from "../../utils/api";
+
+const getApiErrorMessage = (error: any, fallback: string) => {
+  const errData = error.response?.data;
+  if (!errData) {
+    return error.message || fallback;
+  }
+  if (typeof errData === "string") {
+    return errData;
+  }
+  return errData.error?.message || errData.message || errData.detail || fallback;
+};
 
 export default function AuthSignupScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const setPendingRegistration = useAppStore((state) => state.setPendingRegistration);
 
   const [restaurantName, setRestaurantName] = useState("");
   const [ownerName, setOwnerName] = useState("");
@@ -50,57 +64,40 @@ export default function AuthSignupScreen() {
 
     setIsLoading(true);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://risto-ai.vercel.app";
+      const normalizedPayload = {
+        restaurant_name: restaurantName.trim(),
+        owner_full_name: ownerName.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+      };
+      const apiUrl = getApiBaseUrl();
       const response = await axios.post(
         `${apiUrl}/api/v1/auth/restaurant/register`,
-        {
-          restaurant_name: restaurantName,
-          owner_full_name: ownerName,
-          email: email.trim(),
-          password: password,
-        }
+        normalizedPayload
       );
 
       const data = response.data;
       console.log("Signup API Response:", data);
+      setPendingRegistration(normalizedPayload);
 
       Alert.alert("Success", data.message || "Account created successfully.");
-      
-      // Navigate to the verify identity screen, passing all data needed for resend
-      router.push({
-        pathname: "/(auth)/verify",
-        params: { 
-          email: email.trim(),
-          restaurant_name: restaurantName,
-          owner_full_name: ownerName,
-          password: password,
-        }
-      } as any);
+      router.push("/(auth)/verify" as any);
       
     } catch (error: any) {
       console.log("Signup API Error:", error.response?.data || error.message);
-      
-      let errorMessage = "An unexpected error occurred during signup.";
-      const errData = error.response?.data;
-      
-      if (errData?.error?.code === "conflict" || errData?.error?.message === "An account with this email already exists" || errData?.message === "An account with this email already exists") {
-        errorMessage = "Account exist";
-      } else if (errData) {
-        if (typeof errData === 'string') {
-          try {
-            const parsed = JSON.parse(errData);
-            errorMessage = parsed.error?.message || parsed.message || parsed.detail || errData;
-          } catch {
-            errorMessage = errData;
-          }
-        } else {
-          errorMessage = errData.error?.message || errData.message || errData.detail || JSON.stringify(errData);
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
+      const errorMessage = getApiErrorMessage(
+        error,
+        "An unexpected error occurred during signup."
+      );
 
-      Alert.alert("Error", errorMessage);
+      if (
+        error.response?.data?.error?.code === "conflict" ||
+        errorMessage === "An account with this email already exists"
+      ) {
+        Alert.alert("Error", "An account with this email already exists.");
+      } else {
+        Alert.alert("Error", errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -233,39 +230,6 @@ export default function AuthSignupScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Social Logins */}
-          <View style={styles.socialContainer}>
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.socialButtonsRow}>
-              <TouchableOpacity style={styles.socialButton}>
-                <View style={styles.socialIconContainer}>
-                  <FontAwesome5
-                    name="google"
-                    size={moderateScale(18)}
-                    color="#DB4437"
-                  />
-                </View>
-                <Text style={styles.socialButtonText}>Google</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.socialButton}>
-                <View style={styles.socialIconContainer}>
-                  <FontAwesome5
-                    name="apple"
-                    size={moderateScale(20)}
-                    color="#000000"
-                  />
-                </View>
-                <Text style={styles.socialButtonText}>Apple</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
           {/* Footer */}
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>
@@ -362,50 +326,6 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(18, 0.3),
     fontWeight: "700",
     color: "#FFFFFF",
-  },
-  socialContainer: {
-    marginBottom: verticalScale(30),
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: verticalScale(24),
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E5E7EB",
-  },
-  dividerText: {
-    marginHorizontal: scale(16),
-    fontSize: moderateScale(12, 0.3),
-    fontWeight: "600",
-    color: "#9CA3AF",
-    letterSpacing: 0.5,
-  },
-  socialButtonsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  socialButton: {
-    flex: 1,
-    flexDirection: "row",
-    height: verticalScale(52),
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: scale(12),
-    justifyContent: "center",
-    alignItems: "center",
-    marginHorizontal: scale(6),
-    backgroundColor: "#FFFFFF",
-  },
-  socialIconContainer: {
-    marginRight: scale(10),
-  },
-  socialButtonText: {
-    fontSize: moderateScale(15, 0.3),
-    fontWeight: "600",
-    color: "#374151",
   },
   footerContainer: {
     alignItems: "center",
