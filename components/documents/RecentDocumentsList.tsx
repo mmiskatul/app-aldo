@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import Skeleton, { SkeletonCard } from '../ui/Skeleton';
 import { useTranslation } from '../../utils/i18n';
 
 interface DocumentProp {
@@ -110,7 +111,23 @@ export default function RecentDocumentsList({ documents, loading }: RecentDocume
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="small" color="#FA8C4C" />
+        <Text style={styles.sectionTitle}>{t('recent_documents')}</Text>
+        {Array.from({ length: 3 }).map((_, index) => (
+          <SkeletonCard key={index} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View>
+                <Skeleton width={scale(120)} height={moderateScale(14)} borderRadius={7} />
+                <Skeleton width={scale(84)} height={moderateScale(10)} borderRadius={5} style={{ marginTop: verticalScale(6) }} />
+              </View>
+              <Skeleton width={scale(76)} height={moderateScale(22)} borderRadius={11} />
+            </View>
+            <View style={styles.amountRow}>
+              <Skeleton width={scale(78)} height={moderateScale(22)} borderRadius={8} />
+              <Skeleton width={scale(120)} height={moderateScale(12)} borderRadius={6} />
+            </View>
+            <Skeleton width="100%" height={moderateScale(40)} borderRadius={12} />
+          </SkeletonCard>
+        ))}
       </View>
     );
   }
@@ -149,8 +166,6 @@ export default function RecentDocumentsList({ documents, loading }: RecentDocume
     </View>
   );
 }
-
-import { ActivityIndicator } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {

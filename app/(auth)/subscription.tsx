@@ -3,7 +3,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -15,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import { BillingCycle, UserSubscriptionPlan, getUserSubscriptionPlans } from "../../api/settings";
+import { ListRouteSkeleton } from "../../components/ui/RouteSkeletons";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -71,9 +71,7 @@ export default function SubscriptionScreen() {
         </View>
 
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FA8C4C" />
-          </View>
+          <ListRouteSkeleton itemCount={2} />
         ) : (
           <>
             <View style={styles.toggleContainer}>
@@ -179,11 +177,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: scale(10),
     lineHeight: moderateScale(22, 0.3),
-  },
-  loadingContainer: {
-    minHeight: verticalScale(220),
-    justifyContent: "center",
-    alignItems: "center",
   },
   toggleContainer: {
     flexDirection: "row",

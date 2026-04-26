@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,6 +12,7 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Header from '../../../components/ui/Header';
+import { TextRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { PublicLegalDocument, getTermsOfService } from '../../../api/settings';
 
 const formatDate = (value: string | null) => {
@@ -66,9 +66,7 @@ export default function TermsConditionsScreen() {
       <Header title="Terms of Service" showBack={true} />
 
       {loading ? (
-        <View style={styles.centerState}>
-          <ActivityIndicator size="large" color="#FA8C4C" />
-        </View>
+        <TextRouteSkeleton />
       ) : error ? (
         <View style={styles.centerState}>
           <Feather name="alert-circle" size={moderateScale(42)} color="#EF4444" />

@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import Input from "../../components/ui/Input";
+import { getApiBaseUrl } from "../../utils/api";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -38,7 +39,7 @@ export default function ForgotPasswordScreen() {
 
     setIsLoading(true);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://risto-ai.vercel.app";
+      const apiUrl = getApiBaseUrl();
       const response = await axios.post(`${apiUrl}/api/v1/auth/restaurant/forgot-password`, {
         email: email.trim(),
       });

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Linking,
   ScrollView,
   StyleSheet,
@@ -14,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import Header from '../../../components/ui/Header';
+import { DetailRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { getTicketById, TicketDetail, TicketMessage } from '../../../api/support';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -101,9 +101,7 @@ export default function TicketDetailScreen() {
     return (
       <View style={styles.safeArea}>
         <Header title="Ticket Details" showBack={true} />
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#FA8B4F" />
-        </View>
+        <DetailRouteSkeleton />
       </View>
     );
   }

@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,6 +13,7 @@ import ChatInput from "../../components/chat/ChatInput";
 import ChatMessage from "../../components/chat/ChatMessage";
 import QuickPrompts from "../../components/chat/QuickPrompts";
 import Header from "../../components/ui/Header";
+import { ChatRouteSkeleton } from "../../components/ui/RouteSkeletons";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../utils/i18n";
 
@@ -186,13 +186,8 @@ export default function ChatScreen() {
         <Header title={t('chat_title')} showBell={true} />
 
         {loading ? (
-          <View
-            style={[
-              styles.scrollView,
-              { justifyContent: "center", alignItems: "center" },
-            ]}
-          >
-            <ActivityIndicator size="large" color="#FA8C4C" />
+          <View style={styles.scrollView}>
+            <ChatRouteSkeleton />
           </View>
         ) : (
           <ScrollView

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useNavigation } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import Header from '../../../components/ui/Header';
 import VatBalance from '../../../components/home/VatBalance'; 
+import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore"; 
 
@@ -157,9 +158,7 @@ export default function VatScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FA8C4C"]} />}
       >
       {loading && !vatOverviewData ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", marginTop: verticalScale(40) }}>
-          <ActivityIndicator size="large" color="#FA8C4C" />
-        </View>
+        <ListRouteSkeleton itemCount={3} />
       ) : (
         <>
           {/* VAT Card */}

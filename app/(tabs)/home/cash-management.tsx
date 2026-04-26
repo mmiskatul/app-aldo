@@ -2,7 +2,6 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,10 +12,33 @@ import {
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../../api/apiClient";
 import Header from "../../../components/ui/Header";
+import { ListRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 import { useAppStore } from "../../../store/useAppStore";
 
 import CashMetrics from "../../../components/home/cash/CashMetrics";
 import RecentDeposits from "../../../components/home/cash/RecentDeposits";
+
+interface HomeCashItem {
+  label: string;
+  amount: number;
+  subtitle: string;
+}
+
+interface HomeCashDataResponse {
+  available_periods?: string[];
+  weekly?: {
+    cash_management?: HomeCashItem[];
+  };
+  monthly?: {
+    cash_management?: HomeCashItem[];
+  };
+  recent_activity?: Array<{
+    kind?: string;
+    title?: string;
+    subtitle?: string;
+    timestamp?: string;
+  }>;
+}
 
 export default function CashManagementScreen() {
   const router = useRouter();
@@ -26,7 +48,8 @@ export default function CashManagementScreen() {
 
   const [activeFilter, setActiveFilter] = useState("Today");
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(!cashOverviewData);
+  const [loading, setLoading] = useState(true);
+  const [homeCashData, setHomeCashData] = useState<HomeCashDataResponse | null>(null);
 
   const filters = ["Today", "This Week", "This Month"];
 
@@ -45,9 +68,13 @@ export default function CashManagementScreen() {
 
   const fetchCashOverview = useCallback(async () => {
     try {
-      const res = await apiClient.get("/api/v1/restaurant/cash/overview");
-      console.log("CASH OVERVIEW API RESPONSE:", JSON.stringify(res.data, null, 2));
-      setCashOverviewData(res.data);
+      const [cashOverviewRes, homeRes] = await Promise.all([
+        apiClient.get("/api/v1/restaurant/cash/overview"),
+        apiClient.get("/api/v1/restaurant/home"),
+      ]);
+
+      setCashOverviewData(cashOverviewRes.data);
+      setHomeCashData(homeRes.data);
     } catch (error) {
       console.error("Error fetching cash overview:", error);
     } finally {
@@ -67,17 +94,43 @@ export default function CashManagementScreen() {
 
   const periodKey = filterToPeriodKey(activeFilter);
   const currentData = cashOverviewData?.periods?.[periodKey];
+  const homePeriodKey = activeFilter === "This Month" ? "monthly" : "weekly";
+  const homeCashManagementData = homeCashData?.[homePeriodKey]?.cash_management;
+  const hasScreenData = Boolean(currentData && homeCashData);
+
+  const currentSummary = currentData?.summary
+    ? {
+        ...currentData.summary,
+        total_collected:
+          homeCashManagementData?.find((item) => item.label.toLowerCase() === "total cash collected")?.amount ??
+          currentData.summary.total_collected,
+        cash_available:
+          homeCashManagementData?.find((item) => item.label.toLowerCase() === "cash available")?.amount ??
+          currentData.summary.cash_available,
+        bank_deposits:
+          homeCashManagementData?.find((item) => item.label.toLowerCase() === "cash deposited")?.amount ??
+          (currentData.summary as any).bank_deposits ??
+          (currentData.summary as any).bank_deposits_total ??
+          0,
+      }
+    : null;
+
+  const recentTransactions = homeCashData?.recent_activity?.length
+    ? homeCashData.recent_activity.map((item, index) => ({
+        id: `${item.kind || "activity"}-${item.timestamp || index}-${index}`,
+        display_title: item.title || "Transaction",
+        deposit_date_formatted: item.subtitle || item.timestamp || "",
+        amount_formatted: "",
+        amount: item.kind === "expense" ? -1 : 1,
+      }))
+    : currentData?.recent_deposits;
 
   return (
     <View style={styles.safeArea}>
       <Header title="Cash Management" showBack={true} />
 
-      {loading && !cashOverviewData ? (
-        <View
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-        >
-          <ActivityIndicator size="large" color="#FA8C4C" />
-        </View>
+      {loading && !hasScreenData ? (
+        <ListRouteSkeleton itemCount={3} />
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -140,10 +193,10 @@ export default function CashManagementScreen() {
           {currentData && (
             <>
               <CashMetrics
-                summary={currentData.summary}
+                summary={currentSummary ?? currentData.summary}
                 status={currentData.status}
               />
-              <RecentDeposits deposits={currentData.recent_deposits} />
+              <RecentDeposits deposits={recentTransactions} />
             </>
           )}
         </ScrollView>

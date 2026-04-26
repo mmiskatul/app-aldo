@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Platform,
@@ -16,6 +15,7 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Header from '../../../components/ui/Header';
+import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { useAppStore } from '../../../store/useAppStore';
 import {
   RestaurantNotificationSettings,
@@ -141,9 +141,7 @@ export default function NotificationSettingsScreen() {
       />
 
       {loading ? (
-        <View style={styles.centerState}>
-          <ActivityIndicator size="large" color="#FA8C4C" />
-        </View>
+        <ListRouteSkeleton withAction={false} itemCount={4} />
       ) : error ? (
         <View style={styles.centerState}>
           <Feather name="alert-circle" size={moderateScale(42)} color="#EF4444" />

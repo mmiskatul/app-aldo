@@ -7,7 +7,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
 import { ArrowDownTrayIcon, BellIcon } from "react-native-heroicons/outline";
 import { Feather } from "@expo/vector-icons";
@@ -19,6 +18,7 @@ import InsightSummaryCard from "../../../components/home/view-insight/InsightSum
 import OtherInsights from "../../../components/home/view-insight/OtherInsights";
 import RecommendedActions from "../../../components/home/view-insight/RecommendedActions";
 import RootCauses from "../../../components/home/view-insight/RootCauses";
+import { DetailRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 
 export default function ViewInsightScreen() {
   const router = useRouter();
@@ -115,7 +115,7 @@ export default function ViewInsightScreen() {
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
-          <ActivityIndicator size="large" color="#FA8C4C" style={{ marginTop: verticalScale(40) }} />
+          <DetailRouteSkeleton />
         ) : data ? (
           <>
             <InsightSummaryCard 

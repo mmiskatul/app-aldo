@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 
@@ -15,6 +15,7 @@ import SupplierPriceAlerts from '../../components/analytics/SupplierPriceAlerts'
 import { useAppStore } from '../../store/useAppStore';
 
 import ActionFilterBar from '../../components/home/ActionFilterBar';
+import { DashboardRouteSkeleton } from '../../components/ui/RouteSkeletons';
 import apiClient from '../../api/apiClient';
 import { useTranslation } from '../../utils/i18n';
 
@@ -60,8 +61,9 @@ export default function AnalyticsScreen() {
 
   if (!analyticsData || loading) {
     return (
-      <View style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#FA8C4C" />
+      <View style={styles.safeArea}>
+        <Header title={t('analytics_title')} showBell={true} />
+        <DashboardRouteSkeleton />
       </View>
     );
   }

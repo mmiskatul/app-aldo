@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Linking,
@@ -15,6 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Header from '../../../components/ui/Header';
+import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { useAppStore } from '../../../store/useAppStore';
 import {
   BillingCycle,
@@ -183,9 +183,7 @@ export default function ManageSubscriptionScreen() {
       />
 
       {loading ? (
-        <View style={styles.centerState}>
-          <ActivityIndicator size="large" color="#FA8B4C" />
-        </View>
+        <ListRouteSkeleton itemCount={3} />
       ) : error ? (
         <View style={styles.centerState}>
           <Feather name="alert-circle" size={moderateScale(42)} color="#EF4444" />

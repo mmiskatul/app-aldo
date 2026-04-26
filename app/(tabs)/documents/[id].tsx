@@ -2,7 +2,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Platform,
   ScrollView,
@@ -20,6 +19,7 @@ import DetailsActions from "../../../components/documents/document-details/Detai
 import DocumentInformation from "../../../components/documents/document-details/DocumentInformation";
 import DocumentPreview from "../../../components/documents/document-details/DocumentPreview";
 import ExtractedData from "../../../components/documents/document-details/ExtractedData";
+import { DetailRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 import { useTranslation } from "../../../utils/i18n";
 const { StorageAccessFramework } = FileSystem;
 
@@ -290,13 +290,9 @@ export default function DocumentDetailsScreen() {
 
   if (loading) {
     return (
-      <View
-        style={[
-          styles.safeArea,
-          { justifyContent: "center", alignItems: "center" },
-        ]}
-      >
-        <ActivityIndicator size="large" color="#FA8C4C" />
+      <View style={styles.safeArea}>
+        <Header title={t('document_details_title')} showBack={true} />
+        <DetailRouteSkeleton />
       </View>
     );
   }

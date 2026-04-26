@@ -7,7 +7,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
@@ -18,6 +17,7 @@ import apiClient from "../../../api/apiClient";
 import ExpenseDistribution from "../../../components/home/expenses/ExpenseDistribution";
 import QuickSummary from "../../../components/home/expenses/QuickSummary";
 import RecentTransactions from "../../../components/home/expenses/RecentTransactions";
+import { ListRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 
 export default function ExpensesScreen() {
   const router = useRouter();
@@ -111,9 +111,7 @@ export default function ExpensesScreen() {
         </ScrollView>
 
         {loading && !refreshing ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FA8C4C" />
-          </View>
+          <ListRouteSkeleton withAction={false} itemCount={3} />
         ) : expenseData ? (
           <>
             <QuickSummary 
@@ -191,11 +189,6 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: '#FFFFFF',
     fontWeight: "600",
-  },
-  loadingContainer: {
-    paddingVertical: verticalScale(100),
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   emptyContainer: {
     paddingVertical: verticalScale(100),

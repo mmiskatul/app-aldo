@@ -36,9 +36,12 @@ export default function RecentDeposits({ deposits }: RecentDepositsProps) {
         </View>
       ) : displayDeposits.map((item) => {
         const isPositive = item.amount >= 0;
-        const displayAmount = isPositive
-          ? `+${item.amount_formatted}`
-          : `-${item.amount_formatted.replace("-", "")}`;
+        const hasAmount = Boolean(item.amount_formatted);
+        const displayAmount = hasAmount
+          ? isPositive
+            ? `+${item.amount_formatted}`
+            : `-${item.amount_formatted.replace("-", "")}`
+          : null;
         // Since the backend might not provide a type flag for vendor, we determine it blindly by amount if needed,
         // or just treat all as bank since it's "Recent Deposits". For visual diversity with dummy data, we check amount flag:
         const iconType = item.amount < 0 ? "vendor" : "bank";
@@ -69,14 +72,16 @@ export default function RecentDeposits({ deposits }: RecentDepositsProps) {
               </Text>
             </View>
 
-            <Text
-              style={[
-                styles.amount,
-                isPositive ? styles.amountPositive : styles.amountNegative,
-              ]}
-            >
-              {displayAmount}
-            </Text>
+            {displayAmount ? (
+              <Text
+                style={[
+                  styles.amount,
+                  isPositive ? styles.amountPositive : styles.amountNegative,
+                ]}
+              >
+                {displayAmount}
+              </Text>
+            ) : null}
           </View>
         );
       })}

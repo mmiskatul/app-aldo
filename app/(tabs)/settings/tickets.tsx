@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -14,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import Header from '../../../components/ui/Header';
+import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { getUserTickets, TicketListItem } from '../../../api/support';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -116,9 +116,7 @@ export default function TicketsScreen() {
       <Header title="My Tickets" showBack={true} />
 
       {loading ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#FA8B4F" />
-        </View>
+        <ListRouteSkeleton withAction={false} itemCount={4} />
       ) : error ? (
         <View style={styles.emptyContainer}>
           <Feather name="alert-circle" size={moderateScale(48)} color="#FCA5A5" />
@@ -165,11 +163,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F9FAFB',
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   listContent: {
     padding: scale(16),

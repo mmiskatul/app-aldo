@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View, ActivityIndicator, RefreshControl } from "react-native";
+import { ScrollView, StyleSheet, View, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale, verticalScale } from "react-native-size-matters";
 import { useRouter } from "expo-router";
@@ -16,6 +16,7 @@ import QuickActions from "../../../components/home/QuickActions";
 import RecentActivity from "../../../components/home/RecentActivity";
 import RevenueChart from "../../../components/home/RevenueChart";
 import VatBalance from "../../../components/home/VatBalance";
+import { DashboardRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 import { generatePdfExport, generateExcelExport } from "../../../utils/exportData";
 
 interface HomeDashboardData {
@@ -129,8 +130,8 @@ export default function TabsIndex() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" color="#FA8C4C" />
+      <View style={styles.container}>
+        <DashboardRouteSkeleton />
       </View>
     );
   }

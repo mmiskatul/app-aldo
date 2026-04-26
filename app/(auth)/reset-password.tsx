@@ -20,6 +20,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import Input from "../../components/ui/Input";
 import OTPVerification from "../../components/ui/OTPVerification";
+import { getApiBaseUrl } from "../../utils/api";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -45,7 +46,7 @@ export default function ResetPasswordScreen() {
     }
     setIsResending(true);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://risto-ai.vercel.app";
+      const apiUrl = getApiBaseUrl();
       const response = await axios.post(`${apiUrl}/api/v1/auth/restaurant/forgot-password`, {
         email
       });
@@ -97,7 +98,7 @@ export default function ResetPasswordScreen() {
 
     setIsLoading(true);
     try {
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://risto-ai.vercel.app";
+      const apiUrl = getApiBaseUrl();
       const response = await axios.post(
         `${apiUrl}/api/v1/auth/restaurant/reset-password`,
         {
