@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -17,38 +18,59 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
-import OTPVerification from "../../components/ui/OTPVerification";
+import Input from "../../components/ui/Input";
 import { getApiBaseUrl } from "../../utils/api";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
 
-export default function ResetPasswordScreen() {
+export default function ResetPasswordFormScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { email } = useLocalSearchParams<{ email: string }>();
+  const { email, code } = useLocalSearchParams<{ email: string; code: string }>();
 
-  const [code, setCode] = useState(["", "", "", ""]);
-  const [isResending, setIsResending] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleResendCode = async () => {
-    if (!email) {
-      Alert.alert("Error", "Email not found. Please go back and enter your email again.");
+  const handleResetPassword = async () => {
+    if (!email || !code) {
+      Alert.alert("Error", "Verification details are missing. Please restart the reset process.");
+      router.replace("/(auth)/forgot-password" as any);
       return;
     }
 
-    setIsResending(true);
+    if (!newPassword || !confirmPassword) {
+      Alert.alert("Error", "Please enter your new password.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match.");
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const apiUrl = getApiBaseUrl();
-      const response = await axios.post(`${apiUrl}/api/v1/auth/restaurant/forgot-password`, {
+      const response = await axios.post(`${apiUrl}/api/v1/auth/restaurant/reset-password`, {
         email,
+        code,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
       });
 
-      Alert.alert("Success", response.data?.message || "Password reset code resent to your email.");
+      Alert.alert(
+        "Success",
+        response.data?.message || "Restaurant account password reset successful",
+        [{ text: "OK", onPress: () => router.replace("/(auth)" as any) }]
+      );
     } catch (error: any) {
-      console.log("Resend API Error:", error.response?.data || error.message);
-      const errData = error.response?.data;
+      console.log("Reset Password API Error:", error.response?.data || error.message);
       let errorMessage = "An unexpected error occurred.";
+      const errData = error.response?.data;
 
       if (errData) {
         if (typeof errData === "string") {
@@ -68,26 +90,8 @@ export default function ResetPasswordScreen() {
 
       Alert.alert("Error", errorMessage);
     } finally {
-      setIsResending(false);
+      setIsLoading(false);
     }
-  };
-
-  const handleVerifyCode = () => {
-    const otp = code.join("");
-    if (otp.length !== 4) {
-      Alert.alert("Error", "Please enter the complete 4-digit code.");
-      return;
-    }
-
-    if (!email) {
-      Alert.alert("Error", "Email not found. Please restart the process.");
-      return;
-    }
-
-    router.push({
-      pathname: "/(auth)/reset-password-form",
-      params: { email, code: otp },
-    } as any);
   };
 
   return (
@@ -113,35 +117,51 @@ export default function ResetPasswordScreen() {
           </View>
 
           <View style={styles.headerContainer}>
-            <Text style={styles.headerTitle}>Verify Reset Code</Text>
+            <Text style={styles.headerTitle}>Create New Password</Text>
             <Text style={styles.headerSubtitle}>
-              Enter the 4-digit code sent to your email. After verification, you will continue to the
-              new password screen.
+              Your code is ready. Enter and confirm your new password to complete the reset.
             </Text>
           </View>
 
           <View style={styles.formContainer}>
-            <View style={styles.otpWrapper}>
-              <Text style={styles.otpLabel}>Verification Code</Text>
-              <OTPVerification code={code} setCode={setCode} onResend={handleResendCode} />
-            </View>
+            <Input
+              label="New Password"
+              placeholder="********"
+              isPassword
+              isPasswordVisible={isPasswordVisible}
+              onTogglePasswordVisibility={() => setIsPasswordVisible(!isPasswordVisible)}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              leadingIcon={<Feather name="lock" size={moderateScale(18)} color="#9CA3AF" />}
+            />
+
+            <Input
+              label="Confirm New Password"
+              placeholder="********"
+              isPassword
+              isPasswordVisible={isConfirmPasswordVisible}
+              onTogglePasswordVisibility={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              leadingIcon={<Feather name="shield" size={moderateScale(18)} color="#9CA3AF" />}
+            />
 
             <TouchableOpacity
               style={styles.submitButton}
-              onPress={handleVerifyCode}
-              disabled={isResending}
+              onPress={handleResetPassword}
+              disabled={isLoading}
             >
-              {isResending ? (
+              {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.submitButtonText}>Verify Code</Text>
+                <Text style={styles.submitButtonText}>Reset Password</Text>
               )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>
-              Changed your mind?{" "}
+              Need a different code?{" "}
               <Text style={styles.footerHighlight} onPress={() => router.back()}>
                 Go back
               </Text>
@@ -193,17 +213,6 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     marginBottom: verticalScale(20),
-  },
-  otpWrapper: {
-    marginBottom: verticalScale(24),
-    alignItems: "center",
-  },
-  otpLabel: {
-    fontSize: moderateScale(14, 0.3),
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: verticalScale(8),
-    alignSelf: "flex-start",
   },
   submitButton: {
     backgroundColor: "#FA8C4C",

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { CreditCardIcon, BanknotesIcon, BuildingLibraryIcon, ChevronRightIcon } from 'react-native-heroicons/outline';
 import { useTranslation } from '../../utils/i18n';
+import Skeleton from '../ui/Skeleton';
 
 interface CashItemProps {
   title: string;
@@ -33,42 +34,75 @@ interface CashManagementProps {
     amount: number;
     subtitle: string;
   }[];
+  loading?: boolean;
 }
 
-export default function CashManagement({ cashData }: CashManagementProps) {
+export default function CashManagement({ cashData, loading = false }: CashManagementProps) {
   const { t } = useTranslation();
+
   const getIconData = (label: string) => {
     switch (label.toLowerCase()) {
-      case 'total cash collected': return CreditCardIcon;
-      case 'cash available': return BanknotesIcon;
-      case 'cash deposited': return BuildingLibraryIcon;
-      default: return BanknotesIcon;
+      case 'total cash collected':
+        return CreditCardIcon;
+      case 'cash available':
+        return BanknotesIcon;
+      case 'cash deposited':
+        return BuildingLibraryIcon;
+      default:
+        return BanknotesIcon;
     }
   };
 
-  const parsedCashData: CashItemProps[] = cashData && cashData.length > 0
-    ? cashData.map(c => ({
-        title: c.label,
-        value: `€${c.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        IconComponent: getIconData(c.label),
-      }))
-    : [
-        { title: 'Total Cash Collected', value: '€0.00', IconComponent: CreditCardIcon },
-        { title: 'Cash Available', value: '€0.00', IconComponent: BanknotesIcon },
-        { title: 'Cash Deposited to Bank', value: '€0.00', IconComponent: BuildingLibraryIcon },
-      ];
+  const parsedCashData: CashItemProps[] =
+    cashData && cashData.length > 0
+      ? cashData.map((cashItem) => ({
+          title: cashItem.label,
+          value: `\u20AC${cashItem.amount.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}`,
+          IconComponent: getIconData(cashItem.label),
+        }))
+      : [
+          { title: 'Total Cash Collected', value: '\u20AC0.00', IconComponent: CreditCardIcon },
+          { title: 'Cash Available', value: '\u20AC0.00', IconComponent: BanknotesIcon },
+          { title: 'Cash Deposited to Bank', value: '\u20AC0.00', IconComponent: BuildingLibraryIcon },
+        ];
+
+  const skeletonRows = [0, 1, 2];
 
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>{t('cash_management')}</Text>
-      
+
       <View style={styles.cardContainer}>
-        {parsedCashData.map((item, index) => (
-          <View key={item.title + index}>
-            <CashItem {...item} />
-            {index < parsedCashData.length - 1 && <View style={styles.divider} />}
-          </View>
-        ))}
+        {loading
+          ? skeletonRows.map((index) => (
+              <View key={index}>
+                <View style={styles.itemContainer}>
+                  <View style={styles.itemLeft}>
+                    <Skeleton width={scale(40)} height={scale(40)} borderRadius={scale(20)} />
+                    <View style={styles.textContainer}>
+                      <Skeleton width={scale(110)} height={moderateScale(16)} borderRadius={8} />
+                      <Skeleton
+                        width={scale(140)}
+                        height={moderateScale(11)}
+                        borderRadius={6}
+                        style={styles.cashLabelSkeleton}
+                      />
+                    </View>
+                  </View>
+                  <Skeleton width={scale(14)} height={moderateScale(14)} borderRadius={7} />
+                </View>
+                {index < skeletonRows.length - 1 && <View style={styles.divider} />}
+              </View>
+            ))
+          : parsedCashData.map((item, index) => (
+              <View key={item.title + index}>
+                <CashItem {...item} />
+                {index < parsedCashData.length - 1 && <View style={styles.divider} />}
+              </View>
+            ))}
       </View>
     </View>
   );
@@ -123,6 +157,9 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12, 0.3),
     fontWeight: '500',
     color: '#9CA3AF',
+  },
+  cashLabelSkeleton: {
+    marginTop: verticalScale(6),
   },
   divider: {
     height: 1,

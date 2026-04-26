@@ -3,13 +3,15 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from '../../utils/i18n';
+import Skeleton from '../ui/Skeleton';
 
 interface VatBalanceProps {
   balance?: number;
+  loading?: boolean;
   onPress?: () => void;
 }
 
-export default function VatBalance({ balance, onPress }: VatBalanceProps) {
+export default function VatBalance({ balance, loading = false, onPress }: VatBalanceProps) {
   const Container = onPress ? TouchableOpacity : React.Fragment;
   const { t } = useTranslation();
 
@@ -22,8 +24,19 @@ export default function VatBalance({ balance, onPress }: VatBalanceProps) {
         style={styles.container}
       >
         <Text style={styles.subtitle}>{t('estimated_vat')}</Text>
-        <Text style={styles.balanceText}>€{balance !== undefined ? balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : 80}</Text>
-        
+        {loading ? (
+          <Skeleton
+            width={scale(150)}
+            height={moderateScale(34)}
+            borderRadius={12}
+            style={styles.balanceSkeleton}
+          />
+        ) : (
+          <Text style={styles.balanceText}>
+            {'\u20AC'}{balance !== undefined ? balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : 80}
+          </Text>
+        )}
+
         <View style={styles.syncContainer}>
           <View style={styles.syncDot} />
           <Text style={styles.syncText}>{t('live_sync')}</Text>
@@ -55,6 +68,10 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(40, 0.3),
     fontWeight: '800',
     color: '#FFFFFF',
+    marginBottom: verticalScale(16),
+  },
+  balanceSkeleton: {
+    backgroundColor: 'rgba(255,255,255,0.28)',
     marginBottom: verticalScale(16),
   },
   syncContainer: {

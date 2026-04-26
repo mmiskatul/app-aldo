@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-import { Feather } from '@expo/vector-icons';
 
 import Header from '../../components/ui/Header';
 import AnalyticsAIInsightCard from '../../components/analytics/AnalyticsAIInsightCard';
@@ -11,72 +10,328 @@ import StatsSelector from '../../components/analytics/StatsSelector';
 import RevenueComparisonChart from '../../components/analytics/RevenueComparisonChart';
 import ActivityCostSection from '../../components/analytics/ActivityCostSection';
 import SupplierPriceAlerts from '../../components/analytics/SupplierPriceAlerts';
-
-import { useAppStore } from '../../store/useAppStore';
-
 import ActionFilterBar from '../../components/home/ActionFilterBar';
-import { DashboardRouteSkeleton } from '../../components/ui/RouteSkeletons';
+import Skeleton, { SkeletonCard } from '../../components/ui/Skeleton';
 import apiClient from '../../api/apiClient';
 import { useTranslation } from '../../utils/i18n';
+import { generateAnalyticsPdfExport, generateAnalyticsExcelExport } from '../../utils/exportData';
+
+type PeriodKey = 'weekly' | 'monthly';
+
+type InsightBanner = {
+  title: string;
+  subtitle: string;
+};
+
+type MetricTile = {
+  label: string;
+  value: number | string;
+  change_percent?: number;
+  subtitle?: string;
+};
+
+type RevenuePoint = {
+  label: string;
+  value: number;
+};
+
+type SummaryStat = {
+  label: string;
+  value: number | string;
+};
+
+type RevenueComparison = {
+  label: string;
+  value: number;
+};
+
+type SupplierAlert = {
+  title: string;
+  subtitle?: string;
+  impact?: string;
+};
+
+interface AnalyticsMetricTilesResponse {
+  period: PeriodKey;
+  items: MetricTile[];
+}
+
+interface AnalyticsRevenueTrendResponse {
+  period: PeriodKey;
+  revenue_total: number;
+  change_percent: number;
+  points: RevenuePoint[];
+}
+
+interface AnalyticsSummaryStatsResponse {
+  period: PeriodKey;
+  items: SummaryStat[];
+}
+
+interface AnalyticsRevenueComparisonResponse {
+  period: PeriodKey;
+  items: RevenueComparison[];
+}
+
+interface AnalyticsCoversActivityResponse {
+  period: PeriodKey;
+  items: SummaryStat[];
+}
+
+interface AnalyticsCostBreakdownResponse {
+  period: PeriodKey;
+  items: SummaryStat[];
+}
+
+interface AnalyticsSupplierAlertsResponse {
+  period: PeriodKey;
+  items: SupplierAlert[];
+}
+
+const SECTION_LOAD_DELAY_MS = 180;
 
 export default function AnalyticsScreen() {
   const { t } = useTranslation();
-  const analyticsData = useAppStore((state) => state.analyticsData);
-  const setAnalyticsData = useAppStore((state) => state.setAnalyticsData);
-  
-  const [activePeriod, setActivePeriod] = React.useState('weekly');
-  const [loading, setLoading] = React.useState(false);
-  const [businessInsight, setBusinessInsight] = React.useState<any>(null);
 
-  const fetchAnalyticsData = async (period: string) => {
+  const [activePeriod, setActivePeriod] = React.useState<PeriodKey>('weekly');
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const [businessInsight, setBusinessInsight] = React.useState<InsightBanner | null>(null);
+  const [metricTilesByPeriod, setMetricTilesByPeriod] = React.useState<Partial<Record<PeriodKey, MetricTile[]>>>({});
+  const [revenueTrendByPeriod, setRevenueTrendByPeriod] = React.useState<Partial<Record<PeriodKey, AnalyticsRevenueTrendResponse>>>({});
+  const [summaryStatsByPeriod, setSummaryStatsByPeriod] = React.useState<Partial<Record<PeriodKey, SummaryStat[]>>>({});
+  const [revenueComparisonByPeriod, setRevenueComparisonByPeriod] = React.useState<Partial<Record<PeriodKey, RevenueComparison[]>>>({});
+  const [coversActivityByPeriod, setCoversActivityByPeriod] = React.useState<Partial<Record<PeriodKey, SummaryStat[]>>>({});
+  const [costBreakdownByPeriod, setCostBreakdownByPeriod] = React.useState<Partial<Record<PeriodKey, SummaryStat[]>>>({});
+  const [supplierAlertsByPeriod, setSupplierAlertsByPeriod] = React.useState<Partial<Record<PeriodKey, SupplierAlert[]>>>({});
+
+  const [insightLoading, setInsightLoading] = React.useState(false);
+  const [metricTilesLoading, setMetricTilesLoading] = React.useState(false);
+  const [revenueTrendLoading, setRevenueTrendLoading] = React.useState(false);
+  const [summaryStatsLoading, setSummaryStatsLoading] = React.useState(false);
+  const [revenueComparisonLoading, setRevenueComparisonLoading] = React.useState(false);
+  const [coversActivityLoading, setCoversActivityLoading] = React.useState(false);
+  const [costBreakdownLoading, setCostBreakdownLoading] = React.useState(false);
+  const [supplierAlertsLoading, setSupplierAlertsLoading] = React.useState(false);
+
+  const fetchBusinessInsight = React.useCallback(async () => {
+    setInsightLoading(true);
     try {
-      setLoading(true);
-      const [overviewRes, insightRes] = await Promise.all([
-        apiClient.get(`/api/v1/restaurant/analytics/overview?period=${period}`),
-        apiClient.get('/api/v1/restaurant/analytics/business-insight')
-      ]);
-      setAnalyticsData(overviewRes.data);
-      setBusinessInsight(insightRes.data);
+      const response = await apiClient.get<InsightBanner>('/api/v1/restaurant/analytics/business-insight');
+      setBusinessInsight(response.data);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      console.error('Error fetching business insight:', error);
     } finally {
-      setLoading(false);
+      setInsightLoading(false);
     }
-  };
+  }, []);
+
+  const fetchMetricTiles = React.useCallback(async (period: PeriodKey) => {
+    setMetricTilesLoading(true);
+    try {
+      const response = await apiClient.get<AnalyticsMetricTilesResponse>('/api/v1/restaurant/analytics/metric-tiles', {
+        params: { period },
+      });
+      setMetricTilesByPeriod((current) => ({ ...current, [period]: response.data.items }));
+    } catch (error) {
+      console.error('Error fetching analytics metric tiles:', error);
+    } finally {
+      setMetricTilesLoading(false);
+    }
+  }, []);
+
+  const fetchRevenueTrend = React.useCallback(async (period: PeriodKey) => {
+    setRevenueTrendLoading(true);
+    try {
+      const response = await apiClient.get<AnalyticsRevenueTrendResponse>('/api/v1/restaurant/analytics/revenue-trend', {
+        params: { period },
+      });
+      setRevenueTrendByPeriod((current) => ({ ...current, [period]: response.data }));
+    } catch (error) {
+      console.error('Error fetching analytics revenue trend:', error);
+    } finally {
+      setRevenueTrendLoading(false);
+    }
+  }, []);
+
+  const fetchSummaryStats = React.useCallback(async (period: PeriodKey) => {
+    setSummaryStatsLoading(true);
+    try {
+      const response = await apiClient.get<AnalyticsSummaryStatsResponse>('/api/v1/restaurant/analytics/summary-stats', {
+        params: { period },
+      });
+      setSummaryStatsByPeriod((current) => ({ ...current, [period]: response.data.items }));
+    } catch (error) {
+      console.error('Error fetching analytics summary stats:', error);
+    } finally {
+      setSummaryStatsLoading(false);
+    }
+  }, []);
+
+  const fetchRevenueComparison = React.useCallback(async (period: PeriodKey) => {
+    setRevenueComparisonLoading(true);
+    try {
+      const response = await apiClient.get<AnalyticsRevenueComparisonResponse>('/api/v1/restaurant/analytics/revenue-comparison', {
+        params: { period },
+      });
+      setRevenueComparisonByPeriod((current) => ({ ...current, [period]: response.data.items }));
+    } catch (error) {
+      console.error('Error fetching analytics revenue comparison:', error);
+    } finally {
+      setRevenueComparisonLoading(false);
+    }
+  }, []);
+
+  const fetchCoversActivity = React.useCallback(async (period: PeriodKey) => {
+    setCoversActivityLoading(true);
+    try {
+      const response = await apiClient.get<AnalyticsCoversActivityResponse>('/api/v1/restaurant/analytics/covers-activity', {
+        params: { period },
+      });
+      setCoversActivityByPeriod((current) => ({ ...current, [period]: response.data.items }));
+    } catch (error) {
+      console.error('Error fetching analytics covers activity:', error);
+    } finally {
+      setCoversActivityLoading(false);
+    }
+  }, []);
+
+  const fetchCostBreakdown = React.useCallback(async (period: PeriodKey) => {
+    setCostBreakdownLoading(true);
+    try {
+      const response = await apiClient.get<AnalyticsCostBreakdownResponse>('/api/v1/restaurant/analytics/cost-breakdown', {
+        params: { period },
+      });
+      setCostBreakdownByPeriod((current) => ({ ...current, [period]: response.data.items }));
+    } catch (error) {
+      console.error('Error fetching analytics cost breakdown:', error);
+    } finally {
+      setCostBreakdownLoading(false);
+    }
+  }, []);
+
+  const fetchSupplierAlerts = React.useCallback(async (period: PeriodKey) => {
+    setSupplierAlertsLoading(true);
+    try {
+      const response = await apiClient.get<AnalyticsSupplierAlertsResponse>('/api/v1/restaurant/analytics/supplier-alerts', {
+        params: { period },
+      });
+      setSupplierAlertsByPeriod((current) => ({ ...current, [period]: response.data.items }));
+    } catch (error) {
+      console.error('Error fetching analytics supplier alerts:', error);
+    } finally {
+      setSupplierAlertsLoading(false);
+    }
+  }, []);
+
+  const waitForDelay = React.useCallback((delayMs: number) => {
+    return new Promise<void>((resolve) => {
+      setTimeout(resolve, delayMs);
+    });
+  }, []);
+
+  const fetchNonAiSectionsStaggered = React.useCallback(async (period: PeriodKey, force = false) => {
+    const sectionTasks: Promise<void>[] = [];
+
+    const scheduleSection = (
+      shouldFetch: boolean,
+      order: number,
+      fetcher: () => Promise<void>,
+    ) => {
+      if (!shouldFetch) {
+        return;
+      }
+      sectionTasks.push((async () => {
+        await waitForDelay(order * SECTION_LOAD_DELAY_MS);
+        await fetcher();
+      })());
+    };
+
+    scheduleSection(force || !metricTilesByPeriod[period], 0, () => fetchMetricTiles(period));
+    scheduleSection(force || !revenueTrendByPeriod[period], 1, () => fetchRevenueTrend(period));
+    scheduleSection(force || !summaryStatsByPeriod[period], 2, () => fetchSummaryStats(period));
+    scheduleSection(force || !revenueComparisonByPeriod[period], 3, () => fetchRevenueComparison(period));
+    scheduleSection(force || !coversActivityByPeriod[period], 4, () => fetchCoversActivity(period));
+    scheduleSection(force || !costBreakdownByPeriod[period], 5, () => fetchCostBreakdown(period));
+    scheduleSection(force || !supplierAlertsByPeriod[period], 6, () => fetchSupplierAlerts(period));
+
+    await Promise.all(sectionTasks);
+  }, [
+    costBreakdownByPeriod,
+    coversActivityByPeriod,
+    fetchCostBreakdown,
+    fetchCoversActivity,
+    fetchMetricTiles,
+    fetchRevenueComparison,
+    fetchRevenueTrend,
+    fetchSummaryStats,
+    fetchSupplierAlerts,
+    metricTilesByPeriod,
+    revenueComparisonByPeriod,
+    revenueTrendByPeriod,
+    summaryStatsByPeriod,
+    supplierAlertsByPeriod,
+    waitForDelay,
+  ]);
+
+  const fetchAnalyticsData = React.useCallback(async (period: PeriodKey) => {
+    try {
+      if (businessInsight === null) {
+        void fetchBusinessInsight();
+      }
+      await fetchNonAiSectionsStaggered(period, true);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [businessInsight, fetchBusinessInsight, fetchNonAiSectionsStaggered]);
+
+  React.useEffect(() => {
+    void fetchAnalyticsData(activePeriod);
+  }, [activePeriod, fetchAnalyticsData]);
 
   const handlePeriodChange = (period: string) => {
-    setActivePeriod(period);
-    fetchAnalyticsData(period);
+    setActivePeriod(period as PeriodKey);
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    void fetchBusinessInsight();
+    void fetchAnalyticsData(activePeriod);
   };
 
   const handleExport = async (format: 'pdf' | 'excel') => {
-    if (!analyticsData) return;
-    
+    const analyticsData = {
+      insight_banner: businessInsight,
+      revenue_total: revenueTrendByPeriod[activePeriod]?.revenue_total ?? 0,
+      revenue_change_percent: revenueTrendByPeriod[activePeriod]?.change_percent ?? 0,
+      weekly_revenue: revenueTrendByPeriod[activePeriod]?.points ?? [],
+      metric_tiles: metricTilesByPeriod[activePeriod] ?? [],
+      summary_stats: summaryStatsByPeriod[activePeriod] ?? [],
+      revenue_comparison: revenueComparisonByPeriod[activePeriod] ?? [],
+      covers_activity: coversActivityByPeriod[activePeriod] ?? [],
+      cost_breakdown: costBreakdownByPeriod[activePeriod] ?? [],
+      supplier_price_alerts: supplierAlertsByPeriod[activePeriod] ?? [],
+    };
+
     if (format === 'pdf') {
-      await generateAnalyticsPdfExport({ analyticsData, period: activePeriod });
+      await generateAnalyticsPdfExport({ analyticsData: analyticsData as any, period: activePeriod });
     } else {
-      await generateAnalyticsExcelExport({ analyticsData, period: activePeriod });
+      await generateAnalyticsExcelExport({ analyticsData: analyticsData as any, period: activePeriod });
     }
   };
-
-  if (!analyticsData || loading) {
-    return (
-      <View style={styles.safeArea}>
-        <Header title={t('analytics_title')} showBell={true} />
-        <DashboardRouteSkeleton />
-      </View>
-    );
-  }
 
   return (
     <View style={styles.safeArea}>
       <Header title={t('analytics_title')} showBell={true} />
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FA8C4C']} />
+        }
       >
-        <ActionFilterBar 
+        <ActionFilterBar
           activePeriod={activePeriod}
           availablePeriods={['weekly', 'monthly']}
           onPeriodChange={handlePeriodChange}
@@ -84,20 +339,89 @@ export default function AnalyticsScreen() {
           dropdownTop={verticalScale(130)}
         />
 
-        <AnalyticsAIInsightCard insight={businessInsight || analyticsData.insight_banner} />
-        <SummaryCards metrics={analyticsData.metric_tiles} />
-        <RevenueTrendChart 
-          weeklyRevenue={analyticsData.weekly_revenue} 
-          totalRevenue={analyticsData.revenue_total}
-          changePercent={analyticsData.revenue_change_percent}
-        />
-        <StatsSelector stats={analyticsData.summary_stats} />
-        <RevenueComparisonChart comparison={analyticsData.revenue_comparison} />
-        <ActivityCostSection 
-          coversActivity={analyticsData.covers_activity} 
-          costBreakdown={analyticsData.cost_breakdown} 
-        />
-        <SupplierPriceAlerts alerts={analyticsData.supplier_price_alerts} />
+        {insightLoading && !businessInsight ? (
+          <SkeletonCard style={styles.sectionCard}>
+            <Skeleton width="42%" height={moderateScale(12)} borderRadius={6} />
+            <Skeleton width="94%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
+            <Skeleton width="86%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
+            <Skeleton width="76%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
+          </SkeletonCard>
+        ) : businessInsight ? (
+          <AnalyticsAIInsightCard insight={businessInsight} />
+        ) : null}
+
+        {metricTilesLoading && !metricTilesByPeriod[activePeriod] ? (
+          <View style={styles.twoCardRow}>
+            {[0, 1].map((index) => (
+              <SkeletonCard key={index} style={styles.metricCardSkeleton}>
+                <Skeleton width="46%" height={moderateScale(10)} borderRadius={5} />
+                <Skeleton width="72%" height={moderateScale(20)} borderRadius={8} style={styles.gap8} />
+                <Skeleton width="34%" height={moderateScale(10)} borderRadius={5} />
+              </SkeletonCard>
+            ))}
+          </View>
+        ) : metricTilesByPeriod[activePeriod] ? (
+          <SummaryCards metrics={metricTilesByPeriod[activePeriod] ?? []} />
+        ) : null}
+
+        {revenueTrendLoading && !revenueTrendByPeriod[activePeriod] ? (
+          <SkeletonCard style={styles.sectionCard}>
+            <Skeleton width="34%" height={moderateScale(12)} borderRadius={6} />
+            <Skeleton width="28%" height={moderateScale(22)} borderRadius={8} style={styles.gap8} />
+            <Skeleton width="100%" height={verticalScale(150)} borderRadius={12} style={styles.gap12} />
+          </SkeletonCard>
+        ) : revenueTrendByPeriod[activePeriod] ? (
+          <RevenueTrendChart
+            weeklyRevenue={revenueTrendByPeriod[activePeriod]?.points ?? []}
+            totalRevenue={revenueTrendByPeriod[activePeriod]?.revenue_total ?? 0}
+            changePercent={revenueTrendByPeriod[activePeriod]?.change_percent ?? 0}
+          />
+        ) : null}
+
+        {summaryStatsLoading && !summaryStatsByPeriod[activePeriod] ? (
+          <View style={styles.threeCardRow}>
+            {[0, 1, 2].map((index) => (
+              <SkeletonCard key={index} style={styles.statCardSkeleton}>
+                <Skeleton width="54%" height={moderateScale(9)} borderRadius={5} />
+                <Skeleton width="72%" height={moderateScale(16)} borderRadius={7} style={styles.gap8} />
+              </SkeletonCard>
+            ))}
+          </View>
+        ) : summaryStatsByPeriod[activePeriod] ? (
+          <StatsSelector stats={summaryStatsByPeriod[activePeriod] ?? []} />
+        ) : null}
+
+        {revenueComparisonLoading && !revenueComparisonByPeriod[activePeriod] ? (
+          <SkeletonCard style={styles.sectionCard}>
+            <Skeleton width="38%" height={moderateScale(12)} borderRadius={6} />
+            {[0, 1].map((index) => (
+              <View key={index} style={styles.gap12}>
+                <Skeleton width="100%" height={moderateScale(12)} borderRadius={6} />
+                <Skeleton width="100%" height={moderateScale(8)} borderRadius={4} style={styles.gap8} />
+              </View>
+            ))}
+          </SkeletonCard>
+        ) : revenueComparisonByPeriod[activePeriod] ? (
+          <RevenueComparisonChart comparison={revenueComparisonByPeriod[activePeriod] ?? []} />
+        ) : null}
+
+        {coversActivityLoading || costBreakdownLoading || coversActivityByPeriod[activePeriod] || costBreakdownByPeriod[activePeriod] ? (
+          <ActivityCostSection
+            coversActivity={coversActivityByPeriod[activePeriod] ?? []}
+            costBreakdown={costBreakdownByPeriod[activePeriod] ?? []}
+            coversLoading={coversActivityLoading && !coversActivityByPeriod[activePeriod]}
+            costLoading={costBreakdownLoading && !costBreakdownByPeriod[activePeriod]}
+          />
+        ) : null}
+
+        {supplierAlertsLoading && !supplierAlertsByPeriod[activePeriod] ? (
+          <SkeletonCard style={styles.sectionCard}>
+            <Skeleton width="44%" height={moderateScale(12)} borderRadius={6} />
+            <Skeleton width="100%" height={verticalScale(72)} borderRadius={12} style={styles.gap12} />
+          </SkeletonCard>
+        ) : supplierAlertsByPeriod[activePeriod] ? (
+          <SupplierPriceAlerts alerts={supplierAlertsByPeriod[activePeriod] ?? []} />
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -112,57 +436,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(20),
     paddingBottom: verticalScale(40),
   },
-  bellButton: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(20),
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
+  sectionCard: {
+    marginBottom: verticalScale(24),
   },
-  notificationDot: {
-    position: "absolute",
-    top: scale(10),
-    right: scale(12),
-    width: moderateScale(6),
-    height: moderateScale(6),
-    borderRadius: moderateScale(3),
-    backgroundColor: "#EF4444",
-  },
-  topControls: {
+  twoCardRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: verticalScale(20),
+    justifyContent: 'space-between',
+    marginBottom: verticalScale(24),
   },
-  exportButton: {
+  threeCardRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: scale(8),
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(6),
-    marginRight: scale(12),
+    justifyContent: 'space-between',
+    marginBottom: verticalScale(24),
   },
-  exportText: {
-    fontSize: moderateScale(11, 0.3),
-    fontWeight: '600',
-    color: '#111827',
-    marginLeft: scale(6),
+  metricCardSkeleton: {
+    flex: 1,
+    marginHorizontal: scale(4),
   },
-  filterDropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FCE7D6',
-    borderRadius: scale(8),
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(6),
+  statCardSkeleton: {
+    flex: 1,
+    marginHorizontal: scale(4),
+    paddingVertical: scale(12),
   },
-  filterText: {
-    fontSize: moderateScale(11, 0.3),
-    fontWeight: '600',
-    color: '#111827',
-    marginRight: scale(6),
+  gap8: {
+    marginTop: verticalScale(8),
+  },
+  gap12: {
+    marginTop: verticalScale(12),
   },
 });

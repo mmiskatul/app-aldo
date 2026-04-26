@@ -1,12 +1,11 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View, RefreshControl } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ScrollView, StyleSheet, View, RefreshControl, NativeSyntheticEvent, NativeScrollEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale, verticalScale } from "react-native-size-matters";
 import { useRouter } from "expo-router";
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore";
 
-// Home Components
 import ActionFilterBar from "../../../components/home/ActionFilterBar";
 import AIInsightBox from "../../../components/home/AIInsightBox";
 import CashManagement from "../../../components/home/CashManagement";
@@ -16,27 +15,80 @@ import QuickActions from "../../../components/home/QuickActions";
 import RecentActivity from "../../../components/home/RecentActivity";
 import RevenueChart from "../../../components/home/RevenueChart";
 import VatBalance from "../../../components/home/VatBalance";
-import { DashboardRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 import { generatePdfExport, generateExcelExport } from "../../../utils/exportData";
 
-interface HomeDashboardData {
+interface MetricCard {
+  label: string;
+  value: number;
+  change_percent: number;
+  currency: string;
+}
+
+interface CashItem {
+  label: string;
+  amount: number;
+  subtitle: string;
+}
+
+interface RevenuePoint {
+  label: string;
+  value: number;
+}
+
+interface FeaturedInsight {
+  title: string;
+  summary: string;
+}
+
+interface ActivityItem {
+  kind?: string;
+  title?: string;
+  subtitle?: string;
+  timestamp?: string;
+}
+
+interface HomeShellData {
   greeting_name: string;
   restaurant_name: string;
   preferred_language: string;
   available_periods: string[];
-  weekly: PeriodData;
-  monthly: PeriodData;
   quick_actions: any[];
-  recent_activity: any[];
 }
 
-interface PeriodData {
-  metrics: any[];
-  cash_management: any[];
-  vat_balance: number;
-  revenue: any[];
-  featured_insight: any;
+interface HomeSectionMetricResponse {
+  period: "weekly" | "monthly";
+  items: MetricCard[];
 }
+
+interface HomeSectionCashResponse {
+  period: "weekly" | "monthly";
+  items: CashItem[];
+}
+
+interface HomeSectionRevenueResponse {
+  period: "weekly" | "monthly";
+  items: RevenuePoint[];
+}
+
+interface HomeSectionInsightResponse {
+  period: "weekly" | "monthly";
+  insight: FeaturedInsight | null;
+}
+
+interface HomeSectionRecentActivityResponse {
+  items: ActivityItem[];
+}
+
+interface HomeSectionVatBalanceResponse {
+  balance: number;
+}
+
+type PeriodKey = "weekly" | "monthly";
+
+const REVENUE_TRIGGER_Y = 260;
+const INSIGHT_TRIGGER_Y = 520;
+const RECENT_ACTIVITY_TRIGGER_Y = 760;
+const HOME_SECTION_LOAD_DELAY_MS = 160;
 
 export default function TabsIndex() {
   const insets = useSafeAreaInsets();
@@ -45,10 +97,31 @@ export default function TabsIndex() {
   const setAnalyticsData = useAppStore((state) => state.setAnalyticsData);
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
   const setProfile = useAppStore((state) => state.setProfile);
-  const [data, setData] = useState<HomeDashboardData | null>(null);
-  const [activePeriod, setActivePeriod] = useState<string>("weekly");
+
+  const [shellData, setShellData] = useState<HomeShellData | null>(null);
+  const [activePeriod, setActivePeriod] = useState<PeriodKey>("weekly");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [metricsByPeriod, setMetricsByPeriod] = useState<Partial<Record<PeriodKey, MetricCard[]>>>({});
+  const [cashByPeriod, setCashByPeriod] = useState<Partial<Record<PeriodKey, CashItem[]>>>({});
+  const [revenueByPeriod, setRevenueByPeriod] = useState<Partial<Record<PeriodKey, RevenuePoint[]>>>({});
+  const [insightByPeriod, setInsightByPeriod] = useState<Partial<Record<PeriodKey, FeaturedInsight | null>>>({});
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[] | null>(null);
+  const [vatBalance, setVatBalance] = useState<number | null>(null);
+
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [cashLoading, setCashLoading] = useState(false);
+  const [vatLoading, setVatLoading] = useState(false);
+  const [revenueLoading, setRevenueLoading] = useState(false);
+  const [insightLoading, setInsightLoading] = useState(false);
+  const [recentActivityLoading, setRecentActivityLoading] = useState(false);
+
+  const triggeredSectionsRef = useRef({
+    revenue: false,
+    insight: false,
+    recentActivity: false,
+  });
 
   const hydrateSupportingData = useCallback(async () => {
     const [analyticsRes, cashOverviewRes, profileRes] = await Promise.allSettled([
@@ -76,83 +149,243 @@ export default function TabsIndex() {
     }
   }, [setAnalyticsData, setCashOverviewData, setProfile]);
 
-  const fetchHomeData = useCallback(async () => {
+  const fetchHomeShell = useCallback(async () => {
+    const response = await apiClient.get("/api/v1/restaurant/home", {
+      params: {
+        include_metrics: false,
+        include_cash_management: false,
+        include_revenue: false,
+        include_featured_insight: false,
+        include_recent_activity: false,
+      },
+    });
+
+    setShellData({
+      greeting_name: response.data.greeting_name,
+      restaurant_name: response.data.restaurant_name,
+      preferred_language: response.data.preferred_language,
+      available_periods: response.data.available_periods,
+      quick_actions: response.data.quick_actions,
+    });
+
+    if (response.data.available_periods?.length > 0) {
+      setActivePeriod((currentPeriod) =>
+        response.data.available_periods.includes(currentPeriod)
+          ? currentPeriod
+          : response.data.available_periods[0]
+      );
+    }
+  }, []);
+
+  const fetchMetricsSection = useCallback(async (period: PeriodKey) => {
+    setMetricsLoading(true);
     try {
-      const homeRes = await apiClient.get("/api/v1/restaurant/home");
-      
-      setData(homeRes.data);
+      const response = await apiClient.get<HomeSectionMetricResponse>("/api/v1/restaurant/home/metrics", {
+        params: { period },
+      });
+      setMetricsByPeriod((current) => ({ ...current, [period]: response.data.items }));
+    } catch (error: any) {
+      console.log("Home metrics error:", error.response?.data || error.message);
+    } finally {
+      setMetricsLoading(false);
+    }
+  }, []);
 
-      if (homeRes.data.available_periods?.length > 0) {
-        setActivePeriod((currentPeriod) =>
-          homeRes.data.available_periods.includes(currentPeriod)
-            ? currentPeriod
-            : homeRes.data.available_periods[0]
-        );
+  const fetchCashSection = useCallback(async (period: PeriodKey) => {
+    setCashLoading(true);
+    try {
+      const response = await apiClient.get<HomeSectionCashResponse>("/api/v1/restaurant/home/cash-management", {
+        params: { period },
+      });
+      setCashByPeriod((current) => ({ ...current, [period]: response.data.items }));
+    } catch (error: any) {
+      console.log("Home cash section error:", error.response?.data || error.message);
+    } finally {
+      setCashLoading(false);
+    }
+  }, []);
+
+  const fetchVatSection = useCallback(async () => {
+    setVatLoading(true);
+    try {
+      const response = await apiClient.get<HomeSectionVatBalanceResponse>("/api/v1/restaurant/home/vat-balance");
+      setVatBalance(response.data.balance);
+    } catch (error: any) {
+      console.log("Home VAT error:", error.response?.data || error.message);
+    } finally {
+      setVatLoading(false);
+    }
+  }, []);
+
+  const fetchRevenueSection = useCallback(async (period: PeriodKey) => {
+    setRevenueLoading(true);
+    try {
+      const response = await apiClient.get<HomeSectionRevenueResponse>("/api/v1/restaurant/home/revenue", {
+        params: { period },
+      });
+      setRevenueByPeriod((current) => ({ ...current, [period]: response.data.items }));
+    } catch (error: any) {
+      console.log("Home revenue error:", error.response?.data || error.message);
+    } finally {
+      setRevenueLoading(false);
+    }
+  }, []);
+
+  const fetchInsightSection = useCallback(async (period: PeriodKey) => {
+    setInsightLoading(true);
+    try {
+      const response = await apiClient.get<HomeSectionInsightResponse>("/api/v1/restaurant/home/insight", {
+        params: { period },
+      });
+      setInsightByPeriod((current) => ({ ...current, [period]: response.data.insight }));
+    } catch (error: any) {
+      console.log("Home insight error:", error.response?.data || error.message);
+    } finally {
+      setInsightLoading(false);
+    }
+  }, []);
+
+  const fetchRecentActivitySection = useCallback(async () => {
+    setRecentActivityLoading(true);
+    try {
+      const response = await apiClient.get<HomeSectionRecentActivityResponse>("/api/v1/restaurant/home/recent-activity");
+      setRecentActivity(response.data.items);
+    } catch (error: any) {
+      console.log("Home recent activity error:", error.response?.data || error.message);
+    } finally {
+      setRecentActivityLoading(false);
+    }
+  }, []);
+
+  const waitForDelay = useCallback((delayMs: number) => {
+    return new Promise<void>((resolve) => {
+      setTimeout(resolve, delayMs);
+    });
+  }, []);
+
+  const fetchTopPrioritySections = useCallback(async (period: PeriodKey, force = false) => {
+    const tasks: Promise<void>[] = [];
+
+    const scheduleSection = (
+      shouldFetch: boolean,
+      order: number,
+      fetcher: () => Promise<void>,
+    ) => {
+      if (!shouldFetch) {
+        return;
       }
+      tasks.push((async () => {
+        await waitForDelay(order * HOME_SECTION_LOAD_DELAY_MS);
+        await fetcher();
+      })());
+    };
 
+    scheduleSection(force || !metricsByPeriod[period], 0, () => fetchMetricsSection(period));
+    scheduleSection(force || !cashByPeriod[period], 1, () => fetchCashSection(period));
+    scheduleSection(force || vatBalance === null, 2, () => fetchVatSection());
+
+    if (tasks.length > 0) {
+      await Promise.all(tasks);
+    }
+  }, [cashByPeriod, fetchCashSection, fetchMetricsSection, fetchVatSection, metricsByPeriod, vatBalance, waitForDelay]);
+
+  const fetchHomeData = useCallback(async (period: PeriodKey) => {
+    try {
+      triggeredSectionsRef.current = {
+        revenue: false,
+        insight: false,
+        recentActivity: false,
+      };
+      await fetchHomeShell();
+      await fetchTopPrioritySections(period, true);
       void hydrateSupportingData();
     } catch (error: any) {
-      console.log("API Error:", error.response?.data || error.message);
+      console.log("Home shell error:", error.response?.data || error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [hydrateSupportingData]);
+  }, [fetchHomeShell, fetchTopPrioritySections, hydrateSupportingData]);
 
   useEffect(() => {
-    fetchHomeData();
-  }, [fetchHomeData]);
+    void fetchHomeData(activePeriod);
+  }, [activePeriod, fetchHomeData]);
+
+  useEffect(() => {
+    if (!loading) {
+      void fetchTopPrioritySections(activePeriod);
+      if (triggeredSectionsRef.current.revenue && !revenueByPeriod[activePeriod]) {
+        void fetchRevenueSection(activePeriod);
+      }
+      if (triggeredSectionsRef.current.insight && !(activePeriod in insightByPeriod)) {
+        void fetchInsightSection(activePeriod);
+      }
+    }
+  }, [activePeriod, fetchInsightSection, fetchRevenueSection, fetchTopPrioritySections, insightByPeriod, loading, revenueByPeriod]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchHomeData();
+    void fetchHomeData(activePeriod);
   };
 
-  const currentPeriodData = data ? (data as any)[activePeriod] as PeriodData : null;
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
 
-  const handleExport = async (format: 'pdf' | 'excel') => {
-    if (!currentPeriodData) return;
+    if (offsetY >= REVENUE_TRIGGER_Y && !triggeredSectionsRef.current.revenue) {
+      triggeredSectionsRef.current.revenue = true;
+      if (!revenueByPeriod[activePeriod]) {
+        void fetchRevenueSection(activePeriod);
+      }
+    }
 
-    if (format === 'pdf') {
-      await generatePdfExport({
-        metrics: currentPeriodData.metrics,
-        cashData: currentPeriodData.cash_management,
-        period: activePeriod,
-      });
-    } else if (format === 'excel') {
-      await generateExcelExport({
-        metrics: currentPeriodData.metrics,
-        cashData: currentPeriodData.cash_management,
-        period: activePeriod,
-      });
+    if (offsetY >= INSIGHT_TRIGGER_Y && !triggeredSectionsRef.current.insight) {
+      triggeredSectionsRef.current.insight = true;
+      if (!(activePeriod in insightByPeriod)) {
+        void fetchInsightSection(activePeriod);
+      }
+    }
+
+    if (offsetY >= RECENT_ACTIVITY_TRIGGER_Y && !triggeredSectionsRef.current.recentActivity) {
+      triggeredSectionsRef.current.recentActivity = true;
+      if (recentActivity === null) {
+        void fetchRecentActivitySection();
+      }
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <DashboardRouteSkeleton />
-      </View>
-    );
-  }
+  const currentMetrics = metricsByPeriod[activePeriod];
+  const currentCashManagement = cashByPeriod[activePeriod];
+  const currentRevenue = revenueByPeriod[activePeriod];
+  const currentInsight = insightByPeriod[activePeriod];
+
+  const handleExport = async (format: "pdf" | "excel") => {
+    const exportPayload = {
+      metrics: currentMetrics,
+      cashData: currentCashManagement,
+      period: activePeriod,
+    };
+
+    if (format === "pdf") {
+      await generatePdfExport(exportPayload);
+    } else if (format === "excel") {
+      await generateExcelExport(exportPayload);
+    }
+  };
 
   return (
     <View style={styles.container}>
       <View
         style={{
-          paddingTop: Math.max(
-            insets.top + verticalScale(16),
-            verticalScale(16),
-          ),
+          paddingTop: Math.max(insets.top + verticalScale(16), verticalScale(16)),
           paddingHorizontal: scale(20),
           backgroundColor: "#F9FAFB",
           zIndex: 10,
         }}
       >
-        <HomeHeader 
-          greetingName={data?.greeting_name}
-          restaurantName={data?.restaurant_name}
-          preferredLanguage={data?.preferred_language}
+        <HomeHeader
+          greetingName={shellData?.greeting_name}
+          restaurantName={shellData?.restaurant_name}
+          preferredLanguage={shellData?.preferred_language}
         />
       </View>
       <ScrollView
@@ -164,21 +397,31 @@ export default function TabsIndex() {
           },
         ]}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FA8C4C"]} />}
       >
-        <ActionFilterBar 
+        <ActionFilterBar
           activePeriod={activePeriod}
-          availablePeriods={data?.available_periods || ["weekly", "monthly"]}
-          onPeriodChange={setActivePeriod}
+          availablePeriods={shellData?.available_periods || ["weekly", "monthly"]}
+          onPeriodChange={(period) => setActivePeriod(period as PeriodKey)}
           onExport={handleExport}
         />
-        <KPIGrid metrics={currentPeriodData?.metrics} />
-        <CashManagement cashData={currentPeriodData?.cash_management} />
-        <QuickActions items={data?.quick_actions} />
-        <VatBalance balance={currentPeriodData?.vat_balance} onPress={() => router.push("/(tabs)/home/vat")} />
-        <RevenueChart revenue={currentPeriodData?.revenue} period={activePeriod} />
-        <AIInsightBox insight={currentPeriodData?.featured_insight} />
-        <RecentActivity activities={data?.recent_activity} />
+        <KPIGrid metrics={currentMetrics} loading={metricsLoading && !currentMetrics} />
+        <CashManagement cashData={currentCashManagement} loading={cashLoading && !currentCashManagement} />
+        <QuickActions items={shellData?.quick_actions} />
+        <VatBalance
+          balance={vatBalance ?? undefined}
+          loading={vatLoading && vatBalance === null}
+          onPress={() => router.push("/(tabs)/home/vat")}
+        />
+        <RevenueChart
+          revenue={currentRevenue}
+          period={activePeriod}
+          loading={revenueLoading && !currentRevenue}
+        />
+        <AIInsightBox insight={currentInsight ?? undefined} loading={insightLoading && !(activePeriod in insightByPeriod)} />
+        <RecentActivity activities={recentActivity ?? undefined} loading={recentActivityLoading && recentActivity === null} />
       </ScrollView>
     </View>
   );
@@ -187,7 +430,7 @@ export default function TabsIndex() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB", // Slightly off-white background to match dashboard aesthetic
+    backgroundColor: "#F9FAFB",
   },
   scrollContent: {
     flexGrow: 1,

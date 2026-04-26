@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useTranslation } from '../../utils/i18n';
+import Skeleton from '../ui/Skeleton';
 
 interface ActivityCostData {
   label: string;
@@ -12,16 +13,30 @@ interface ActivityCostData {
 interface ActivityCostSectionProps {
   coversActivity: ActivityCostData[];
   costBreakdown: ActivityCostData[];
+  coversLoading?: boolean;
+  costLoading?: boolean;
 }
 
-export default function ActivityCostSection({ coversActivity, costBreakdown }: ActivityCostSectionProps) {
+export default function ActivityCostSection({ coversActivity, costBreakdown, coversLoading = false, costLoading = false }: ActivityCostSectionProps) {
   const { t } = useTranslation();
   return (
     <View style={styles.container}>
       {/* Covers Activity */}
       <View style={styles.card}>
         <Text style={styles.title}>{t('covers_activity')}</Text>
-        {coversActivity.map((item, index) => (
+        {coversLoading ? (
+          <>
+            {[0, 1].map((row) => (
+              <View key={row} style={styles.row}>
+                <View style={styles.subRow}>
+                  <Skeleton width={moderateScale(14)} height={moderateScale(14)} borderRadius={7} />
+                  <Skeleton width="48%" height={moderateScale(11)} borderRadius={6} style={styles.labelSkeleton} />
+                </View>
+                <Skeleton width="18%" height={moderateScale(12)} borderRadius={6} />
+              </View>
+            ))}
+          </>
+        ) : coversActivity.map((item, index) => (
           <View key={index} style={styles.row}>
             <View style={styles.subRow}>
               <Feather 
@@ -39,7 +54,16 @@ export default function ActivityCostSection({ coversActivity, costBreakdown }: A
       {/* Cost % */}
       <View style={styles.card}>
         <Text style={styles.title}>{t('cost_percentage')}</Text>
-        {costBreakdown.map((item, index) => (
+        {costLoading ? (
+          <>
+            {[0, 1].map((row) => (
+              <View key={row} style={styles.row}>
+                <Skeleton width="42%" height={moderateScale(11)} borderRadius={6} />
+                <Skeleton width="18%" height={moderateScale(12)} borderRadius={6} />
+              </View>
+            ))}
+          </>
+        ) : costBreakdown.map((item, index) => (
           <View key={index} style={styles.row}>
             <Text style={styles.label}>{item.label}</Text>
             <Text style={[styles.value, { color: index === 0 ? '#EF4444' : '#F59E0B' }]}>
@@ -87,6 +111,9 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(11, 0.3),
     color: '#6B7280',
     fontWeight: '500',
+    marginLeft: scale(6),
+  },
+  labelSkeleton: {
     marginLeft: scale(6),
   },
   value: {

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from '../../utils/i18n';
+import Skeleton from '../ui/Skeleton';
 
 interface RevenuePoint {
   label: string;
@@ -12,6 +13,7 @@ interface RevenuePoint {
 interface RevenueChartProps {
   revenue?: RevenuePoint[];
   period?: string;
+  loading?: boolean;
 }
 
 const CHART_WIDTH = scale(286);
@@ -33,7 +35,7 @@ const normalizeLabel = (label: string, period: string) => {
   return label.length > 4 && period === 'weekly' ? label.slice(0, 3) : label;
 };
 
-export default function RevenueChart({ revenue = [], period = 'weekly' }: RevenueChartProps) {
+export default function RevenueChart({ revenue = [], period = 'weekly', loading = false }: RevenueChartProps) {
   const { t } = useTranslation();
   const safeRevenue = revenue.length > 0 ? revenue : [];
   const maxValue = Math.max(...safeRevenue.map((item) => item.value), 0);
@@ -58,94 +60,107 @@ export default function RevenueChart({ revenue = [], period = 'weekly' }: Revenu
         </Text>
       </View>
 
-      <View style={styles.chartRow}>
-        <View style={styles.yAxis}>
-          {yAxisValues.map((value) => (
-            <Text key={value} style={styles.axisLabel}>
-              {formatCompactCurrency(value)}
-            </Text>
-          ))}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <View style={styles.yAxis}>
+            {[0, 1, 2, 3, 4].map((index) => (
+              <Skeleton key={index} width={scale(34)} height={moderateScale(8)} borderRadius={4} />
+            ))}
+          </View>
+          <View style={styles.chartSkeletonArea}>
+            <Skeleton width="100%" height={CHART_HEIGHT} borderRadius={12} />
+          </View>
         </View>
+      ) : (
+        <View style={styles.chartRow}>
+          <View style={styles.yAxis}>
+            {yAxisValues.map((value) => (
+              <Text key={value} style={styles.axisLabel}>
+                {formatCompactCurrency(value)}
+              </Text>
+            ))}
+          </View>
 
-        <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
-          <Defs>
-            <LinearGradient id="homeBarFill" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor="#F97316" />
-              <Stop offset="100%" stopColor="#FDBA74" />
-            </LinearGradient>
-            <LinearGradient id="homeBarPeakFill" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0%" stopColor="#C2410C" />
-              <Stop offset="100%" stopColor="#F97316" />
-            </LinearGradient>
-          </Defs>
+          <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
+            <Defs>
+              <LinearGradient id="homeBarFill" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0%" stopColor="#F97316" />
+                <Stop offset="100%" stopColor="#FDBA74" />
+              </LinearGradient>
+              <LinearGradient id="homeBarPeakFill" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0%" stopColor="#C2410C" />
+                <Stop offset="100%" stopColor="#F97316" />
+              </LinearGradient>
+            </Defs>
 
-          {yAxisValues.map((_, index) => {
-            const y = PADDING_TOP + (plotHeight / GRID_LINES) * index;
-            return (
-              <Line
-                key={`grid-${index}`}
-                x1={PADDING_LEFT}
-                y1={y}
-                x2={CHART_WIDTH - PADDING_RIGHT}
-                y2={y}
-                stroke="#F3F4F6"
-                strokeDasharray="4 4"
-                strokeWidth="1"
-              />
-            );
-          })}
-
-          {safeRevenue.map((item, index) => {
-            const barHeight = chartMax > 0 ? (item.value / chartMax) * plotHeight : 0;
-            const x = PADDING_LEFT + index * barSlotWidth + (barSlotWidth - barWidth) / 2;
-            const y = PADDING_TOP + plotHeight - barHeight;
-            const isPeak = item.value === maxValue && maxValue > 0;
-
-            return (
-              <React.Fragment key={`${item.label}-${index}`}>
-                <Rect
-                  x={x}
-                  y={PADDING_TOP}
-                  width={barWidth}
-                  height={plotHeight}
-                  rx={scale(7)}
-                  fill="#FFF7ED"
+            {yAxisValues.map((_, index) => {
+              const y = PADDING_TOP + (plotHeight / GRID_LINES) * index;
+              return (
+                <Line
+                  key={`grid-${index}`}
+                  x1={PADDING_LEFT}
+                  y1={y}
+                  x2={CHART_WIDTH - PADDING_RIGHT}
+                  y2={y}
+                  stroke="#F3F4F6"
+                  strokeDasharray="4 4"
+                  strokeWidth="1"
                 />
-                <Rect
-                  x={x}
-                  y={barHeight > 0 ? y : PADDING_TOP + plotHeight - verticalScale(4)}
-                  width={barWidth}
-                  height={Math.max(barHeight, item.value > 0 ? verticalScale(4) : 0)}
-                  rx={scale(7)}
-                  fill={isPeak ? 'url(#homeBarPeakFill)' : 'url(#homeBarFill)'}
-                />
-                <SvgText
-                  x={x + barWidth / 2}
-                  y={CHART_HEIGHT - scale(6)}
-                  fontSize={moderateScale(9, 0.3)}
-                  fontWeight="700"
-                  fill={isPeak ? '#C2410C' : '#6B7280'}
-                  textAnchor="middle"
-                >
-                  {normalizeLabel(item.label, period)}
-                </SvgText>
-                {item.value > 0 ? (
+              );
+            })}
+
+            {safeRevenue.map((item, index) => {
+              const barHeight = chartMax > 0 ? (item.value / chartMax) * plotHeight : 0;
+              const x = PADDING_LEFT + index * barSlotWidth + (barSlotWidth - barWidth) / 2;
+              const y = PADDING_TOP + plotHeight - barHeight;
+              const isPeak = item.value === maxValue && maxValue > 0;
+
+              return (
+                <React.Fragment key={`${item.label}-${index}`}>
+                  <Rect
+                    x={x}
+                    y={PADDING_TOP}
+                    width={barWidth}
+                    height={plotHeight}
+                    rx={scale(7)}
+                    fill="#FFF7ED"
+                  />
+                  <Rect
+                    x={x}
+                    y={barHeight > 0 ? y : PADDING_TOP + plotHeight - verticalScale(4)}
+                    width={barWidth}
+                    height={Math.max(barHeight, item.value > 0 ? verticalScale(4) : 0)}
+                    rx={scale(7)}
+                    fill={isPeak ? 'url(#homeBarPeakFill)' : 'url(#homeBarFill)'}
+                  />
                   <SvgText
                     x={x + barWidth / 2}
-                    y={Math.max(y - verticalScale(6), PADDING_TOP - verticalScale(2))}
-                    fontSize={moderateScale(8, 0.3)}
+                    y={CHART_HEIGHT - scale(6)}
+                    fontSize={moderateScale(9, 0.3)}
                     fontWeight="700"
-                    fill="#6B7280"
+                    fill={isPeak ? '#C2410C' : '#6B7280'}
                     textAnchor="middle"
                   >
-                    {formatCompactCurrency(item.value)}
+                    {normalizeLabel(item.label, period)}
                   </SvgText>
-                ) : null}
-              </React.Fragment>
-            );
-          })}
-        </Svg>
-      </View>
+                  {item.value > 0 ? (
+                    <SvgText
+                      x={x + barWidth / 2}
+                      y={Math.max(y - verticalScale(6), PADDING_TOP - verticalScale(2))}
+                      fontSize={moderateScale(8, 0.3)}
+                      fontWeight="700"
+                      fill="#6B7280"
+                      textAnchor="middle"
+                    >
+                      {formatCompactCurrency(item.value)}
+                    </SvgText>
+                  ) : null}
+                </React.Fragment>
+              );
+            })}
+          </Svg>
+        </View>
+      )}
     </View>
   );
 }
@@ -178,6 +193,13 @@ const styles = StyleSheet.create({
   chartRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  chartSkeletonArea: {
+    flex: 1,
   },
   yAxis: {
     height: CHART_HEIGHT - PADDING_BOTTOM + verticalScale(2),

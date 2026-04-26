@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { DocumentArrowUpIcon, ClipboardDocumentListIcon, BoltIcon } from 'react-native-heroicons/outline';
 import { useTranslation } from '../../utils/i18n';
+import Skeleton from '../ui/Skeleton';
 
 interface ActivityItemProps {
   title: string;
@@ -32,15 +33,20 @@ const ActivityItem = ({ title, subtitle, timeText, IconComponent, iconBgColor, i
 
 interface RecentActivityProps {
   activities?: any[];
+  loading?: boolean;
 }
 
-export default function RecentActivity({ activities: apiActivities }: RecentActivityProps) {
+export default function RecentActivity({ activities: apiActivities, loading = false }: RecentActivityProps) {
   const { t } = useTranslation();
+
   const getIconForType = (type?: string) => {
     switch (type?.toLowerCase()) {
-      case 'invoice': return { IconComponent: DocumentArrowUpIcon, iconBgColor: '#FFF0E5', iconColor: '#FA8C4C' };
-      case 'expense': return { IconComponent: ClipboardDocumentListIcon, iconBgColor: '#FEE2E2', iconColor: '#EF4444' };
-      default: return { IconComponent: BoltIcon, iconBgColor: '#FEF3C7', iconColor: '#D97706' };
+      case 'invoice':
+        return { IconComponent: DocumentArrowUpIcon, iconBgColor: '#FFF0E5', iconColor: '#FA8C4C' };
+      case 'expense':
+        return { IconComponent: ClipboardDocumentListIcon, iconBgColor: '#FEE2E2', iconColor: '#EF4444' };
+      default:
+        return { IconComponent: BoltIcon, iconBgColor: '#FEF3C7', iconColor: '#D97706' };
     }
   };
 
@@ -50,26 +56,23 @@ export default function RecentActivity({ activities: apiActivities }: RecentActi
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-    
+
     if (diffHrs < 1) return t('just_now');
     if (diffHrs < 24) return `${diffHrs}H AGO`;
     return `${Math.floor(diffHrs / 24)}D AGO`;
   };
 
-  const fallbackActivities: ActivityItemProps[] = [
-    { title: 'Invoice uploaded', subtitle: 'Sysco Food Services Ltd.', timeText: '2H AGO', ...getIconForType('invoice') },
-    { title: 'Expense added', subtitle: 'Kitchen Utilities - Gas Bill', timeText: '5H AGO', ...getIconForType('expense') },
-    { title: 'AI insight generated', subtitle: 'Labor efficiency report ready', timeText: '8H AGO', ...getIconForType('insight') },
-  ];
+  const displayActivities: ActivityItemProps[] =
+    apiActivities && apiActivities.length > 0
+      ? apiActivities.map((activity) => ({
+          title: activity.title || 'Activity',
+          subtitle: activity.subtitle || '',
+          timeText: formatTimestamp(activity.timestamp),
+          ...getIconForType(activity.kind),
+        }))
+      : [];
 
-  const displayActivities: ActivityItemProps[] = apiActivities && apiActivities.length > 0
-    ? apiActivities.map(a => ({
-        title: a.title || 'Activity',
-        subtitle: a.subtitle || '',
-        timeText: formatTimestamp(a.timestamp),
-        ...getIconForType(a.kind)
-      }))
-    : (apiActivities ? [] : fallbackActivities);
+  const skeletonRows = [0, 1, 2];
 
   return (
     <View style={styles.container}>
@@ -77,9 +80,25 @@ export default function RecentActivity({ activities: apiActivities }: RecentActi
         <Text style={styles.sectionTitle}>{t('recent_activity')}</Text>
         <Text style={styles.seeAllText}>{t('see_all')}</Text>
       </View>
-      
+
       <View style={styles.cardContainer}>
-        {displayActivities.length > 0 ? (
+        {loading ? (
+          skeletonRows.map((index) => (
+            <View key={index}>
+              <View style={styles.itemContainer}>
+                <View style={styles.itemLeft}>
+                  <Skeleton width={scale(40)} height={scale(40)} borderRadius={scale(20)} />
+                  <View style={styles.textContainer}>
+                    <Skeleton width="66%" height={moderateScale(13)} borderRadius={7} />
+                    <Skeleton width="82%" height={moderateScale(11)} borderRadius={6} style={styles.subtitleSkeleton} />
+                  </View>
+                </View>
+                <Skeleton width={scale(42)} height={moderateScale(10)} borderRadius={6} />
+              </View>
+              {index < skeletonRows.length - 1 && <View style={styles.divider} />}
+            </View>
+          ))
+        ) : displayActivities.length > 0 ? (
           displayActivities.map((item, index) => (
             <View key={`${item.title}-${index}`}>
               <ActivityItem {...item} />
@@ -96,7 +115,7 @@ export default function RecentActivity({ activities: apiActivities }: RecentActi
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: verticalScale(100), // Extra bottom padding to clear absolute tab bar
+    marginBottom: verticalScale(100),
   },
   header: {
     flexDirection: 'row',
@@ -129,7 +148,7 @@ const styles = StyleSheet.create({
   },
   itemLeft: {
     flexDirection: 'row',
-    flex: 1, // allow wrapping
+    flex: 1,
   },
   iconContainer: {
     width: scale(40),
@@ -141,7 +160,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     justifyContent: 'center',
-    flex: 1, // ensure text doesn't push past right edge
+    flex: 1,
   },
   itemTitle: {
     fontSize: moderateScale(14, 0.3),
@@ -154,11 +173,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#9CA3AF',
   },
+  subtitleSkeleton: {
+    marginTop: verticalScale(6),
+  },
   timeText: {
     fontSize: moderateScale(10, 0.3),
     fontWeight: '600',
     color: '#9CA3AF',
-    marginTop: verticalScale(4), // align slightly down
+    marginTop: verticalScale(4),
   },
   divider: {
     height: 1,
