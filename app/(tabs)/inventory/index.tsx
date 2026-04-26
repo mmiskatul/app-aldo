@@ -1,9 +1,13 @@
 import { Feather } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import apiClient from '../../../api/apiClient';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   LayoutAnimation,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,128 +17,143 @@ import {
   View,
 } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import Header from "../../../components/ui/Header";
+import Header from '../../../components/ui/Header';
+import { useAppStore } from '../../../store/useAppStore';
 import { useTranslation } from '../../../utils/i18n';
 
 import { FilterChips } from '../../../components/inventory/Inventory/FilterChips';
-import { InventoryCard } from '../../../components/inventory/Inventory/InventoryCard';
+import { InventoryCard, InventoryCardItem } from '../../../components/inventory/Inventory/InventoryCard';
 
-// ─── Enable LayoutAnimation on Android ───────────────────────────────────────
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// ─── Sample data ────────────────────────────────────────────────────────────
-export const INVENTORY_ITEMS = [
-  {
-    id: '1',
-    name: 'Tomato Sauce',
-    supplier: 'Italian Tomato Co',
-    status: 'IN STOCK',
-    statusColor: '#16A34A',
-    quantity: 20,
-    unit: 'bottles',
-    lastPurchase: '8 Mar',
-    icon: '🧴',
-    category: 'Sauce Category',
-    currentStock: 12,
-    pricePerUnit: 4.5,
-    supplierFull: 'Global Foods Inc.',
-    supplierRole: 'Primary Distributor',
-    lastPurchaseFull: 'Oct 12, 2023',
-    history: [
-      { type: 'add', label: 'Stock Added', date: 'Feb 12, 2026', amount: '+24' },
-      { type: 'remove', label: 'Stock Removed', date: 'Feb 12, 2026', amount: '-5' },
-      { type: 'purchase', label: 'Purchase Record', date: 'Feb 05, 2026', amount: '$108.00' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Whole Wheat Flour',
-    supplier: 'Millstone Grains',
-    status: 'LOW STOCK',
-    statusColor: '#EA580C',
-    quantity: 5,
-    unit: 'bags',
-    lastPurchase: '2 Mar',
-    icon: '🌾',
-    category: 'Grain Category',
-    currentStock: 5,
-    pricePerUnit: 12.0,
-    supplierFull: 'Millstone Grains Ltd.',
-    supplierRole: 'Primary Distributor',
-    lastPurchaseFull: 'Mar 2, 2026',
-    history: [
-      { type: 'add', label: 'Stock Added', date: 'Mar 2, 2026', amount: '+10' },
-      { type: 'purchase', label: 'Purchase Record', date: 'Feb 28, 2026', amount: '$120.00' },
-    ],
-  },
-  {
-    id: '3',
-    name: 'Organic Eggs',
-    supplier: 'Green Pastures Farm',
-    status: 'OUT OF STOCK',
-    statusColor: '#DC2626',
-    quantity: 0,
-    unit: 'crates',
-    lastPurchase: '15 Feb',
-    icon: '🥚',
-    category: 'Produce Category',
-    currentStock: 0,
-    pricePerUnit: 8.0,
-    supplierFull: 'Green Pastures Farm',
-    supplierRole: 'Primary Distributor',
-    lastPurchaseFull: 'Feb 15, 2026',
-    history: [
-      { type: 'remove', label: 'Stock Removed', date: 'Feb 15, 2026', amount: '-6' },
-      { type: 'purchase', label: 'Purchase Record', date: 'Feb 01, 2026', amount: '$48.00' },
-    ],
-  },
-  {
-    id: '4',
-    name: 'Extra Virgin Olive Oil',
-    supplier: 'Tuscany Imports',
-    status: 'IN STOCK',
-    statusColor: '#16A34A',
-    quantity: 12,
-    unit: 'liters',
-    lastPurchase: '5 Mar',
-    icon: '🫒',
-    category: 'Oil Category',
-    currentStock: 12,
-    pricePerUnit: 9.5,
-    supplierFull: 'Tuscany Imports S.r.l.',
-    supplierRole: 'Primary Distributor',
-    lastPurchaseFull: 'Mar 5, 2026',
-    history: [
-      { type: 'add', label: 'Stock Added', date: 'Mar 5, 2026', amount: '+6' },
-      { type: 'purchase', label: 'Purchase Record', date: 'Mar 4, 2026', amount: '$57.00' },
-    ],
-  },
-];
+interface InventoryApiItem {
+  id: string;
+  product_name: string;
+  category: string;
+  stock_quantity: number;
+  unit_type: string;
+  supplier_name?: string | null;
+  unit_price: number;
+  alert_threshold: number;
+  stock_status: string;
+  purchase_date?: string | null;
+}
 
-const TOTAL_VALUE = 12450;
+interface InventoryListResponse {
+  total_inventory_value: number;
+  items: InventoryApiItem[];
+}
 
-// ─── Screen ──────────────────────────────────────────────────────────────────
+const iconForCategory = (category: string) => {
+  const normalized = category.toLowerCase();
+  if (normalized.includes('sauce')) return '🧴';
+  if (normalized.includes('grain') || normalized.includes('flour')) return '🌾';
+  if (normalized.includes('egg') || normalized.includes('dairy')) return '🥚';
+  if (normalized.includes('oil')) return '🫒';
+  if (normalized.includes('meat')) return '🥩';
+  if (normalized.includes('vegetable') || normalized.includes('produce')) return '🥬';
+  return '📦';
+};
+
+const statusColorFor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'in_stock':
+      return '#16A34A';
+    case 'low_stock':
+      return '#EA580C';
+    case 'out_of_stock':
+      return '#DC2626';
+    default:
+      return '#6B7280';
+  }
+};
+
+const formatShortDate = (value?: string | null) => {
+  if (!value) {
+    return 'N/A';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+};
+
 export default function InventoryScreen() {
   const { t } = useTranslation();
+  const inventoryRefreshToken = useAppStore((state) => state.inventoryRefreshToken);
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [items, setItems] = useState<InventoryCardItem[]>([]);
+  const [totalValue, setTotalValue] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchInventory = useCallback(async (query: string, withRefresh = false) => {
+    if (withRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      const response = await apiClient.get<InventoryListResponse>('/api/v1/restaurant/inventory', {
+        params: {
+          page: 1,
+          page_size: 50,
+          search: query || undefined,
+        },
+      });
+
+      setTotalValue(response.data.total_inventory_value ?? 0);
+      setItems(
+        response.data.items.map((item) => ({
+          id: item.id,
+          name: item.product_name,
+          supplier: item.supplier_name || 'Unknown supplier',
+          status: item.stock_status,
+          statusColor: statusColorFor(item.stock_status),
+          quantity: item.stock_quantity,
+          unit: item.unit_type,
+          lastPurchase: formatShortDate(item.purchase_date),
+          icon: iconForCategory(item.category),
+        })),
+      );
+    } catch (error: any) {
+      console.log('Inventory list error:', error.response?.data || error.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void fetchInventory(search);
+    }, 250);
+
+    return () => clearTimeout(timeoutId);
+  }, [fetchInventory, inventoryRefreshToken, search]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchInventory(search);
+    }, [fetchInventory, search])
+  );
 
   const toggleFilters = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowFilters(!showFilters);
   };
 
-  const filtered = INVENTORY_ITEMS.filter((i) =>
-    i.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => items, [items]);
 
   return (
     <View style={styles.safe}>
       <Header title={t('inventory_title')} showBell={true} />
 
-      {/* Search */}
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
           <Feather name="search" size={moderateScale(16)} color="#9CA3AF" />
@@ -146,50 +165,61 @@ export default function InventoryScreen() {
             onChangeText={setSearch}
           />
         </View>
-        <TouchableOpacity 
-          style={[styles.filterBtn, showFilters && styles.filterBtnActive]} 
+        <TouchableOpacity
+          style={[styles.filterBtn, showFilters && styles.filterBtnActive]}
           onPress={toggleFilters}
         >
-          <Feather name="sliders" size={moderateScale(16)} color={showFilters ? "#FA8C4C" : "#6B7280"} />
+          <Feather name="sliders" size={moderateScale(16)} color={showFilters ? '#FA8C4C' : '#6B7280'} />
         </TouchableOpacity>
       </View>
 
-      {/* Filter Chips */}
-      {showFilters && <FilterChips />}
+      {showFilters ? <FilterChips /> : null}
 
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: verticalScale(120) }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void fetchInventory(search, true)}
+            colors={['#FA8C4C']}
+          />
+        }
       >
-        {/* Title */}
-        <View style={{ paddingHorizontal: scale(20), marginBottom: verticalScale(12) }}>
+        <View style={styles.titleWrap}>
           <Text style={styles.pageTitle}>{t('inventory_title')}</Text>
-          <Text style={styles.pageSubtitle}>
-            {t('inventory_subtitle')}
-          </Text>
+          <Text style={styles.pageSubtitle}>{t('inventory_subtitle')}</Text>
         </View>
 
-        {/* Total value card */}
         <View style={styles.valueCard}>
           <Text style={styles.valueLabelSmall}>{t('total_inventory_value')}</Text>
-          <Text style={styles.valueAmount}>${TOTAL_VALUE.toLocaleString()}.00</Text>
+          <Text style={styles.valueAmount}>
+            ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </Text>
           <View style={styles.valueBadge}>
-            <Feather name="trending-up" size={moderateScale(12)} color="#16A34A" />
-            <Text style={styles.valueBadgeText}> +4.2%</Text>
-            <Text style={styles.valueBadgeSub}>  {t('from_month')}</Text>
+            <Feather name="package" size={moderateScale(12)} color="#16A34A" />
+            <Text style={styles.valueBadgeText}> {filtered.length}</Text>
+            <Text style={styles.valueBadgeSub}> items</Text>
           </View>
         </View>
 
-        {/* Items */}
-        <View style={{ paddingHorizontal: scale(20) }}>
-          {filtered.map((item) => (
-            <InventoryCard key={item.id} item={item} />
-          ))}
+        <View style={styles.listWrap}>
+          {loading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator size="small" color="#FA8C4C" />
+            </View>
+          ) : filtered.length > 0 ? (
+            filtered.map((item) => <InventoryCard key={item.id} item={item} />)
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>No inventory items found</Text>
+              <Text style={styles.emptySubtitle}>Create an item or change the search term.</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
-      {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => router.push('/(tabs)/inventory/add-item')}
@@ -200,23 +230,8 @@ export default function InventoryScreen() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(12),
-  },
-  headerTitle: {
-    fontSize: moderateScale(17),
-    fontWeight: '700',
-    color: '#111827',
-  },
-
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -251,11 +266,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF4EE',
     borderColor: '#FA8C4C',
   },
-
   scroll: { flex: 1 },
+  titleWrap: {
+    paddingHorizontal: scale(20),
+    marginBottom: verticalScale(12),
+  },
   pageTitle: { fontSize: moderateScale(20), fontWeight: '700', color: '#111827' },
   pageSubtitle: { fontSize: moderateScale(12), color: '#6B7280', marginTop: verticalScale(2) },
-
   valueCard: {
     marginHorizontal: scale(20),
     marginBottom: verticalScale(16),
@@ -268,7 +285,29 @@ const styles = StyleSheet.create({
   valueBadge: { flexDirection: 'row', alignItems: 'center', marginTop: verticalScale(6) },
   valueBadgeText: { fontSize: moderateScale(12), color: '#16A34A', fontWeight: '600' },
   valueBadgeSub: { fontSize: moderateScale(12), color: '#6B7280' },
-
+  listWrap: { paddingHorizontal: scale(20) },
+  loadingState: {
+    paddingVertical: verticalScale(32),
+    alignItems: 'center',
+  },
+  emptyState: {
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    borderRadius: scale(12),
+    padding: scale(18),
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: moderateScale(14),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  emptySubtitle: {
+    marginTop: verticalScale(6),
+    fontSize: moderateScale(12),
+    color: '#6B7280',
+    textAlign: 'center',
+  },
   fab: {
     position: 'absolute',
     right: scale(24),
@@ -286,4 +325,3 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
 });
-

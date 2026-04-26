@@ -4,8 +4,16 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { useTranslation } from '../../../utils/i18n';
 
-export function HistoryList({ item }: { item: any }) {
+export interface InventoryHistoryListItem {
+  type: 'add' | 'remove' | 'purchase';
+  label: string;
+  date: string;
+  amount: string;
+}
+
+export function HistoryList({ item }: { item: { history: InventoryHistoryListItem[] } }) {
   const { t } = useTranslation();
+
   return (
     <View>
       <View style={styles.historyHeader}>
@@ -15,7 +23,7 @@ export function HistoryList({ item }: { item: any }) {
         </TouchableOpacity>
       </View>
 
-      {item.history.map((hist: any, index: number) => (
+      {item.history.map((hist, index) => (
         <View key={index} style={styles.historyItem}>
           <View
             style={[
@@ -23,26 +31,14 @@ export function HistoryList({ item }: { item: any }) {
               hist.type === 'add'
                 ? { backgroundColor: '#DCFCE7' }
                 : hist.type === 'remove'
-                ? { backgroundColor: '#FEE2E2' }
-                : { backgroundColor: '#DBEAFE' },
+                  ? { backgroundColor: '#FEE2E2' }
+                  : { backgroundColor: '#DBEAFE' },
             ]}
           >
             <Feather
-              name={
-                hist.type === 'add'
-                  ? 'plus'
-                  : hist.type === 'remove'
-                  ? 'minus'
-                  : 'shopping-bag'
-              }
+              name={hist.type === 'add' ? 'plus' : hist.type === 'remove' ? 'minus' : 'shopping-bag'}
               size={moderateScale(16)}
-              color={
-                hist.type === 'add'
-                  ? '#16A34A'
-                  : hist.type === 'remove'
-                  ? '#DC2626'
-                  : '#2563EB'
-              }
+              color={hist.type === 'add' ? '#16A34A' : hist.type === 'remove' ? '#DC2626' : '#2563EB'}
             />
           </View>
           <View style={styles.historyMeta}>
@@ -55,8 +51,8 @@ export function HistoryList({ item }: { item: any }) {
               hist.type === 'add'
                 ? { color: '#16A34A' }
                 : hist.type === 'remove'
-                ? { color: '#DC2626' }
-                : { color: '#111827' },
+                  ? { color: '#DC2626' }
+                  : { color: '#111827' },
             ]}
           >
             {hist.amount}
@@ -85,7 +81,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: verticalScale(12),
-    borderBottomWidth:1,
+    borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
   historyIconBox: {

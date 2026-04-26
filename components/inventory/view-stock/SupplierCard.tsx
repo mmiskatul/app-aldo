@@ -4,8 +4,16 @@ import { StyleSheet, Text, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { useTranslation } from '../../../utils/i18n';
 
-export function SupplierCard({ item }: { item: any }) {
+export interface InventorySupplierCardItem {
+  supplierName: string;
+  supplierRole: string;
+  lastPurchase: string;
+  pricePerUnitLabel: string;
+}
+
+export function SupplierCard({ item }: { item: InventorySupplierCardItem }) {
   const { t } = useTranslation();
+
   return (
     <View>
       <Text style={styles.sectionTitle}>{t('supplier_details')}</Text>
@@ -15,20 +23,18 @@ export function SupplierCard({ item }: { item: any }) {
             <Feather name="truck" size={moderateScale(20)} color="#6B7280" />
           </View>
           <View>
-            <Text style={styles.supplierName}>{item.supplierFull}</Text>
+            <Text style={styles.supplierName}>{item.supplierName}</Text>
             <Text style={styles.supplierRole}>{item.supplierRole}</Text>
           </View>
         </View>
         <View style={styles.supplierMetaRow}>
           <View>
             <Text style={styles.metaLabel}>{t('last_purchase')}</Text>
-            <Text style={styles.metaValue}>{item.lastPurchaseFull}</Text>
+            <Text style={styles.metaValue}>{item.lastPurchase}</Text>
           </View>
           <View>
             <Text style={styles.metaLabel}>{t('price_per_unit')}</Text>
-            <Text style={styles.metaValue}>
-              ${item.pricePerUnit.toFixed(2)} / {item.unit.replace(/s$/, '')}
-            </Text>
+            <Text style={styles.metaValue}>{item.pricePerUnitLabel}</Text>
           </View>
         </View>
       </View>

@@ -1,12 +1,39 @@
 import { Feather } from '@expo/vector-icons';
+import apiClient from '../../../api/apiClient';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { useTranslation } from '../../../utils/i18n';
 
-export function StockUpdate() {
+interface StockUpdateProps {
+  itemId: string;
+  onUpdated: (payload: any) => void;
+}
+
+export function StockUpdate({ itemId, onUpdated }: StockUpdateProps) {
   const { t } = useTranslation();
   const [stockToUpdate, setStockToUpdate] = useState({ add: 0, remove: 0 });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!stockToUpdate.add && !stockToUpdate.remove) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await apiClient.post(`/api/v1/restaurant/inventory/${itemId}/stock-update`, {
+        add_stock: stockToUpdate.add,
+        remove_stock: stockToUpdate.remove,
+      });
+      setStockToUpdate({ add: 0, remove: 0 });
+      onUpdated(response.data);
+    } catch (error: any) {
+      Alert.alert('Update failed', error.response?.data?.detail || error.message || 'Unable to update stock.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <View>
@@ -34,8 +61,16 @@ export function StockUpdate() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.updateButton}>
-        <Text style={styles.updateButtonText}>{t('update_stock_level')}</Text>
+      <TouchableOpacity
+        style={[styles.updateButton, submitting && styles.updateButtonDisabled]}
+        onPress={() => void handleSubmit()}
+        disabled={submitting || (!stockToUpdate.add && !stockToUpdate.remove)}
+      >
+        {submitting ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <Text style={styles.updateButtonText}>{t('update_stock_level')}</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -66,6 +101,9 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(14),
     alignItems: 'center',
     marginBottom: verticalScale(24),
+  },
+  updateButtonDisabled: {
+    opacity: 0.7,
   },
   updateButtonText: { color: '#FFFFFF', fontSize: moderateScale(14), fontWeight: '600' },
 });

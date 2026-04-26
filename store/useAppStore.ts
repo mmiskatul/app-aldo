@@ -62,19 +62,19 @@ export interface AnalyticsData {
   };
   revenue_total: number;
   revenue_change_percent: number;
-  weekly_revenue: Array<{ label: string; value: number }>;
-  metric_tiles: Array<{
+  weekly_revenue: { label: string; value: number }[];
+  metric_tiles: {
     label: string;
     value: any;
     change_percent?: number;
     subtitle?: string;
-  }>;
-  summary_stats: Array<{ label: string; value: any }>;
-  revenue_comparison: Array<{ label: string; value: number }>;
+  }[];
+  summary_stats: { label: string; value: any }[];
+  revenue_comparison: { label: string; value: number }[];
   covers_total: number;
-  covers_activity: Array<{ label: string; value: number }>;
+  covers_activity: { label: string; value: number }[];
   avg_revenue_per_cover: number;
-  cost_breakdown: Array<{ label: string; value: number }>;
+  cost_breakdown: { label: string; value: number }[];
   supplier_price_alerts: any[];
 }
 
@@ -117,6 +117,7 @@ interface AppState {
   vatOverviewData: VatOverviewData | null;
   profile: Profile | null;
   pendingRegistration: PendingRegistration | null;
+  inventoryRefreshToken: number;
   setUser: (user: User | null, tokens?: Tokens | null) => void;
   setTokens: (tokens: Tokens | null) => void;
   setAnalyticsData: (data: AnalyticsData | null) => void;
@@ -124,6 +125,7 @@ interface AppState {
   setVatOverviewData: (data: VatOverviewData | null) => void;
   setProfile: (profile: Profile | null) => void;
   setPendingRegistration: (payload: PendingRegistration | null) => void;
+  bumpInventoryRefreshToken: () => void;
   appLanguage: 'en' | 'it';
   setAppLanguage: (lang: 'en' | 'it') => void;
   logout: () => void;
@@ -142,6 +144,7 @@ export const useAppStore = create<AppState>()(
       vatOverviewData: null,
       profile: null,
       pendingRegistration: null,
+      inventoryRefreshToken: 0,
       setUser: (user, tokens = null) => set({ user, tokens }),
       setTokens: (tokens: Tokens | null) => set({ tokens }),
       setAnalyticsData: (data) => set({ analyticsData: data }),
@@ -149,6 +152,7 @@ export const useAppStore = create<AppState>()(
       setVatOverviewData: (data) => set({ vatOverviewData: data }),
       setProfile: (profile) => set({ profile }),
       setPendingRegistration: (payload) => set({ pendingRegistration: payload }),
+      bumpInventoryRefreshToken: () => set((state) => ({ inventoryRefreshToken: state.inventoryRefreshToken + 1 })),
       appLanguage: 'en',
       setAppLanguage: (lang) => set({ appLanguage: lang }),
       logout: () =>
@@ -160,6 +164,7 @@ export const useAppStore = create<AppState>()(
           vatOverviewData: null,
           profile: null,
           pendingRegistration: null,
+          inventoryRefreshToken: 0,
         }),
     }),
     {

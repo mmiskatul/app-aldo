@@ -1,90 +1,161 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import apiClient from '../../../api/apiClient';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import Header from "../../../components/ui/Header";
+import Header from '../../../components/ui/Header';
+import { useAppStore } from '../../../store/useAppStore';
 
 import DatePicker from '../../../components/ui/DatePicker';
 import { useTranslation } from '../../../utils/i18n';
 
 export default function AddInventoryItemScreen() {
   const { t } = useTranslation();
+  const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
   const [purchaseDate, setPurchaseDate] = useState(new Date());
+  const [productName, setProductName] = useState('');
+  const [category, setCategory] = useState('');
+  const [stockQuantity, setStockQuantity] = useState('');
+  const [unitType, setUnitType] = useState('');
+  const [supplierName, setSupplierName] = useState('');
+  const [unitPrice, setUnitPrice] = useState('');
+  const [alertThreshold, setAlertThreshold] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const buildErrorMessage = (error: any) => {
+    const detail = error?.response?.data?.detail;
+    if (Array.isArray(detail)) {
+      return detail.map((item) => item?.msg || 'Invalid field').join('\n');
+    }
+    if (typeof detail === 'string') {
+      return detail;
+    }
+    return error?.message || 'Unable to save inventory item.';
+  };
+
+  const handleSave = async () => {
+    const trimmedProductName = productName.trim();
+    const trimmedCategory = category.trim();
+    const trimmedUnitType = unitType.trim();
+    const trimmedSupplierName = supplierName.trim();
+    const parsedStockQuantity = Number(stockQuantity);
+    const parsedUnitPrice = Number(unitPrice || 0);
+    const parsedAlertThreshold = Number(alertThreshold || 0);
+
+    if (trimmedProductName.length < 2) {
+      Alert.alert('Validation', 'Product name must be at least 2 characters.');
+      return;
+    }
+    if (trimmedCategory.length < 2) {
+      Alert.alert('Validation', 'Category must be at least 2 characters.');
+      return;
+    }
+    if (trimmedUnitType.length < 1) {
+      Alert.alert('Validation', 'Unit type is required.');
+      return;
+    }
+    if (!Number.isFinite(parsedStockQuantity) || parsedStockQuantity < 0) {
+      Alert.alert('Validation', 'Stock quantity must be a valid number.');
+      return;
+    }
+    if (!Number.isFinite(parsedUnitPrice) || parsedUnitPrice < 0) {
+      Alert.alert('Validation', 'Unit price must be a valid number.');
+      return;
+    }
+    if (!Number.isFinite(parsedAlertThreshold) || parsedAlertThreshold < 0) {
+      Alert.alert('Validation', 'Alert threshold must be a valid number.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await apiClient.post('/api/v1/restaurant/inventory/add-item', {
+        product_name: trimmedProductName,
+        category: trimmedCategory,
+        stock_quantity: parsedStockQuantity,
+        unit_type: trimmedUnitType,
+        supplier_name: trimmedSupplierName || null,
+        unit_price: parsedUnitPrice,
+        alert_threshold: parsedAlertThreshold,
+        purchase_date: purchaseDate.toISOString().slice(0, 10),
+      });
+      bumpInventoryRefreshToken();
+      router.back();
+    } catch (error: any) {
+      Alert.alert('Save failed', buildErrorMessage(error));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <View style={styles.safe}>
-      <Header title={t('add_inventory_title')} showBack={true} />
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
+      <Header title={t('add_inventory_item')} showBack={true} />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.pageTitle}>{t('add_inventory_item')}</Text>
-          <Text style={styles.pageSubtitle}>
-            {t('add_inventory_item_subtitle')}
-          </Text>
+          <Text style={styles.pageSubtitle}>{t('add_inventory_item_subtitle')}</Text>
 
-          {/* Form Fields */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>{t('product_name')}</Text>
-            <TextInput style={styles.input} placeholder={t('product_name_placeholder')} placeholderTextColor="#9CA3AF" />
+            <TextInput style={styles.input} placeholder={t('product_name_placeholder')} placeholderTextColor="#9CA3AF" value={productName} onChangeText={setProductName} />
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>{t('category')}</Text>
-            <TouchableOpacity style={styles.dropdownInput}>
-              <Text style={styles.dropdownText}>{t('select_category')}</Text>
-              <Feather name="chevron-down" size={moderateScale(18)} color="#111827" />
-            </TouchableOpacity>
+            <TextInput style={styles.input} placeholder={t('select_category')} placeholderTextColor="#9CA3AF" value={category} onChangeText={setCategory} />
           </View>
 
           <View style={styles.row}>
             <View style={[styles.formGroup, { flex: 1 }]}>
               <Text style={styles.label}>{t('form_stock_quantity')}</Text>
-              <TextInput style={styles.input} placeholder="0" keyboardType="numeric" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.input} placeholder="0" keyboardType="numeric" placeholderTextColor="#9CA3AF" value={stockQuantity} onChangeText={setStockQuantity} />
             </View>
             <View style={[styles.formGroup, { flex: 1 }]}>
               <Text style={styles.label}>{t('unit_type')}</Text>
-              <TouchableOpacity style={styles.dropdownInput}>
-                <Text style={styles.dropdownTextFilled}>kg</Text>
-                <Feather name="chevron-down" size={moderateScale(18)} color="#111827" />
-              </TouchableOpacity>
+              <TextInput style={styles.input} placeholder="kg" placeholderTextColor="#9CA3AF" value={unitType} onChangeText={setUnitType} />
             </View>
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>{t('supplier_name')}</Text>
-            <TextInput style={styles.input} placeholder={t('enter_supplier_name')} placeholderTextColor="#9CA3AF" />
+            <TextInput style={styles.input} placeholder={t('enter_supplier_name')} placeholderTextColor="#9CA3AF" value={supplierName} onChangeText={setSupplierName} />
           </View>
 
           <View style={styles.row}>
             <View style={[styles.formGroup, { flex: 1 }]}>
               <Text style={styles.label}>{t('unit_price')}</Text>
-              <TextInput style={styles.input} placeholder="0.00" keyboardType="decimal-pad" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.input} placeholder="0.00" keyboardType="decimal-pad" placeholderTextColor="#9CA3AF" value={unitPrice} onChangeText={setUnitPrice} />
             </View>
             <View style={[styles.formGroup, { flex: 1 }]}>
               <Text style={styles.label}>{t('alert_threshold')}</Text>
-              <TextInput style={styles.input} placeholder={t('low_stock_at')} keyboardType="numeric" placeholderTextColor="#9CA3AF" />
+              <TextInput style={styles.input} placeholder={t('low_stock_at')} keyboardType="numeric" placeholderTextColor="#9CA3AF" value={alertThreshold} onChangeText={setAlertThreshold} />
             </View>
           </View>
 
-          <DatePicker 
-            label={t('purchase_date')} 
-            value={purchaseDate} 
-            onChange={setPurchaseDate} 
+          <DatePicker
+            label={t('purchase_date')}
+            value={purchaseDate}
+            onChange={setPurchaseDate}
           />
 
-
-          {/* Spacer */}
           <View style={{ height: verticalScale(40) }} />
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.saveBtn} onPress={() => router.back()}>
-            <Feather name="save" size={moderateScale(18)} color="#FFFFFF" />
-            <Text style={styles.saveBtnText}>{t('save_item')}</Text>
+          <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnDisabled]} onPress={() => void handleSave()} disabled={saving}>
+            {saving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Feather name="save" size={moderateScale(18)} color="#FFFFFF" />
+                <Text style={styles.saveBtnText}>{t('save_item')}</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -94,34 +165,12 @@ export default function AddInventoryItemScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(12),
-  },
-  backBtn: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(20),
-    backgroundColor: '#F9FAFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  headerTitleContainer: { flex: 1, alignItems: 'center' },
-  headerTitle: { fontSize: moderateScale(16), fontWeight: '700', color: '#111827' },
-  
   scroll: { flex: 1, paddingHorizontal: scale(20) },
   pageTitle: { fontSize: moderateScale(20), fontWeight: '700', color: '#111827', marginTop: verticalScale(10) },
   pageSubtitle: { fontSize: moderateScale(14), color: '#6B7280', marginTop: verticalScale(6), marginBottom: verticalScale(24) },
-
   formGroup: { marginBottom: verticalScale(16) },
   row: { flexDirection: 'row', gap: scale(12) },
   label: { fontSize: moderateScale(12), fontWeight: '700', color: '#111827', marginBottom: verticalScale(8) },
-  
   input: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -132,20 +181,6 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     color: '#111827',
   },
-  dropdownInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: scale(10),
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(12),
-  },
-  dropdownText: { fontSize: moderateScale(14), color: '#9CA3AF' },
-  dropdownTextFilled: { fontSize: moderateScale(14), color: '#111827' },
-
   footer: {
     paddingHorizontal: scale(20),
     paddingTop: verticalScale(16),
@@ -162,6 +197,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: verticalScale(14),
     gap: scale(8),
+  },
+  saveBtnDisabled: {
+    opacity: 0.7,
   },
   saveBtnText: { color: '#FFFFFF', fontSize: moderateScale(15), fontWeight: '600' },
 });

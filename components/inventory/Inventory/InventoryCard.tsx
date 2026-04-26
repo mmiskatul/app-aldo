@@ -5,8 +5,21 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { useTranslation } from '../../../utils/i18n';
 
-export function InventoryCard({ item }: { item: any }) {
+export interface InventoryCardItem {
+  id: string;
+  name: string;
+  supplier: string;
+  status: string;
+  statusColor: string;
+  quantity: number;
+  unit: string;
+  lastPurchase: string;
+  icon: string;
+}
+
+export function InventoryCard({ item }: { item: InventoryCardItem }) {
   const { t } = useTranslation();
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -18,7 +31,7 @@ export function InventoryCard({ item }: { item: any }) {
           <Text style={styles.cardSupplier}>{item.supplier}</Text>
         </View>
         <Text style={[styles.statusBadge, { color: item.statusColor }]}>
-          {t(item.status.toLowerCase().replace(/ /g, '_') as any).toUpperCase()}
+          {t(item.status.toLowerCase() as never).toUpperCase()}
         </Text>
       </View>
 

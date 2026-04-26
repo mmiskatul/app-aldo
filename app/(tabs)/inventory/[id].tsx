@@ -1,37 +1,139 @@
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import apiClient from '../../../api/apiClient';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import Header from "../../../components/ui/Header";
+import Header from '../../../components/ui/Header';
 import { useTranslation } from '../../../utils/i18n';
 
 import { HistoryList } from '../../../components/inventory/view-stock/HistoryList';
 import { StockUpdate } from '../../../components/inventory/view-stock/StockUpdate';
 import { SupplierCard } from '../../../components/inventory/view-stock/SupplierCard';
-import { INVENTORY_ITEMS } from './index';
+
+interface InventoryDetailResponse {
+  id: string;
+  product_name: string;
+  category: string;
+  stock_quantity: number;
+  unit_type: string;
+  supplier_name?: string | null;
+  unit_price: number;
+  alert_threshold: number;
+  stock_status: string;
+  purchase_date?: string | null;
+  current_stock_value: number;
+  history: {
+    kind: string;
+    quantity_delta: number;
+    occurred_at: string;
+  }[];
+}
+
+const formatLongDate = (value?: string | null) => {
+  if (!value) {
+    return 'N/A';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
 
 export default function ItemDetailScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams();
-  const item = INVENTORY_ITEMS.find((i) => i.id === id) || INVENTORY_ITEMS[0];
+  const itemId = Array.isArray(id) ? id[0] : id;
+  const [item, setItem] = useState<InventoryDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchItem = useCallback(async () => {
+    if (!itemId) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await apiClient.get<InventoryDetailResponse>(`/api/v1/restaurant/inventory/${itemId}`);
+      setItem(response.data);
+    } catch (error: any) {
+      Alert.alert('Load failed', error.response?.data?.detail || error.message || 'Unable to load item.');
+    } finally {
+      setLoading(false);
+    }
+  }, [itemId]);
+
+  useEffect(() => {
+    void fetchItem();
+  }, [fetchItem]);
+
+  const viewModel = useMemo(() => {
+    if (!item) {
+      return null;
+    }
+
+    return {
+      name: item.product_name,
+      category: item.category.toUpperCase(),
+      currentStock: item.current_stock_value,
+      unit: item.unit_type,
+      supplier: {
+        supplierName: item.supplier_name || 'Unknown supplier',
+        supplierRole: 'Primary Distributor',
+        lastPurchase: formatLongDate(item.purchase_date),
+        pricePerUnitLabel: `$${item.unit_price.toFixed(2)} / ${item.unit_type}`,
+      },
+      history: item.history.map((entry) => ({
+        type: entry.kind === 'stock_added' ? 'add' : entry.kind === 'stock_removed' ? 'remove' : 'purchase',
+        label: entry.kind === 'stock_added' ? 'Stock Added' : entry.kind === 'stock_removed' ? 'Stock Removed' : 'Purchase Record',
+        date: formatLongDate(entry.occurred_at),
+        amount: `${entry.quantity_delta > 0 ? '+' : ''}${entry.quantity_delta}`,
+      })),
+    };
+  }, [item]);
+
+  const handleDelete = async () => {
+    if (!itemId) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await apiClient.delete(`/api/v1/restaurant/inventory/${itemId}`);
+      router.back();
+    } catch (error: any) {
+      Alert.alert('Delete failed', error.response?.data?.detail || error.message || 'Unable to delete item.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  if (loading || !viewModel || !itemId) {
+    return (
+      <View style={styles.safe}>
+        <Header title={t('inventory_title')} showBack={true} />
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="small" color="#FA8C4C" />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.safe}>
-      <Header 
-        title={item.name} 
-        subtitle={item.category.toUpperCase()} 
-        showBack={true} 
+      <Header
+        title={viewModel.name}
+        subtitle={viewModel.category}
+        showBack={true}
       />
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Current Stock Banner */}
         <View style={styles.stockBanner}>
           <View>
             <Text style={styles.bannerLabel}>{t('current_stock')}</Text>
             <View style={styles.bannerValContainer}>
-              <Text style={styles.bannerVal}>{item.currentStock}</Text>
-              <Text style={styles.bannerUnit}>{item.unit}</Text>
+              <Text style={styles.bannerVal}>{viewModel.currentStock}</Text>
+              <Text style={styles.bannerUnit}>{viewModel.unit}</Text>
             </View>
           </View>
           <View style={styles.bannerIcon}>
@@ -39,20 +141,24 @@ export default function ItemDetailScreen() {
           </View>
         </View>
 
-        {/* Components */}
-        <StockUpdate />
-        <SupplierCard item={item} />
-        <HistoryList item={item} />
+        <StockUpdate itemId={itemId} onUpdated={setItem} />
+        <SupplierCard item={viewModel.supplier} />
+        <HistoryList item={{ history: viewModel.history }} />
 
-        {/* Bottom Actions */}
         <View style={styles.bottomActions}>
           <TouchableOpacity style={styles.secondaryBtn}>
             <Feather name="edit" size={moderateScale(16)} color="#6B7280" />
             <Text style={styles.secondaryBtnText}>{t('edit_item')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.secondaryBtn, { borderColor: '#FEE2E2' }]}>
+          <TouchableOpacity
+            style={[styles.secondaryBtn, { borderColor: '#FEE2E2' }]}
+            onPress={() => void handleDelete()}
+            disabled={deleting}
+          >
             <Feather name="trash-2" size={moderateScale(16)} color="#DC2626" />
-            <Text style={[styles.secondaryBtnText, { color: '#DC2626' }]}>{t('delete')}</Text>
+            <Text style={[styles.secondaryBtnText, { color: '#DC2626' }]}>
+              {deleting ? 'Deleting...' : t('delete')}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -62,34 +168,7 @@ export default function ItemDetailScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(12),
-  },
-  backBtn: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(20),
-    backgroundColor: '#F9FAFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  headerTitleContainer: { flex: 1, alignItems: 'center' },
-  headerTitle: { fontSize: moderateScale(16), fontWeight: '700', color: '#111827' },
-  headerSubtitle: {
-    fontSize: moderateScale(10),
-    fontWeight: '700',
-    color: '#FA8C4C',
-    letterSpacing: 0.5,
-    marginTop: 2,
-  },
   scroll: { flex: 1, paddingHorizontal: scale(20) },
-
   stockBanner: {
     backgroundColor: '#FFF4EE',
     borderRadius: scale(14),
@@ -117,87 +196,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-
-  sectionTitle: {
-    fontSize: moderateScale(16),
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: verticalScale(12),
-  },
-
-  updateRow: { flexDirection: 'row', gap: scale(12), marginBottom: verticalScale(12) },
-  updateBox: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    borderRadius: scale(12),
-    padding: scale(14),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  updateLabel: { fontSize: moderateScale(10), fontWeight: '700', color: '#111827', marginBottom: verticalScale(8) },
-  updateControls: { flexDirection: 'row', alignItems: 'center', gap: scale(8) },
-  updateNum: { fontSize: moderateScale(18), fontWeight: '700', color: '#111827' },
-
-  updateButton: {
-    backgroundColor: '#FA8C4C',
-    borderRadius: scale(10),
-    paddingVertical: verticalScale(14),
-    alignItems: 'center',
-    marginBottom: verticalScale(24),
-  },
-  updateButtonText: { color: '#FFFFFF', fontSize: moderateScale(14), fontWeight: '600' },
-
-  supplierCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: scale(12),
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: scale(16),
-    marginBottom: verticalScale(24),
-  },
-  supplierHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: verticalScale(16) },
-  supplierIconBox: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: scale(10),
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: scale(12),
-  },
-  supplierName: { fontSize: moderateScale(14), fontWeight: '700', color: '#111827' },
-  supplierRole: { fontSize: moderateScale(12), color: '#9CA3AF', marginTop: 2 },
-  supplierMetaRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  metaLabel: { fontSize: moderateScale(9), color: '#9CA3AF', fontWeight: '700', letterSpacing: 0.5 },
-  metaValue: { fontSize: moderateScale(13), fontWeight: '700', color: '#111827', marginTop: verticalScale(4) },
-
-  historyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: verticalScale(12),
-  },
-  viewAllText: { fontSize: moderateScale(13), color: '#FA8C4C', fontWeight: '500' },
-  historyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: verticalScale(12),
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  historyIconBox: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(18),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: scale(12),
-  },
-  historyMeta: { flex: 1 },
-  historyLabel: { fontSize: moderateScale(14), fontWeight: '600', color: '#111827' },
-  historyDate: { fontSize: moderateScale(11), color: '#9CA3AF', marginTop: 2 },
-  historyAmount: { fontSize: moderateScale(14), fontWeight: '700' },
-
   bottomActions: {
     flexDirection: 'row',
     gap: scale(12),
@@ -217,4 +215,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   secondaryBtnText: { fontSize: moderateScale(14), fontWeight: '500', color: '#4B5563' },
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

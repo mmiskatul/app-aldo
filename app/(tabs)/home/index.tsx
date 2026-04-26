@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View, RefreshControl, NativeSyntheticEvent, NativeScrollEvent } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale, verticalScale } from "react-native-size-matters";
 import { useRouter } from "expo-router";
@@ -122,6 +123,8 @@ export default function TabsIndex() {
     insight: false,
     recentActivity: false,
   });
+  const hasFocusedRef = useRef(false);
+  const previousPeriodRef = useRef<PeriodKey>("weekly");
 
   const hydrateSupportingData = useCallback(async () => {
     const [analyticsRes, cashOverviewRes, profileRes] = await Promise.allSettled([
@@ -307,9 +310,21 @@ export default function TabsIndex() {
     }
   }, [fetchHomeShell, fetchTopPrioritySections, hydrateSupportingData]);
 
+  useFocusEffect(
+    useCallback(() => {
+      hasFocusedRef.current = true;
+      previousPeriodRef.current = activePeriod;
+      void fetchHomeData(activePeriod);
+    }, [activePeriod, fetchHomeData])
+  );
+
   useEffect(() => {
+    if (!hasFocusedRef.current || loading || previousPeriodRef.current === activePeriod) {
+      return;
+    }
+    previousPeriodRef.current = activePeriod;
     void fetchHomeData(activePeriod);
-  }, [activePeriod, fetchHomeData]);
+  }, [activePeriod, fetchHomeData, loading]);
 
   useEffect(() => {
     if (!loading) {
