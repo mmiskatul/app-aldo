@@ -1,7 +1,9 @@
 import { Feather } from "@expo/vector-icons";
-import { useNavigation, useRouter } from "expo-router";
-import React from "react";
+import { useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,44 +12,190 @@ import {
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
-
-import DataHistoryList from "../../../components/home/data-management/DataHistoryList";
+import DataHistoryList, {
+  DataHistoryEntry,
+  DataHistorySegment,
+} from "../../../components/home/data-management/DataHistoryList";
 import DataMetrics from "../../../components/home/data-management/DataMetrics";
+import apiClient from "../../../api/apiClient";
+import { useTranslation } from "../../../utils/i18n";
+
+interface DailyDataListItem {
+  id: string;
+  business_date: string;
+  total_revenue: number;
+  total_expenses: number;
+  total_covers: number;
+  avg_revenue_per_cover: number;
+}
+
+interface DailyDataListResponse {
+  items: DailyDataListItem[];
+}
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(value) ? value : 0);
+
+const formatBusinessDate = (value: string) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const labelForSegment = (segment: DataHistorySegment, value: string) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return segment.toUpperCase();
+  }
+
+  if (segment === "date") {
+    return parsed.toLocaleDateString("en-GB", { weekday: "long" }).toUpperCase();
+  }
+
+  if (segment === "week") {
+    return `WEEK OF ${parsed.toLocaleDateString("en-GB", { day: "numeric", month: "short" }).toUpperCase()}`;
+  }
+
+  return parsed.toLocaleDateString("en-GB", { month: "long", year: "numeric" }).toUpperCase();
+};
 
 export default function DataManagementScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
+  const { t } = useTranslation();
+  const [selectedSegment, setSelectedSegment] = useState<DataHistorySegment>("date");
+  const [items, setItems] = useState<DailyDataListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchDailyData = useCallback(async (segment: DataHistorySegment, silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
+
+    try {
+      const response = await apiClient.get<DailyDataListResponse>("/api/v1/restaurant/daily-data", {
+        params: {
+          page: 1,
+          page_size: 200,
+          view: segment,
+        },
+      });
+      setItems(response.data.items || []);
+    } catch (error: any) {
+      console.error("Error fetching daily data:", error.response?.data || error.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchDailyData(selectedSegment);
+  }, [fetchDailyData, selectedSegment]);
+
+  const handleDelete = useCallback(async (recordId: string) => {
+    try {
+      await apiClient.delete(`/api/v1/restaurant/daily-data/${recordId}`);
+      void fetchDailyData(selectedSegment, true);
+    } catch (error: any) {
+      console.error("Error deleting daily data record:", error.response?.data || error.message);
+      Alert.alert("Error", "Failed to delete the daily data record.");
+    }
+  }, [fetchDailyData, selectedSegment]);
+
+  const metrics = useMemo(() => {
+    const totalRevenue = items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0);
+    const totalExpenses = items.reduce((sum, item) => sum + Number(item.total_expenses || 0), 0);
+    const totalCovers = items.reduce((sum, item) => sum + Number(item.total_covers || 0), 0);
+    const totalProfit = totalRevenue - totalExpenses;
+    const averagePerCover = totalCovers > 0 ? totalRevenue / totalCovers : 0;
+
+    return {
+      revenue: formatCurrency(totalRevenue),
+      expenses: formatCurrency(totalExpenses),
+      profit: formatCurrency(totalProfit),
+      covers: totalCovers.toLocaleString(),
+      averagePerCover: formatCurrency(averagePerCover),
+    };
+  }, [items]);
+
+  const historyItems: DataHistoryEntry[] = useMemo(
+    () =>
+      items.map((item) => ({
+        id: item.id,
+        label: labelForSegment(selectedSegment, item.business_date),
+        date: formatBusinessDate(item.business_date),
+        referenceDate: item.business_date,
+        revenue: formatCurrency(Number(item.total_revenue || 0)),
+        covers: Number(item.total_covers || 0).toLocaleString(),
+        average: formatCurrency(Number(item.avg_revenue_per_cover || 0)),
+      })),
+    [items, selectedSegment],
+  );
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Data Management" showBack={true} showBell={true} />
+      <Header title={t("daily_data_dashboard")} showBack={true} showBell={true} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              void fetchDailyData(selectedSegment, true);
+            }}
+            colors={["#FA8C4C"]}
+          />
+        }
       >
-        <Text style={styles.pageTitle}>Daily Data Management</Text>
+        <Text style={styles.pageTitle}>{t("daily_data_dashboard")}</Text>
         <Text style={styles.pageSubtitle}>
           Track and manage your restaurant performance
         </Text>
 
-        <DataMetrics />
-        <DataHistoryList />
+        <DataMetrics
+          loading={loading}
+          revenue={metrics.revenue}
+          expenses={metrics.expenses}
+          profit={metrics.profit}
+          covers={metrics.covers}
+          averagePerCover={metrics.averagePerCover}
+        />
+        <DataHistoryList
+          items={historyItems}
+          loading={loading}
+          selectedSegment={selectedSegment}
+          onSegmentChange={setSelectedSegment}
+          onDelete={handleDelete}
+        />
       </ScrollView>
 
-      {/* Sticky Add Data Button */}
       <View style={styles.floatingButtonContainer}>
-        <TouchableOpacity 
-          style={styles.fab} 
-          onPress={() => router.push('/(tabs)/home/add-daily-data')}
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => router.push("/(tabs)/home/add-daily-data")}
         >
           <Feather
-            name="plus"
+            name="edit-3"
             size={moderateScale(18)}
             color="#FFFFFF"
             style={{ marginRight: scale(6) }}
           />
-          <Text style={styles.fabText}>Add Daily Data</Text>
+          <Text style={styles.fabText}>{t("add_daily_data_record")}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -58,45 +206,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: scale(20),
-    paddingBottom: verticalScale(16),
-  },
-  backButton: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(20),
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: moderateScale(16, 0.3),
-    fontWeight: "700",
-    color: "#111827",
-  },
-  bellButton: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(20),
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  notificationDot: {
-    position: "absolute",
-    top: scale(10),
-    right: scale(12),
-    width: moderateScale(6),
-    height: moderateScale(6),
-    borderRadius: moderateScale(3),
-    backgroundColor: "#EF4444",
   },
   scrollContent: {
     paddingHorizontal: scale(20),

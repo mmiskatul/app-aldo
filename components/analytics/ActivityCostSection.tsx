@@ -7,7 +7,7 @@ import Skeleton from '../ui/Skeleton';
 
 interface ActivityCostData {
   label: string;
-  value: number;
+  value: number | string;
 }
 
 interface ActivityCostSectionProps {
@@ -67,7 +67,7 @@ export default function ActivityCostSection({ coversActivity, costBreakdown, cov
           <View key={index} style={styles.row}>
             <Text style={styles.label}>{item.label}</Text>
             <Text style={[styles.value, { color: index === 0 ? '#EF4444' : '#F59E0B' }]}>
-              {item.value}%
+              {Number(item.value)}%
             </Text>
           </View>
         ))}

@@ -1,10 +1,8 @@
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import apiClient from '../../../api/apiClient';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   LayoutAnimation,
   Platform,
   RefreshControl,
@@ -42,9 +40,25 @@ interface InventoryApiItem {
 }
 
 interface InventoryListResponse {
-  total_inventory_value: number;
+  total_inventory_value?: number | string | null;
   items: InventoryApiItem[];
 }
+
+const toSafeNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const calculateInventoryValue = (items: InventoryApiItem[]) =>
+  items.reduce((total, item) => total + (toSafeNumber(item.stock_quantity) * toSafeNumber(item.unit_price)), 0);
+
+const calculateInventoryValueFromCache = (items: InventoryCardItem[]) =>
+  items.reduce((total, item) => total + (toSafeNumber(item.quantity) * toSafeNumber(item.unitPrice)), 0);
+
+const resolveInventoryTotalValue = (payload: InventoryListResponse) => {
+  const backendTotal = toSafeNumber(payload.total_inventory_value);
+  return backendTotal > 0 ? backendTotal : calculateInventoryValue(payload.items);
+};
 
 const iconForCategory = (category: string) => {
   const normalized = category.toLowerCase();
@@ -81,20 +95,56 @@ const formatShortDate = (value?: string | null) => {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 };
 
+function InventoryCardSkeleton() {
+  return (
+    <View style={styles.skeletonCard}>
+      <View style={styles.skeletonHeader}>
+        <View style={styles.skeletonIcon} />
+        <View style={styles.skeletonMeta}>
+          <View style={styles.skeletonLineWide} />
+          <View style={styles.skeletonLineMedium} />
+        </View>
+        <View style={styles.skeletonBadge} />
+      </View>
+
+      <View style={styles.skeletonFooter}>
+        <View style={styles.skeletonInfoWrap}>
+          <View>
+            <View style={styles.skeletonLabel} />
+            <View style={styles.skeletonValue} />
+          </View>
+          <View>
+            <View style={styles.skeletonLabel} />
+            <View style={styles.skeletonValue} />
+          </View>
+        </View>
+
+        <View style={styles.skeletonActionButton} />
+      </View>
+    </View>
+  );
+}
+
 export default function InventoryScreen() {
   const { t } = useTranslation();
+  const { notice, noticeKey } = useLocalSearchParams<{ notice?: string; noticeKey?: string }>();
   const inventoryRefreshToken = useAppStore((state) => state.inventoryRefreshToken);
+  const inventoryListCache = useAppStore((state) => state.inventoryListCache);
+  const setInventoryListCache = useAppStore((state) => state.setInventoryListCache);
+  const setInventoryDetailCacheItem = useAppStore((state) => state.setInventoryDetailCacheItem);
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [items, setItems] = useState<InventoryCardItem[]>([]);
-  const [totalValue, setTotalValue] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<InventoryCardItem[]>(inventoryListCache);
+  const [totalValue, setTotalValue] = useState(calculateInventoryValueFromCache(inventoryListCache));
+  const [valueLoading, setValueLoading] = useState(inventoryListCache.length === 0);
+  const [loading, setLoading] = useState(inventoryListCache.length === 0);
   const [refreshing, setRefreshing] = useState(false);
+  const [bannerMessage, setBannerMessage] = useState('');
 
   const fetchInventory = useCallback(async (query: string, withRefresh = false) => {
     if (withRefresh) {
       setRefreshing(true);
-    } else {
+    } else if (!(query.trim().length === 0 && inventoryListCache.length > 0)) {
       setLoading(true);
     }
 
@@ -107,41 +157,95 @@ export default function InventoryScreen() {
         },
       });
 
-      setTotalValue(response.data.total_inventory_value ?? 0);
-      setItems(
-        response.data.items.map((item) => ({
+      const nextItems = response.data.items.map((item) => ({
+        id: item.id,
+        name: item.product_name,
+        supplier: item.supplier_name || 'Unknown supplier',
+        status: item.stock_status,
+        statusColor: statusColorFor(item.stock_status),
+        quantity: item.stock_quantity,
+        unit: item.unit_type,
+        unitPrice: item.unit_price,
+        lastPurchase: formatShortDate(item.purchase_date),
+        icon: iconForCategory(item.category),
+      }));
+
+      setItems(nextItems);
+      setTotalValue(resolveInventoryTotalValue(response.data));
+      setValueLoading(false);
+      if (query.trim().length === 0) {
+        setInventoryListCache(nextItems);
+      }
+
+      for (const item of response.data.items) {
+        setInventoryDetailCacheItem(item.id, {
           id: item.id,
-          name: item.product_name,
-          supplier: item.supplier_name || 'Unknown supplier',
-          status: item.stock_status,
-          statusColor: statusColorFor(item.stock_status),
-          quantity: item.stock_quantity,
-          unit: item.unit_type,
-          lastPurchase: formatShortDate(item.purchase_date),
-          icon: iconForCategory(item.category),
-        })),
-      );
+          product_name: item.product_name,
+          category: item.category,
+          stock_quantity: item.stock_quantity,
+          unit_type: item.unit_type,
+          supplier_name: item.supplier_name,
+          unit_price: item.unit_price,
+          alert_threshold: item.alert_threshold,
+          stock_status: item.stock_status,
+          purchase_date: item.purchase_date,
+        });
+      }
+
+      setTimeout(() => {
+        void Promise.allSettled(
+          response.data.items.slice(0, 8).map(async (item) => {
+            const detailResponse = await apiClient.get(`/api/v1/restaurant/inventory/${item.id}`);
+            setInventoryDetailCacheItem(item.id, detailResponse.data);
+          }),
+        );
+      }, 0);
     } catch (error: any) {
       console.log('Inventory list error:', error.response?.data || error.message);
     } finally {
       setLoading(false);
+    }
+  }, [inventoryListCache.length, setInventoryDetailCacheItem, setInventoryListCache]);
+
+  const loadInventoryScreen = useCallback(async (query: string, withRefresh = false) => {
+    if (withRefresh) {
+      setRefreshing(true);
+    }
+
+    try {
+      await fetchInventory(query, withRefresh);
+    } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [fetchInventory]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      void fetchInventory(search);
+      void loadInventoryScreen(search);
     }, 250);
 
     return () => clearTimeout(timeoutId);
-  }, [fetchInventory, inventoryRefreshToken, search]);
+  }, [inventoryRefreshToken, loadInventoryScreen, search]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void fetchInventory(search);
-    }, [fetchInventory, search])
-  );
+  useEffect(() => {
+    if (!notice || !noticeKey) {
+      return;
+    }
+
+    const messageByNotice: Record<string, string> = {
+      'item-added': 'Item added successfully.',
+      'item-updated': 'Item updated successfully.',
+      'item-deleted': 'Item deleted successfully.',
+    };
+    const nextMessage = messageByNotice[notice];
+    if (!nextMessage) {
+      return;
+    }
+
+    setBannerMessage(nextMessage);
+    const timeoutId = setTimeout(() => setBannerMessage(''), 3000);
+    return () => clearTimeout(timeoutId);
+  }, [notice, noticeKey]);
 
   const toggleFilters = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -175,6 +279,13 @@ export default function InventoryScreen() {
 
       {showFilters ? <FilterChips /> : null}
 
+      {bannerMessage ? (
+        <View style={styles.banner}>
+          <Feather name="check-circle" size={moderateScale(16)} color="#166534" />
+          <Text style={styles.bannerText}>{bannerMessage}</Text>
+        </View>
+      ) : null}
+
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -182,7 +293,7 @@ export default function InventoryScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => void fetchInventory(search, true)}
+            onRefresh={() => void loadInventoryScreen(search, true)}
             colors={['#FA8C4C']}
           />
         }
@@ -194,9 +305,13 @@ export default function InventoryScreen() {
 
         <View style={styles.valueCard}>
           <Text style={styles.valueLabelSmall}>{t('total_inventory_value')}</Text>
-          <Text style={styles.valueAmount}>
-            ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </Text>
+          {valueLoading ? (
+            <View style={styles.valueAmountSkeleton} />
+          ) : (
+            <Text style={styles.valueAmount}>
+              ${toSafeNumber(totalValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          )}
           <View style={styles.valueBadge}>
             <Feather name="package" size={moderateScale(12)} color="#16A34A" />
             <Text style={styles.valueBadgeText}> {filtered.length}</Text>
@@ -206,11 +321,19 @@ export default function InventoryScreen() {
 
         <View style={styles.listWrap}>
           {loading ? (
-            <View style={styles.loadingState}>
-              <ActivityIndicator size="small" color="#FA8C4C" />
-            </View>
+            <>
+              <InventoryCardSkeleton />
+              <InventoryCardSkeleton />
+              <InventoryCardSkeleton />
+            </>
           ) : filtered.length > 0 ? (
-            filtered.map((item) => <InventoryCard key={item.id} item={item} />)
+            filtered.map((item) => (
+              <InventoryCard
+                key={item.id}
+                item={item}
+                onView={(itemId) => router.push(`/(tabs)/inventory/${itemId}`)}
+              />
+            ))
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>No inventory items found</Text>
@@ -266,6 +389,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF4EE',
     borderColor: '#FA8C4C',
   },
+  banner: {
+    marginHorizontal: scale(20),
+    marginBottom: verticalScale(12),
+    borderRadius: scale(12),
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
+  },
+  bannerText: {
+    flex: 1,
+    color: '#166534',
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+  },
   scroll: { flex: 1 },
   titleWrap: {
     paddingHorizontal: scale(20),
@@ -282,13 +424,88 @@ const styles = StyleSheet.create({
   },
   valueLabelSmall: { fontSize: moderateScale(10), color: '#9CA3AF', fontWeight: '600', letterSpacing: 0.5 },
   valueAmount: { fontSize: moderateScale(28), fontWeight: '800', color: '#111827', marginTop: verticalScale(4) },
+  valueAmountSkeleton: {
+    marginTop: verticalScale(8),
+    width: '58%',
+    height: verticalScale(34),
+    borderRadius: scale(8),
+    backgroundColor: '#F3E2D7',
+  },
   valueBadge: { flexDirection: 'row', alignItems: 'center', marginTop: verticalScale(6) },
   valueBadgeText: { fontSize: moderateScale(12), color: '#16A34A', fontWeight: '600' },
   valueBadgeSub: { fontSize: moderateScale(12), color: '#6B7280' },
   listWrap: { paddingHorizontal: scale(20) },
-  loadingState: {
-    paddingVertical: verticalScale(32),
+  skeletonCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    padding: scale(14),
+    marginBottom: verticalScale(10),
+  },
+  skeletonHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: verticalScale(12),
+  },
+  skeletonIcon: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: scale(10),
+    backgroundColor: '#F3F4F6',
+    marginRight: scale(10),
+  },
+  skeletonMeta: {
+    flex: 1,
+    gap: verticalScale(8),
+  },
+  skeletonLineWide: {
+    width: '62%',
+    height: verticalScale(12),
+    borderRadius: scale(6),
+    backgroundColor: '#F3F4F6',
+  },
+  skeletonLineMedium: {
+    width: '44%',
+    height: verticalScale(10),
+    borderRadius: scale(6),
+    backgroundColor: '#F9FAFB',
+  },
+  skeletonBadge: {
+    width: moderateScale(54),
+    height: verticalScale(14),
+    borderRadius: scale(7),
+    backgroundColor: '#F3F4F6',
+  },
+  skeletonFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  skeletonInfoWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: scale(10),
+  },
+  skeletonLabel: {
+    width: moderateScale(52),
+    height: verticalScale(8),
+    borderRadius: scale(4),
+    backgroundColor: '#F3F4F6',
+    marginBottom: verticalScale(6),
+  },
+  skeletonValue: {
+    width: moderateScale(68),
+    height: verticalScale(12),
+    borderRadius: scale(6),
+    backgroundColor: '#F9FAFB',
+  },
+  skeletonActionButton: {
+    width: moderateScale(38),
+    height: moderateScale(38),
+    borderRadius: moderateScale(19),
+    backgroundColor: '#F3F4F6',
   },
   emptyState: {
     borderWidth: 1,

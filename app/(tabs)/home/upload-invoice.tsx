@@ -131,9 +131,6 @@ export default function UploadInvoiceScreen() {
       );
 
       alert("Invoice saved successfully!");
-      if (router.canGoBack()) {
-        router.dismissAll();
-      }
       router.replace("/(tabs)/documents");
     } catch (error: any) {
       console.log("Save Error:", error.response?.data || error.message);

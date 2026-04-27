@@ -15,24 +15,47 @@ import Header from "../../../components/ui/Header";
 import AIExtractionBanner from "../../../components/documents/AIExtractionBanner";
 import RecentDocumentsList from "../../../components/documents/RecentDocumentsList";
 import apiClient from "../../../api/apiClient";
+import { useAppStore } from "../../../store/useAppStore";
 import { useTranslation } from "../../../utils/i18n";
+
+const DOCUMENTS_CACHE_TTL_MS = 60 * 1000;
+
+const isDocumentsCacheFresh = (fetchedAt: number | null) =>
+  typeof fetchedAt === "number" && Date.now() - fetchedAt < DOCUMENTS_CACHE_TTL_MS;
 
 export default function DocumentsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [bannerData, setBannerData] = useState({ title: "", subtitle: "" });
-  const [loading, setLoading] = useState(true);
+  const documentsScreenCache = useAppStore((state) => state.documentsScreenCache);
+  const setDocumentsScreenCache = useAppStore((state) => state.setDocumentsScreenCache);
+  const [documents, setDocuments] = useState<any[]>(documentsScreenCache.documents);
+  const [bannerData, setBannerData] = useState(documentsScreenCache.bannerData);
+  const [loading, setLoading] = useState(documentsScreenCache.documents.length === 0);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
     try {
-      const response = await apiClient.get("/api/v1/restaurant/documents");
-      console.log("Documents Fetch Response [0]:", JSON.stringify(response.data.items?.[0], null, 2));
-      setDocuments(response.data.items || []);
-      setBannerData({
+      const response = await apiClient.get("/api/v1/restaurant/documents", {
+        params: {
+          page: 1,
+          page_size: 12,
+        },
+      });
+      const nextDocuments = response.data.items || [];
+      const nextBanner = {
         title: response.data.ai_banner_title,
         subtitle: response.data.ai_banner_subtitle,
+      };
+      const fetchedAt = Date.now();
+      setDocuments(nextDocuments);
+      setBannerData(nextBanner);
+      setDocumentsScreenCache({
+        documents: nextDocuments,
+        bannerData: nextBanner,
+        fetchedAt,
       });
     } catch (error) {
       console.error("Error fetching documents:", error);
@@ -44,13 +67,20 @@ export default function DocumentsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchDocuments();
-    }, [])
+      if (documentsScreenCache.documents.length === 0) {
+        void fetchDocuments(false);
+        return;
+      }
+
+      if (!isDocumentsCacheFresh(documentsScreenCache.fetchedAt)) {
+        void fetchDocuments(true);
+      }
+    }, [documentsScreenCache.documents.length, documentsScreenCache.fetchedAt])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchDocuments();
+    void fetchDocuments(true);
   };
 
   return (

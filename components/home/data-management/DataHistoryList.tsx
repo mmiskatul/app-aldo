@@ -1,88 +1,143 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-interface DataEntry {
+import Skeleton, { SkeletonCard } from '../../ui/Skeleton';
+
+export type DataHistorySegment = 'date' | 'week' | 'month';
+
+export interface DataHistoryEntry {
   id: string;
   label: string;
   date: string;
+  referenceDate: string;
   revenue: string;
   covers: string;
-  avg: string;
+  average: string;
 }
 
-const MOCK_HISTORY: DataEntry[] = [
-  { id: '1', label: 'YESTERDAY', date: 'Feb 25, 2026', revenue: '$1,120', covers: '38', avg: '$29.47' },
-  { id: '2', label: 'WEDNESDAY', date: 'Feb 06, 2026', revenue: '$985', covers: '32', avg: '$30.78' },
-  { id: '3', label: 'TUESDAY', date: 'Feb 05, 2026', revenue: '$1,450', covers: '51', avg: '$28.43' },
+interface DataHistoryListProps {
+  items: DataHistoryEntry[];
+  loading?: boolean;
+  selectedSegment: DataHistorySegment;
+  onSegmentChange: (segment: DataHistorySegment) => void;
+  onDelete: (recordId: string) => void;
+}
+
+const SEGMENTS: { key: DataHistorySegment; label: string }[] = [
+  { key: 'date', label: 'Date' },
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
 ];
 
-export default function DataHistoryList() {
+export default function DataHistoryList({
+  items,
+  loading = false,
+  selectedSegment,
+  onSegmentChange,
+  onDelete,
+}: DataHistoryListProps) {
   const router = useRouter();
-  const [selectedSegment, setSelectedSegment] = useState<'Date' | 'Week' | 'Month'>('Date');
 
   return (
     <View style={styles.container}>
-      {/* Segmented Control */}
       <View style={styles.segmentContainer}>
-        {['Date', 'Week', 'Month'].map((tab) => {
-          const isActive = selectedSegment === tab;
+        {SEGMENTS.map((tab) => {
+          const isActive = selectedSegment === tab.key;
           return (
-            <TouchableOpacity 
-              key={tab} 
+            <TouchableOpacity
+              key={tab.key}
               style={[styles.segmentButton, isActive && styles.segmentButtonActive]}
-              onPress={() => setSelectedSegment(tab as any)}
+              onPress={() => onSegmentChange(tab.key)}
             >
               <Text style={[styles.segmentText, isActive && styles.segmentTextActive]}>
-                {tab}
+                {tab.label}
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* History List */}
-      {MOCK_HISTORY.map((entry) => (
-        <View key={entry.id} style={styles.historyCard}>
-          <View style={styles.cardHeader}>
-            <View>
-              <Text style={styles.entryLabel}>{entry.label}</Text>
-              <Text style={styles.entryDate}>{entry.date}</Text>
+      {loading ? (
+        Array.from({ length: 3 }).map((_, index) => (
+          <SkeletonCard key={index} style={styles.historyCard}>
+            <View style={styles.cardHeader}>
+              <View>
+                <Skeleton width={scale(80)} height={moderateScale(9)} borderRadius={5} />
+                <Skeleton width={scale(120)} height={moderateScale(14)} borderRadius={7} style={styles.gap6} />
+              </View>
+              <View style={styles.cardActions}>
+                <Skeleton width={moderateScale(20)} height={moderateScale(20)} borderRadius={10} />
+                <Skeleton width={moderateScale(20)} height={moderateScale(20)} borderRadius={10} style={styles.iconGap} />
+              </View>
             </View>
-            <View style={styles.cardActions}>
-              <TouchableOpacity style={styles.actionIcon} onPress={() => router.push('/(tabs)/home/daily-record-details')}>
-                <Feather name="eye" size={moderateScale(16)} color="#374151" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionIcon}>
-                <Feather name="trash-2" size={moderateScale(16)} color="#EF4444" />
-              </TouchableOpacity>
+            <View style={styles.dataGrid}>
+              {[0, 1, 2].map((item) => (
+                <View key={item} style={styles.dataCol}>
+                  <Skeleton width={scale(46)} height={moderateScale(8)} borderRadius={4} />
+                  <Skeleton width={scale(56)} height={moderateScale(12)} borderRadius={6} style={styles.gap6} />
+                </View>
+              ))}
+            </View>
+          </SkeletonCard>
+        ))
+      ) : items.length > 0 ? (
+        items.map((entry) => (
+          <View key={entry.id} style={styles.historyCard}>
+            <View style={styles.cardHeader}>
+              <View>
+                <Text style={styles.entryLabel}>{entry.label}</Text>
+                <Text style={styles.entryDate}>{entry.date}</Text>
+              </View>
+              <View style={styles.cardActions}>
+                <TouchableOpacity
+                  style={styles.actionIcon}
+                  onPress={() =>
+                    router.push(
+                      `/(tabs)/home/daily-record-details?segment=${selectedSegment}&referenceDate=${encodeURIComponent(entry.referenceDate)}` as any,
+                    )
+                  }
+                >
+                  <Feather name="eye" size={moderateScale(16)} color="#374151" />
+                </TouchableOpacity>
+                {selectedSegment === 'date' ? (
+                  <TouchableOpacity style={styles.actionIcon} onPress={() => onDelete(entry.id)}>
+                    <Feather name="trash-2" size={moderateScale(16)} color="#EF4444" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
+
+            <View style={styles.dataGrid}>
+              <View style={styles.dataCol}>
+                <Text style={styles.dataLabel}>REVENUE</Text>
+                <Text style={styles.dataValue}>{entry.revenue}</Text>
+              </View>
+              <View style={styles.dataCol}>
+                <Text style={styles.dataLabel}>COVERS</Text>
+                <Text style={styles.dataValue}>{entry.covers}</Text>
+              </View>
+              <View style={styles.dataCol}>
+                <Text style={styles.dataLabel}>AVG.</Text>
+                <Text style={styles.dataValue}>{entry.average}</Text>
+              </View>
             </View>
           </View>
-          
-          <View style={styles.dataGrid}>
-            <View style={styles.dataCol}>
-              <Text style={styles.dataLabel}>REVENUE</Text>
-              <Text style={styles.dataValue}>{entry.revenue}</Text>
-            </View>
-            <View style={styles.dataCol}>
-              <Text style={styles.dataLabel}>COVERS</Text>
-              <Text style={styles.dataValue}>{entry.covers}</Text>
-            </View>
-            <View style={styles.dataCol}>
-              <Text style={styles.dataLabel}>AVG.</Text>
-              <Text style={styles.dataValue}>{entry.avg}</Text>
-            </View>
-          </View>
+        ))
+      ) : (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>No daily data yet</Text>
+          <Text style={styles.emptySubtitle}>Add your first daily record to see the dashboard.</Text>
         </View>
-      ))}
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: verticalScale(100), // padding for the floating button
+    paddingBottom: verticalScale(100),
   },
   segmentContainer: {
     flexDirection: 'row',
@@ -140,6 +195,7 @@ const styles = StyleSheet.create({
   },
   cardActions: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   actionIcon: {
     marginLeft: scale(16),
@@ -162,5 +218,30 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13, 0.3),
     fontWeight: '700',
     color: '#111827',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: verticalScale(36),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: scale(16),
+    borderStyle: 'dashed',
+  },
+  emptyTitle: {
+    fontSize: moderateScale(15, 0.3),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  emptySubtitle: {
+    marginTop: verticalScale(6),
+    fontSize: moderateScale(12, 0.3),
+    color: '#6B7280',
+  },
+  gap6: {
+    marginTop: verticalScale(6),
+  },
+  iconGap: {
+    marginLeft: scale(16),
   },
 });

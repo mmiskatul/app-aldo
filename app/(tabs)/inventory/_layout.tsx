@@ -20,6 +20,14 @@ export default function InventoryLayout() {
           animation: 'slide_from_right',
         }}
       />
+      <Stack.Screen
+        name="edit/[id]"
+        options={{
+          headerShown: false,
+          presentation: 'card',
+          animation: 'slide_from_right',
+        }}
+      />
     </Stack>
   );
 }

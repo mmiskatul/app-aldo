@@ -6,7 +6,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { useIsFocused } from "@react-navigation/native";
 import { io, Socket } from "socket.io-client";
 import apiClient from "../../api/apiClient";
 import ChatInput from "../../components/chat/ChatInput";
@@ -20,12 +19,14 @@ import { useTranslation } from "../../utils/i18n";
 export default function ChatScreen() {
   const { t } = useTranslation();
   const tokens = useAppStore((state) => state.tokens);
-  const isFocused = useIsFocused();
-  const [messages, setMessages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const chatMessagesCache = useAppStore((state) => state.chatMessagesCache);
+  const setChatMessagesCache = useAppStore((state) => state.setChatMessagesCache);
+  const [messages, setMessages] = useState<any[]>(chatMessagesCache);
+  const [loading, setLoading] = useState(chatMessagesCache.length === 0);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const hasFetchedRef = useRef(false);
 
   const scrollToBottom = () => {
     setTimeout(
@@ -35,9 +36,10 @@ export default function ChatScreen() {
   };
 
   useEffect(() => {
-    if (!tokens?.access_token || !isFocused) {
+    if (!tokens?.access_token) {
       socketRef.current?.disconnect();
       socketRef.current = null;
+      hasFetchedRef.current = false;
       return;
     }
 
@@ -47,57 +49,75 @@ export default function ChatScreen() {
       "https://risto-ai.vercel.app";
     let isMounted = true;
 
-    // First, fetch initial messages using the REST API
-    apiClient
-      .get("/api/v1/restaurant/chat/messages")
-      .then((response) => {
-        if (!isMounted) return;
-        setMessages(response.data.messages || []);
-        setLoading(false);
-        scrollToBottom();
-      })
-      .catch((error) => {
-        console.error("Error fetching chat messages via REST:", error);
-        if (!isMounted) return;
-        setLoading(false);
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      apiClient
+        .get("/api/v1/restaurant/chat/messages")
+        .then((response) => {
+          if (!isMounted) return;
+          const nextMessages = response.data.messages || [];
+          setMessages(nextMessages);
+          setChatMessagesCache(nextMessages);
+          setLoading(false);
+          scrollToBottom();
+        })
+        .catch((error) => {
+          console.error("Error fetching chat messages via REST:", error);
+          if (!isMounted) return;
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
+
+    if (!socketRef.current) {
+      socketRef.current = io(`${apiUrl}/restaurant-chat`, {
+        path: "/socket.io",
+        auth: { token: tokens.access_token },
+        transports: ["websocket", "polling"],
+        upgrade: true,
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        rememberUpgrade: true,
+        timeout: 20000,
       });
 
-    // Then, initialize Socket.IO connection for real-time interaction.
-    socketRef.current?.disconnect();
-    socketRef.current = io(`${apiUrl}/restaurant-chat`, {
-      path: "/socket.io",
-      auth: { token: tokens.access_token },
-      transports: ["polling"],
-      upgrade: false,
-      reconnection: true,
-      timeout: 15000,
-    });
+      socketRef.current.on("connect", () => {
+        console.log("Chat socket connected.");
+      });
 
-    socketRef.current.on("connect", () => {
-      console.log("Chat socket connected.");
-    });
+      socketRef.current.on("chat:conversation", (data: any) => {
+        const nextMessages = data.messages || [];
+        setIsAiTyping(false);
+        setMessages(nextMessages);
+        setChatMessagesCache(nextMessages);
+        setLoading(false);
+        scrollToBottom();
+      });
 
-    socketRef.current.on("chat:conversation", (data: any) => {
-      setIsAiTyping(false);
-      setMessages(data.messages || []);
-      scrollToBottom();
-    });
+      socketRef.current.on("connect_error", (error) => {
+        const message = typeof error?.message === "string" ? error.message.toLowerCase() : "";
+        if (message.includes("timeout")) {
+          console.log("Chat connection delayed, retrying socket connection.");
+        } else {
+          console.error("Chat connection error:", error);
+        }
+        setIsAiTyping(false);
+      });
 
-    socketRef.current.on("connect_error", (error) => {
-      console.error("Chat connection error:", error);
-      setIsAiTyping(false);
-    });
-
-    socketRef.current.on("disconnect", (reason) => {
-      console.log("Chat socket disconnected:", reason);
-    });
+      socketRef.current.on("disconnect", (reason) => {
+        console.log("Chat socket disconnected:", reason);
+      });
+    }
 
     return () => {
       isMounted = false;
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [tokens?.access_token, isFocused]);
+  }, [setChatMessagesCache, tokens?.access_token]);
 
   const handleSendMessage = async (text: string, file?: any) => {
     if (!text.trim() && !file) return;
@@ -111,7 +131,12 @@ export default function ChatScreen() {
       attachment_name: file?.name || null,
       attachment_source: file?.uri || null, // Best-effort local preview
     };
-    setMessages((prev) => [...prev, optimisticMessage]);
+    let nextOptimisticMessages: any[] = [];
+    setMessages((prev) => {
+      nextOptimisticMessages = [...prev, optimisticMessage];
+      return nextOptimisticMessages;
+    });
+    setChatMessagesCache(nextOptimisticMessages);
     scrollToBottom();
 
     if (file) {
@@ -138,9 +163,11 @@ export default function ChatScreen() {
         // The API returns the updated messages array directly
         if (response.data && Array.isArray(response.data)) {
           setMessages(response.data);
+          setChatMessagesCache(response.data);
           scrollToBottom();
         } else if (response.data?.messages) {
           setMessages(response.data.messages);
+          setChatMessagesCache(response.data.messages);
           scrollToBottom();
         }
       } catch (error) {
@@ -167,6 +194,7 @@ export default function ChatScreen() {
         });
         setIsAiTyping(false);
         setMessages(response.data.messages || []);
+        setChatMessagesCache(response.data.messages || []);
         scrollToBottom();
       } catch (error) {
         setIsAiTyping(false);

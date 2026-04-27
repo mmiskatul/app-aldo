@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 // Components
@@ -16,8 +16,10 @@ import apiClient from '../../../api/apiClient';
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { notice, noticeKey } = useLocalSearchParams<{ notice?: string; noticeKey?: string }>();
   const logout = useAppStore((state) => state.logout);
   const setProfile = useAppStore((state) => state.setProfile);
+  const [bannerMessage, setBannerMessage] = useState('');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -31,11 +33,31 @@ export default function SettingsScreen() {
     fetchProfile();
   }, [setProfile]);
 
+  useEffect(() => {
+    if (!notice || !noticeKey) {
+      return;
+    }
+
+    if (notice === 'profile-updated') {
+      setBannerMessage('Profile updated successfully.');
+    }
+
+    const timeoutId = setTimeout(() => setBannerMessage(''), 3000);
+    return () => clearTimeout(timeoutId);
+  }, [notice, noticeKey]);
+
   return (
     <View style={styles.safeArea}>
       <Header title={t('settings_title')} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {bannerMessage ? (
+          <View style={styles.banner}>
+            <Feather name="check-circle" size={moderateScale(16)} color="#166534" />
+            <Text style={styles.bannerText}>{bannerMessage}</Text>
+          </View>
+        ) : null}
+
         <ProfileCard
           onEditProfile={() => router.push('/(tabs)/settings/edit-profile')}
         />
@@ -99,6 +121,24 @@ const styles = StyleSheet.create({
   content: {
     padding: scale(20),
     paddingBottom: verticalScale(80),
+  },
+  banner: {
+    marginBottom: verticalScale(16),
+    borderRadius: scale(12),
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
+  },
+  bannerText: {
+    flex: 1,
+    color: '#166534',
+    fontSize: moderateScale(13),
+    fontWeight: '600',
   },
   section: {
     marginTop: verticalScale(24),

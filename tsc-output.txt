@@ -1,0 +1,75 @@
+app/(tabs)/_layout.tsx(8,8): error TS2307: Cannot find module '@hugeicons/core-free-icons' or its corresponding type declarations.
+  There are types at 'C:/Miskat/aldo/app-aldo/node_modules/@hugeicons/core-free-icons/dist/types/index.d.ts', but this result could not be resolved under your current 'moduleResolution' setting. Consider updating to 'node16', 'nodenext', or 'bundler'.
+app/(tabs)/_layout.tsx(14,72): error TS2339: Property 'default' does not exist on type 'typeof import("C:/Miskat/aldo/app-aldo/node_modules/@hugeicons/react-native/dist/types/index")'.
+app/(tabs)/analytics.tsx(410,13): error TS2322: Type 'SummaryStat[]' is not assignable to type 'ActivityCostData[]'.
+  Type 'SummaryStat' is not assignable to type 'ActivityCostData'.
+    Types of property 'value' are incompatible.
+      Type 'string | number' is not assignable to type 'number'.
+        Type 'string' is not assignable to type 'number'.
+app/(tabs)/analytics.tsx(411,13): error TS2322: Type 'SummaryStat[]' is not assignable to type 'ActivityCostData[]'.
+  Type 'SummaryStat' is not assignable to type 'ActivityCostData'.
+    Types of property 'value' are incompatible.
+      Type 'string | number' is not assignable to type 'number'.
+        Type 'string' is not assignable to type 'number'.
+app/(tabs)/home/cash-management.tsx(196,17): error TS2741: Property 'bank_deposits' is missing in type '{ total_collected: number; cash_available: number; withdrawals_total: number; bank_deposits_total: number; }' but required in type '{ total_collected: number; cash_available: number; withdrawals_total: number; bank_deposits: number; }'.
+app/(tabs)/home/upload-invoice.tsx(135,16): error TS2339: Property 'dismissAll' does not exist on type 'Router'.
+app/(tabs)/home/vat.tsx(7,43): error TS2307: Cannot find module '@hugeicons/core-free-icons' or its corresponding type declarations.
+  There are types at 'C:/Miskat/aldo/app-aldo/node_modules/@hugeicons/core-free-icons/dist/types/index.d.ts', but this result could not be resolved under your current 'moduleResolution' setting. Consider updating to 'node16', 'nodenext', or 'bundler'.
+app/(tabs)/settings/privacy-policy.tsx(40,72): error TS2345: Argument of type 'LegalDocumentCacheItem' is not assignable to parameter of type 'PublicLegalDocument | (() => PublicLegalDocument | null) | null'.
+  Property 'key' is missing in type 'LegalDocumentCacheItem' but required in type 'PublicLegalDocument'.
+app/(tabs)/settings/privacy-policy.tsx(79,56): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: TouchableOpacityProps): TouchableOpacity', gave the following error.
+    Type '(silent?: boolean) => Promise<void>' is not assignable to type '(event: GestureResponderEvent) => void'.
+      Types of parameters 'silent' and 'event' are incompatible.
+        Type 'GestureResponderEvent' is not assignable to type 'boolean | undefined'.
+  Overload 2 of 2, '(props: TouchableOpacityProps, context: any): TouchableOpacity', gave the following error.
+    Type '(silent?: boolean) => Promise<void>' is not assignable to type '(event: GestureResponderEvent) => void'.
+      Types of parameters 'silent' and 'event' are incompatible.
+        Type 'GestureResponderEvent' is not assignable to type 'boolean | undefined'.
+app/(tabs)/settings/restricted-access.tsx(33,15): error TS2345: Argument of type 'AuthenticatedUser' is not assignable to parameter of type 'User'.
+  Types of property 'restaurant_name' are incompatible.
+    Type 'string | null | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+app/(tabs)/settings/terms-conditions.tsx(40,72): error TS2345: Argument of type 'LegalDocumentCacheItem' is not assignable to parameter of type 'PublicLegalDocument | (() => PublicLegalDocument | null) | null'.
+  Property 'key' is missing in type 'LegalDocumentCacheItem' but required in type 'PublicLegalDocument'.
+app/(tabs)/settings/terms-conditions.tsx(79,56): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: TouchableOpacityProps): TouchableOpacity', gave the following error.
+    Type '(silent?: boolean) => Promise<void>' is not assignable to type '(event: GestureResponderEvent) => void'.
+      Types of parameters 'silent' and 'event' are incompatible.
+        Type 'GestureResponderEvent' is not assignable to type 'boolean | undefined'.
+  Overload 2 of 2, '(props: TouchableOpacityProps, context: any): TouchableOpacity', gave the following error.
+    Type '(silent?: boolean) => Promise<void>' is not assignable to type '(event: GestureResponderEvent) => void'.
+      Types of parameters 'silent' and 'event' are incompatible.
+        Type 'GestureResponderEvent' is not assignable to type 'boolean | undefined'.
+app/modal.tsx(11,22): error TS2322: Type '{ children: Element; href: "/"; dismissTo: true; style: { marginTop: number; paddingVertical: number; }; }' is not assignable to type 'IntrinsicAttributes & LinkProps<"/"> & { children?: ReactNode; }'.
+  Property 'dismissTo' does not exist on type 'IntrinsicAttributes & LinkProps<"/"> & { children?: ReactNode; }'.
+components/auth/restoAi/Step3PhotoUpload.tsx(39,11): error TS2322: Type 'string[]' is not assignable to type 'MediaTypeOptions | undefined'.
+components/auth/restoAi/Step3PhotoUpload.tsx(46,11): error TS2322: Type 'string[]' is not assignable to type 'MediaTypeOptions | undefined'.
+components/chat/ChatMessage.tsx(5,25): error TS2307: Cannot find module '@hugeicons/core-free-icons' or its corresponding type declarations.
+  There are types at 'C:/Miskat/aldo/app-aldo/node_modules/@hugeicons/core-free-icons/dist/types/index.d.ts', but this result could not be resolved under your current 'moduleResolution' setting. Consider updating to 'node16', 'nodenext', or 'bundler'.
+components/documents/AIExtractionBanner.tsx(5,33): error TS2307: Cannot find module '@hugeicons/core-free-icons' or its corresponding type declarations.
+  There are types at 'C:/Miskat/aldo/app-aldo/node_modules/@hugeicons/core-free-icons/dist/types/index.d.ts', but this result could not be resolved under your current 'moduleResolution' setting. Consider updating to 'node16', 'nodenext', or 'bundler'.
+components/documents/document-details/DetailsActions.tsx(51,79): error TS2345: Argument of type '"download"' is not assignable to parameter of type '"restaurant_name" | "expenses" | "english" | "italian" | "greeting" | "restaurant_name_fallback" | "settings_title" | "language_title" | "language_subtitle" | "notifications" | ... 143 more ... | "ai_insights"'.
+components/external-link.tsx(5,66): error TS2314: Generic type 'Href' requires 1 type argument(s).
+components/hello-wave.tsx(11,11): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: AnimateProps<TextProps>): Text', gave the following error.
+    Type '{ fontSize: number; lineHeight: number; marginTop: number; animationName: { '50%': { transform: { rotate: string; }[]; }; }; animationIterationCount: number; animationDuration: string; }' is not assignable to type 'StyleProp<AnimateStyle<StyleProp<TextStyle>>>'.
+      Types of property 'animationName' are incompatible.
+        Object literal may only specify known properties, and ''50%'' does not exist in type 'any[] | SharedValue<AnimatableValue>'.
+  Overload 2 of 2, '(props: AnimateProps<TextProps>, context: any): Text', gave the following error.
+    Type '{ fontSize: number; lineHeight: number; marginTop: number; animationName: { '50%': { transform: { rotate: string; }[]; }; }; animationIterationCount: number; animationDuration: string; }' is not assignable to type 'StyleProp<AnimateStyle<StyleProp<TextStyle>>>'.
+      Types of property 'animationName' are incompatible.
+        Object literal may only specify known properties, and ''50%'' does not exist in type 'any[] | SharedValue<AnimatableValue>'.
+components/home/data-management/DataMetrics.tsx(6,62): error TS2307: Cannot find module '@hugeicons/core-free-icons' or its corresponding type declarations.
+  There are types at 'C:/Miskat/aldo/app-aldo/node_modules/@hugeicons/core-free-icons/dist/types/index.d.ts', but this result could not be resolved under your current 'moduleResolution' setting. Consider updating to 'node16', 'nodenext', or 'bundler'.
+components/home/upload-invoice/UploadActions.tsx(44,7): error TS2322: Type 'string[]' is not assignable to type 'MediaTypeOptions | undefined'.
+components/home/upload-invoice/UploadActions.tsx(61,7): error TS2322: Type 'string[]' is not assignable to type 'MediaTypeOptions | undefined'.
+components/parallax-scroll-view.tsx(7,3): error TS2724: '"react-native-reanimated"' has no exported member named 'useScrollOffset'. Did you mean 'useScrollViewOffset'?
+components/settings/edit-profile/ProfileImageEdit.tsx(33,7): error TS2322: Type 'string[]' is not assignable to type 'MediaTypeOptions | undefined'.
+components/settings/edit-profile/ProfileImageEdit.tsx(53,7): error TS2322: Type 'string[]' is not assignable to type 'MediaTypeOptions | undefined'.
+utils/i18n.ts(115,5): error TS1117: An object literal cannot have multiple properties with the same name.
+utils/i18n.ts(135,5): error TS1117: An object literal cannot have multiple properties with the same name.
+utils/i18n.ts(140,5): error TS1117: An object literal cannot have multiple properties with the same name.
+utils/i18n.ts(291,5): error TS1117: An object literal cannot have multiple properties with the same name.
+utils/i18n.ts(311,5): error TS1117: An object literal cannot have multiple properties with the same name.
+utils/i18n.ts(316,5): error TS1117: An object literal cannot have multiple properties with the same name.

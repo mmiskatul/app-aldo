@@ -74,7 +74,13 @@ export default function EditProfileScreen() {
         });
       }
 
-      router.back();
+      router.replace({
+        pathname: '/(tabs)/settings',
+        params: {
+          notice: 'profile-updated',
+          noticeKey: Date.now().toString(),
+        },
+      } as any);
     } catch (error: any) {
       console.error('Error saving profile:', error.response?.data || error.message);
       Alert.alert('Error', 'Failed to save profile changes. Please try again.');

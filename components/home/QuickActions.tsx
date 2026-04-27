@@ -2,8 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useRouter } from 'expo-router';
-import { DocumentArrowUpIcon, PencilSquareIcon, ClipboardDocumentListIcon, CurrencyDollarIcon } from 'react-native-heroicons/outline';
+import { DocumentArrowUpIcon, PresentationChartBarIcon, ClipboardDocumentListIcon, CurrencyDollarIcon } from 'react-native-heroicons/outline';
 import { useTranslation } from '../../utils/i18n';
+import Skeleton, { SkeletonCard } from '../ui/Skeleton';
 
 interface ActionItemProps {
   title: string;
@@ -27,9 +28,10 @@ interface QuickActionsProps {
     key: string;
     label: string;
   }[];
+  loading?: boolean;
 }
 
-export default function QuickActions({ items: apiItems }: QuickActionsProps) {
+export default function QuickActions({ items: apiItems, loading = false }: QuickActionsProps) {
   const router = useRouter();
   const { t } = useTranslation();
   
@@ -38,13 +40,13 @@ export default function QuickActions({ items: apiItems }: QuickActionsProps) {
       case 'upload_invoice':
         return { IconComponent: DocumentArrowUpIcon, route: '/(tabs)/home/upload-invoice' };
       case 'daily_data':
-        return { IconComponent: PencilSquareIcon, route: '/(tabs)/home/add-daily-data' };
+        return { IconComponent: PresentationChartBarIcon, route: '/(tabs)/home/data-management' };
       case 'expenses':
         return { IconComponent: ClipboardDocumentListIcon, route: '/(tabs)/home/expenses' };
       case 'cash':
         return { IconComponent: CurrencyDollarIcon, route: '/(tabs)/home/cash-management' };
       default:
-        return { IconComponent: PencilSquareIcon, route: '/(tabs)/home' };
+        return { IconComponent: PresentationChartBarIcon, route: '/(tabs)/home' };
     }
   };
 
@@ -58,7 +60,7 @@ export default function QuickActions({ items: apiItems }: QuickActionsProps) {
   const displayActions = (apiItems && apiItems.length > 0 ? apiItems : fallbackActions).map(item => {
     const { IconComponent, route } = getActionData(item.key);
     return {
-      title: item.label,
+      title: item.key === 'daily_data' ? t('daily_data_dashboard') : item.label,
       IconComponent,
       onPress: () => router.push(route as any),
     };
@@ -68,11 +70,22 @@ export default function QuickActions({ items: apiItems }: QuickActionsProps) {
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>{t('quick_actions')}</Text>
       
-      <View style={styles.cardContainer}>
-        {displayActions.map((item: any) => (
-          <ActionItem key={item.title} {...item} />
-        ))}
-      </View>
+      {loading ? (
+        <SkeletonCard style={styles.cardContainer}>
+          {[0, 1, 2, 3].map((item) => (
+            <View key={item} style={styles.skeletonItem}>
+              <Skeleton width={scale(48)} height={scale(48)} borderRadius={scale(24)} />
+              <Skeleton width={scale(52)} height={moderateScale(10)} borderRadius={5} style={styles.skeletonText} />
+            </View>
+          ))}
+        </SkeletonCard>
+      ) : (
+        <View style={styles.cardContainer}>
+          {displayActions.map((item: any) => (
+            <ActionItem key={item.title} {...item} />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -117,5 +130,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     textAlign: 'center',
+  },
+  skeletonItem: {
+    alignItems: 'center',
+    width: '24%',
+  },
+  skeletonText: {
+    marginTop: verticalScale(8),
   },
 });

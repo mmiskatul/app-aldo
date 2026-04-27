@@ -30,7 +30,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -50,7 +50,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,

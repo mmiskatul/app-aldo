@@ -11,7 +11,8 @@ import { Redirect, Tabs, useSegments } from "expo-router";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
 
-const HugeiconsIcon = HugeiconsModule.HugeiconsIcon || HugeiconsModule.default?.HugeiconsIcon || (HugeiconsModule as any);
+const hugeiconsAny = HugeiconsModule as any;
+const HugeiconsIcon = hugeiconsAny.HugeiconsIcon || hugeiconsAny.default?.HugeiconsIcon || hugeiconsAny;
 
 export default function TabLayout() {
   const segments = useSegments();

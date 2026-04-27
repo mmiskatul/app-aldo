@@ -1,18 +1,44 @@
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import apiClient from '../../../api/apiClient';
-import React, { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import apiClient from '../../../../api/apiClient';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
-import Header from '../../../components/ui/Header';
-import { useAppStore } from '../../../store/useAppStore';
+import DatePicker from '../../../../components/ui/DatePicker';
+import Header from '../../../../components/ui/Header';
+import { useAppStore } from '../../../../store/useAppStore';
+import { useTranslation } from '../../../../utils/i18n';
 
-import DatePicker from '../../../components/ui/DatePicker';
-import { useTranslation } from '../../../utils/i18n';
+interface InventoryDetailResponse {
+  id: string;
+  product_name: string;
+  category: string;
+  stock_quantity: number;
+  unit_type: string;
+  supplier_name?: string | null;
+  unit_price: number;
+  alert_threshold: number;
+  purchase_date?: string | null;
+}
 
-export default function AddInventoryItemScreen() {
+const parseDateValue = (value?: string | null) => {
+  if (!value) {
+    return new Date();
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+};
+
+export default function EditInventoryItemScreen() {
   const { t } = useTranslation();
   const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
+  const inventoryDetailCache = useAppStore((state) => state.inventoryDetailCache);
+  const setInventoryDetailCacheItem = useAppStore((state) => state.setInventoryDetailCacheItem);
+  const { id } = useLocalSearchParams();
+  const itemId = Array.isArray(id) ? id[0] : id;
+  const cachedItem = itemId ? inventoryDetailCache[itemId] : null;
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [purchaseDate, setPurchaseDate] = useState(new Date());
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('');
@@ -21,12 +47,26 @@ export default function AddInventoryItemScreen() {
   const [supplierName, setSupplierName] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
   const [alertThreshold, setAlertThreshold] = useState('');
-  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!cachedItem) {
+      return;
+    }
+    setProductName(cachedItem.product_name);
+    setCategory(cachedItem.category);
+    setStockQuantity(String(cachedItem.stock_quantity));
+    setUnitType(cachedItem.unit_type);
+    setSupplierName(cachedItem.supplier_name || '');
+    setUnitPrice(String(cachedItem.unit_price));
+    setAlertThreshold(String(cachedItem.alert_threshold));
+    setPurchaseDate(parseDateValue(cachedItem.purchase_date));
+    setLoading(false);
+  }, [cachedItem]);
 
   const buildErrorMessage = (error: any) => {
     const detail = error?.response?.data?.detail;
     if (Array.isArray(detail)) {
-      return detail.map((item) => item?.msg || 'Invalid field').join('\n');
+      return detail.map((item: any) => item?.msg || 'Invalid field').join('\n');
     }
     if (typeof detail === 'string') {
       return detail;
@@ -34,7 +74,40 @@ export default function AddInventoryItemScreen() {
     return error?.message || 'Unable to save inventory item.';
   };
 
+  useEffect(() => {
+    const loadItem = async () => {
+      if (!itemId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await apiClient.get<InventoryDetailResponse>(`/api/v1/restaurant/inventory/${itemId}`);
+        const item = response.data;
+        setInventoryDetailCacheItem(itemId, item);
+        setProductName(item.product_name);
+        setCategory(item.category);
+        setStockQuantity(String(item.stock_quantity));
+        setUnitType(item.unit_type);
+        setSupplierName(item.supplier_name || '');
+        setUnitPrice(String(item.unit_price));
+        setAlertThreshold(String(item.alert_threshold));
+        setPurchaseDate(parseDateValue(item.purchase_date));
+      } catch (error: any) {
+        Alert.alert('Load failed', buildErrorMessage(error));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadItem();
+  }, [itemId, setInventoryDetailCacheItem]);
+
   const handleSave = async () => {
+    if (!itemId) {
+      return;
+    }
+
     const trimmedProductName = productName.trim();
     const trimmedCategory = category.trim();
     const trimmedUnitType = unitType.trim();
@@ -70,7 +143,7 @@ export default function AddInventoryItemScreen() {
 
     setSaving(true);
     try {
-      await apiClient.post('/api/v1/restaurant/inventory/add-item', {
+      const response = await apiClient.patch(`/api/v1/restaurant/inventory/${itemId}`, {
         product_name: trimmedProductName,
         category: trimmedCategory,
         stock_quantity: parsedStockQuantity,
@@ -81,10 +154,11 @@ export default function AddInventoryItemScreen() {
         purchase_date: purchaseDate.toISOString().slice(0, 10),
       });
       bumpInventoryRefreshToken();
+      setInventoryDetailCacheItem(itemId, response.data);
       router.replace({
         pathname: '/(tabs)/inventory',
         params: {
-          notice: 'item-added',
+          notice: 'item-updated',
           noticeKey: String(Date.now()),
         },
       });
@@ -95,16 +169,27 @@ export default function AddInventoryItemScreen() {
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.safe}>
+        <Header title={t('edit_item')} showBack={true} />
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="small" color="#FA8C4C" />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.safe}>
-      <Header title={t('add_inventory_item')} showBack={true} />
+      <Header title={t('edit_item')} showBack={true} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.pageTitle}>{t('add_inventory_item')}</Text>
-          <Text style={styles.pageSubtitle}>{t('add_inventory_item_subtitle')}</Text>
+          <Text style={styles.pageTitle}>{t('edit_item')}</Text>
+          <Text style={styles.pageSubtitle}>Update this inventory item and keep linked expenses in sync.</Text>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>{t('product_name')}</Text>
@@ -159,7 +244,7 @@ export default function AddInventoryItemScreen() {
             ) : (
               <>
                 <Feather name="save" size={moderateScale(18)} color="#FFFFFF" />
-                <Text style={styles.saveBtnText}>{t('save_item')}</Text>
+                <Text style={styles.saveBtnText}>Save Changes</Text>
               </>
             )}
           </TouchableOpacity>
@@ -208,4 +293,9 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   saveBtnText: { color: '#FFFFFF', fontSize: moderateScale(15), fontWeight: '600' },
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

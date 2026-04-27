@@ -41,7 +41,7 @@ export default function UploadActions({ onFileSelected }: UploadActionsProps) {
     }
 
     let result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 1,
     });
@@ -58,7 +58,7 @@ export default function UploadActions({ onFileSelected }: UploadActionsProps) {
   const openGallery = async () => {
     setModalVisible(false);
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 1,
     });

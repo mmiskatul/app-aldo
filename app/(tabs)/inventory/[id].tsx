@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Header from '../../../components/ui/Header';
+import { useAppStore } from '../../../store/useAppStore';
 import { useTranslation } from '../../../utils/i18n';
 
 import { HistoryList } from '../../../components/inventory/view-stock/HistoryList';
@@ -30,6 +31,8 @@ interface InventoryDetailResponse {
   }[];
 }
 
+type HistoryEntryType = 'add' | 'remove' | 'purchase';
+
 const formatLongDate = (value?: string | null) => {
   if (!value) {
     return 'N/A';
@@ -43,26 +46,34 @@ const formatLongDate = (value?: string | null) => {
 
 export default function ItemDetailScreen() {
   const { t } = useTranslation();
+  const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
+  const inventoryDetailCache = useAppStore((state) => state.inventoryDetailCache);
+  const setInventoryDetailCacheItem = useAppStore((state) => state.setInventoryDetailCacheItem);
+  const removeInventoryDetailCacheItem = useAppStore((state) => state.removeInventoryDetailCacheItem);
   const { id } = useLocalSearchParams();
   const itemId = Array.isArray(id) ? id[0] : id;
-  const [item, setItem] = useState<InventoryDetailResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedItem = itemId ? inventoryDetailCache[itemId] : null;
+  const [item, setItem] = useState<InventoryDetailResponse | null>((cachedItem as InventoryDetailResponse | null) ?? null);
+  const [loading, setLoading] = useState(!cachedItem);
   const [deleting, setDeleting] = useState(false);
 
   const fetchItem = useCallback(async () => {
     if (!itemId) {
       return;
     }
-    setLoading(true);
+    if (!cachedItem) {
+      setLoading(true);
+    }
     try {
       const response = await apiClient.get<InventoryDetailResponse>(`/api/v1/restaurant/inventory/${itemId}`);
       setItem(response.data);
+      setInventoryDetailCacheItem(itemId, response.data);
     } catch (error: any) {
       Alert.alert('Load failed', error.response?.data?.detail || error.message || 'Unable to load item.');
     } finally {
       setLoading(false);
     }
-  }, [itemId]);
+  }, [cachedItem, itemId, setInventoryDetailCacheItem]);
 
   useEffect(() => {
     void fetchItem();
@@ -85,7 +96,7 @@ export default function ItemDetailScreen() {
         pricePerUnitLabel: `$${item.unit_price.toFixed(2)} / ${item.unit_type}`,
       },
       history: item.history.map((entry) => ({
-        type: entry.kind === 'stock_added' ? 'add' : entry.kind === 'stock_removed' ? 'remove' : 'purchase',
+        type: (entry.kind === 'stock_added' ? 'add' : entry.kind === 'stock_removed' ? 'remove' : 'purchase') as HistoryEntryType,
         label: entry.kind === 'stock_added' ? 'Stock Added' : entry.kind === 'stock_removed' ? 'Stock Removed' : 'Purchase Record',
         date: formatLongDate(entry.occurred_at),
         amount: `${entry.quantity_delta > 0 ? '+' : ''}${entry.quantity_delta}`,
@@ -100,7 +111,15 @@ export default function ItemDetailScreen() {
     setDeleting(true);
     try {
       await apiClient.delete(`/api/v1/restaurant/inventory/${itemId}`);
-      router.back();
+      bumpInventoryRefreshToken();
+      removeInventoryDetailCacheItem(itemId);
+      router.replace({
+        pathname: '/(tabs)/inventory',
+        params: {
+          notice: 'item-deleted',
+          noticeKey: String(Date.now()),
+        },
+      });
     } catch (error: any) {
       Alert.alert('Delete failed', error.response?.data?.detail || error.message || 'Unable to delete item.');
     } finally {
@@ -141,12 +160,22 @@ export default function ItemDetailScreen() {
           </View>
         </View>
 
-        <StockUpdate itemId={itemId} onUpdated={setItem} />
+        <StockUpdate
+          itemId={itemId}
+          onUpdated={(payload) => {
+            bumpInventoryRefreshToken();
+            setInventoryDetailCacheItem(itemId, payload);
+            setItem(payload);
+          }}
+        />
         <SupplierCard item={viewModel.supplier} />
         <HistoryList item={{ history: viewModel.history }} />
 
         <View style={styles.bottomActions}>
-          <TouchableOpacity style={styles.secondaryBtn}>
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => router.push(`/(tabs)/inventory/edit/${itemId}`)}
+          >
             <Feather name="edit" size={moderateScale(16)} color="#6B7280" />
             <Text style={styles.secondaryBtnText}>{t('edit_item')}</Text>
           </TouchableOpacity>

@@ -7,7 +7,7 @@ export interface User {
   email: string;
   full_name: string;
   role: string;
-  restaurant_name: string;
+  restaurant_name?: string | null;
   account_status?: string | null;
   [key: string]: any; // Allow other fields from the API
 }
@@ -107,6 +107,162 @@ export interface VatOverviewData {
   report_ready: boolean;
 }
 
+export interface InventoryDetailCacheItem {
+  id: string;
+  product_name: string;
+  category: string;
+  stock_quantity: number;
+  unit_type: string;
+  supplier_name?: string | null;
+  unit_price: number;
+  alert_threshold: number;
+  stock_status?: string;
+  purchase_date?: string | null;
+  current_stock_value?: number;
+  history?: {
+    kind: string;
+    quantity_delta: number;
+    occurred_at: string;
+  }[];
+}
+
+export interface InventoryListCacheItem {
+  id: string;
+  name: string;
+  supplier: string;
+  status: string;
+  statusColor: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  lastPurchase: string;
+  icon: string;
+}
+
+export interface ChatCacheMessage {
+  id: string;
+  role: string;
+  message: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+  edited_at?: string | null;
+  reply_to_message_id?: string | null;
+  attachment_name?: string | null;
+  attachment_source?: string | null;
+  attachment_summary?: string | null;
+}
+
+export interface LegalDocumentCacheItem {
+  key: string;
+  title: string;
+  content: string;
+  updated_at: string | null;
+  updated_by: string | null;
+}
+
+export interface HomeMetricCacheItem {
+  label: string;
+  value: number;
+  change_percent: number;
+  currency: string;
+}
+
+export interface HomeCashCacheItem {
+  label: string;
+  amount: number;
+  subtitle: string;
+}
+
+export interface HomeRevenueCacheItem {
+  label: string;
+  value: number;
+}
+
+export interface HomeInsightCacheItem {
+  title: string;
+  summary: string;
+}
+
+export interface HomeActivityCacheItem {
+  kind?: string;
+  title?: string;
+  subtitle?: string;
+  timestamp?: string;
+}
+
+export interface HomeShellCacheItem {
+  greeting_name: string;
+  restaurant_name: string;
+  preferred_language: string;
+  available_periods: string[];
+  quick_actions: any[];
+}
+
+export interface HomeScreenCache {
+  shellData: HomeShellCacheItem | null;
+  metricsByPeriod: Partial<Record<'weekly' | 'monthly', HomeMetricCacheItem[]>>;
+  cashByPeriod: Partial<Record<'weekly' | 'monthly', HomeCashCacheItem[]>>;
+  revenueByPeriod: Partial<Record<'weekly' | 'monthly', HomeRevenueCacheItem[]>>;
+  insightByPeriod: Partial<Record<'weekly' | 'monthly', HomeInsightCacheItem | null>>;
+  recentActivity: HomeActivityCacheItem[] | null;
+  vatBalance: number | null;
+}
+
+export interface AnalyticsInsightCacheItem {
+  title: string;
+  subtitle: string;
+}
+
+export interface AnalyticsMetricTileCacheItem {
+  label: string;
+  value: number | string;
+  change_percent?: number;
+  subtitle?: string;
+}
+
+export interface AnalyticsSummaryCacheItem {
+  label: string;
+  value: number | string;
+}
+
+export interface AnalyticsRevenueComparisonCacheItem {
+  label: string;
+  value: number;
+}
+
+export interface AnalyticsSupplierAlertCacheItem {
+  title: string;
+  subtitle?: string;
+  impact?: string;
+}
+
+export interface AnalyticsRevenueTrendCacheItem {
+  period: 'weekly' | 'monthly';
+  revenue_total: number;
+  change_percent: number;
+  points: { label: string; value: number }[];
+}
+
+export interface AnalyticsScreenCache {
+  businessInsight: AnalyticsInsightCacheItem | null;
+  metricTilesByPeriod: Partial<Record<'weekly' | 'monthly', AnalyticsMetricTileCacheItem[]>>;
+  revenueTrendByPeriod: Partial<Record<'weekly' | 'monthly', AnalyticsRevenueTrendCacheItem>>;
+  summaryStatsByPeriod: Partial<Record<'weekly' | 'monthly', AnalyticsSummaryCacheItem[]>>;
+  revenueComparisonByPeriod: Partial<Record<'weekly' | 'monthly', AnalyticsRevenueComparisonCacheItem[]>>;
+  coversActivityByPeriod: Partial<Record<'weekly' | 'monthly', AnalyticsSummaryCacheItem[]>>;
+  costBreakdownByPeriod: Partial<Record<'weekly' | 'monthly', AnalyticsSummaryCacheItem[]>>;
+  supplierAlertsByPeriod: Partial<Record<'weekly' | 'monthly', AnalyticsSupplierAlertCacheItem[]>>;
+}
+
+export interface DocumentsScreenCache {
+  documents: any[];
+  bannerData: {
+    title: string;
+    subtitle: string;
+  };
+  fetchedAt: number | null;
+}
+
 interface AppState {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
@@ -118,6 +274,13 @@ interface AppState {
   profile: Profile | null;
   pendingRegistration: PendingRegistration | null;
   inventoryRefreshToken: number;
+  inventoryListCache: InventoryListCacheItem[];
+  inventoryDetailCache: Record<string, InventoryDetailCacheItem>;
+  chatMessagesCache: ChatCacheMessage[];
+  legalDocumentCache: Record<string, LegalDocumentCacheItem>;
+  homeScreenCache: HomeScreenCache;
+  analyticsScreenCache: AnalyticsScreenCache;
+  documentsScreenCache: DocumentsScreenCache;
   setUser: (user: User | null, tokens?: Tokens | null) => void;
   setTokens: (tokens: Tokens | null) => void;
   setAnalyticsData: (data: AnalyticsData | null) => void;
@@ -126,6 +289,21 @@ interface AppState {
   setProfile: (profile: Profile | null) => void;
   setPendingRegistration: (payload: PendingRegistration | null) => void;
   bumpInventoryRefreshToken: () => void;
+  setInventoryListCache: (items: InventoryListCacheItem[]) => void;
+  clearInventoryListCache: () => void;
+  setInventoryDetailCacheItem: (itemId: string, payload: InventoryDetailCacheItem) => void;
+  removeInventoryDetailCacheItem: (itemId: string) => void;
+  clearInventoryDetailCache: () => void;
+  setChatMessagesCache: (messages: ChatCacheMessage[]) => void;
+  clearChatMessagesCache: () => void;
+  setLegalDocumentCacheItem: (cacheKey: string, document: LegalDocumentCacheItem) => void;
+  clearLegalDocumentCache: () => void;
+  setHomeScreenCache: (payload: Partial<HomeScreenCache>) => void;
+  clearHomeScreenCache: () => void;
+  setAnalyticsScreenCache: (payload: Partial<AnalyticsScreenCache>) => void;
+  clearAnalyticsScreenCache: () => void;
+  setDocumentsScreenCache: (payload: DocumentsScreenCache) => void;
+  clearDocumentsScreenCache: () => void;
   appLanguage: 'en' | 'it';
   setAppLanguage: (lang: 'en' | 'it') => void;
   logout: () => void;
@@ -145,6 +323,37 @@ export const useAppStore = create<AppState>()(
       profile: null,
       pendingRegistration: null,
       inventoryRefreshToken: 0,
+      inventoryListCache: [],
+      inventoryDetailCache: {},
+      chatMessagesCache: [],
+      legalDocumentCache: {},
+      homeScreenCache: {
+        shellData: null,
+        metricsByPeriod: {},
+        cashByPeriod: {},
+        revenueByPeriod: {},
+        insightByPeriod: {},
+        recentActivity: null,
+        vatBalance: null,
+      },
+      analyticsScreenCache: {
+        businessInsight: null,
+        metricTilesByPeriod: {},
+        revenueTrendByPeriod: {},
+        summaryStatsByPeriod: {},
+        revenueComparisonByPeriod: {},
+        coversActivityByPeriod: {},
+        costBreakdownByPeriod: {},
+        supplierAlertsByPeriod: {},
+      },
+      documentsScreenCache: {
+        documents: [],
+        bannerData: {
+          title: '',
+          subtitle: '',
+        },
+        fetchedAt: null,
+      },
       setUser: (user, tokens = null) => set({ user, tokens }),
       setTokens: (tokens: Tokens | null) => set({ tokens }),
       setAnalyticsData: (data) => set({ analyticsData: data }),
@@ -153,6 +362,83 @@ export const useAppStore = create<AppState>()(
       setProfile: (profile) => set({ profile }),
       setPendingRegistration: (payload) => set({ pendingRegistration: payload }),
       bumpInventoryRefreshToken: () => set((state) => ({ inventoryRefreshToken: state.inventoryRefreshToken + 1 })),
+      setInventoryListCache: (items) => set({ inventoryListCache: items }),
+      clearInventoryListCache: () => set({ inventoryListCache: [] }),
+      setInventoryDetailCacheItem: (itemId, payload) =>
+        set((state) => ({
+          inventoryDetailCache: {
+            ...state.inventoryDetailCache,
+            [itemId]: payload,
+          },
+        })),
+      removeInventoryDetailCacheItem: (itemId) =>
+        set((state) => {
+          const nextCache = { ...state.inventoryDetailCache };
+          delete nextCache[itemId];
+          return { inventoryDetailCache: nextCache };
+        }),
+      clearInventoryDetailCache: () => set({ inventoryDetailCache: {} }),
+      setChatMessagesCache: (messages) => set({ chatMessagesCache: messages }),
+      clearChatMessagesCache: () => set({ chatMessagesCache: [] }),
+      setLegalDocumentCacheItem: (cacheKey, document) =>
+        set((state) => ({
+          legalDocumentCache: {
+            ...state.legalDocumentCache,
+            [cacheKey]: document,
+          },
+        })),
+      clearLegalDocumentCache: () => set({ legalDocumentCache: {} }),
+      setHomeScreenCache: (payload) =>
+        set((state) => ({
+          homeScreenCache: {
+            ...state.homeScreenCache,
+            ...payload,
+          },
+        })),
+      clearHomeScreenCache: () =>
+        set({
+          homeScreenCache: {
+            shellData: null,
+            metricsByPeriod: {},
+            cashByPeriod: {},
+            revenueByPeriod: {},
+            insightByPeriod: {},
+            recentActivity: null,
+            vatBalance: null,
+          },
+        }),
+      setAnalyticsScreenCache: (payload) =>
+        set((state) => ({
+          analyticsScreenCache: {
+            ...state.analyticsScreenCache,
+            ...payload,
+          },
+        })),
+      clearAnalyticsScreenCache: () =>
+        set({
+          analyticsScreenCache: {
+            businessInsight: null,
+            metricTilesByPeriod: {},
+            revenueTrendByPeriod: {},
+            summaryStatsByPeriod: {},
+            revenueComparisonByPeriod: {},
+            coversActivityByPeriod: {},
+            costBreakdownByPeriod: {},
+            supplierAlertsByPeriod: {},
+          },
+        }),
+      setDocumentsScreenCache: (payload) => set({ documentsScreenCache: payload }),
+      clearDocumentsScreenCache: () =>
+        set({
+          documentsScreenCache: {
+            documents: [],
+            bannerData: {
+              title: '',
+              subtitle: '',
+            },
+            fetchedAt: null,
+          },
+        }),
       appLanguage: 'en',
       setAppLanguage: (lang) => set({ appLanguage: lang }),
       logout: () =>
@@ -165,6 +451,37 @@ export const useAppStore = create<AppState>()(
           profile: null,
           pendingRegistration: null,
           inventoryRefreshToken: 0,
+          inventoryListCache: [],
+          inventoryDetailCache: {},
+          chatMessagesCache: [],
+          legalDocumentCache: {},
+          homeScreenCache: {
+            shellData: null,
+            metricsByPeriod: {},
+            cashByPeriod: {},
+            revenueByPeriod: {},
+            insightByPeriod: {},
+            recentActivity: null,
+            vatBalance: null,
+          },
+          analyticsScreenCache: {
+            businessInsight: null,
+            metricTilesByPeriod: {},
+            revenueTrendByPeriod: {},
+            summaryStatsByPeriod: {},
+            revenueComparisonByPeriod: {},
+            coversActivityByPeriod: {},
+            costBreakdownByPeriod: {},
+            supplierAlertsByPeriod: {},
+          },
+          documentsScreenCache: {
+            documents: [],
+            bannerData: {
+              title: '',
+              subtitle: '',
+            },
+            fetchedAt: null,
+          },
         }),
     }),
     {

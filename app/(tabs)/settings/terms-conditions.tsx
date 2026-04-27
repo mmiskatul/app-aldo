@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from '../../../components/ui/Header';
 import { TextRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { PublicLegalDocument, getTermsOfService } from '../../../api/settings';
+import { useAppStore } from '../../../store/useAppStore';
 
 const formatDate = (value: string | null) => {
   if (!value) {
@@ -34,8 +35,10 @@ const formatDate = (value: string | null) => {
 
 export default function TermsConditionsScreen() {
   const insets = useSafeAreaInsets();
-  const [document, setDocument] = useState<PublicLegalDocument | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedDocument = useAppStore((state) => state.legalDocumentCache['terms-of-service']);
+  const setLegalDocumentCacheItem = useAppStore((state) => state.setLegalDocumentCacheItem);
+  const [document, setDocument] = useState<PublicLegalDocument | null>(cachedDocument ?? null);
+  const [loading, setLoading] = useState(!cachedDocument);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +48,7 @@ export default function TermsConditionsScreen() {
     try {
       const data = await getTermsOfService();
       setDocument(data);
+      setLegalDocumentCacheItem('terms-of-service', data);
     } catch (err: any) {
       setError(
         err?.response?.data?.message ??
@@ -55,10 +59,10 @@ export default function TermsConditionsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [setLegalDocumentCacheItem]);
 
   useEffect(() => {
-    fetchDocument();
+    void fetchDocument(!!cachedDocument);
   }, [fetchDocument]);
 
   return (
@@ -72,7 +76,7 @@ export default function TermsConditionsScreen() {
           <Feather name="alert-circle" size={moderateScale(42)} color="#EF4444" />
           <Text style={styles.stateTitle}>Unable to load terms</Text>
           <Text style={styles.stateDescription}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchDocument}>
+          <TouchableOpacity style={styles.retryButton} onPress={() => void fetchDocument()}>
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>

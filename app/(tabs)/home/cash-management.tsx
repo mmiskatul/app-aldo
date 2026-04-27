@@ -40,6 +40,14 @@ interface HomeCashDataResponse {
   }>;
 }
 
+type CashSummary = {
+  total_collected: number;
+  cash_available: number;
+  withdrawals_total: number;
+  bank_deposits: number;
+  bank_deposits_total?: number;
+};
+
 export default function CashManagementScreen() {
   const router = useRouter();
 
@@ -98,7 +106,7 @@ export default function CashManagementScreen() {
   const homeCashManagementData = homeCashData?.[homePeriodKey]?.cash_management;
   const hasScreenData = Boolean(currentData && homeCashData);
 
-  const currentSummary = currentData?.summary
+  const currentSummary: CashSummary | null = currentData?.summary
     ? {
         ...currentData.summary,
         total_collected:
@@ -193,7 +201,15 @@ export default function CashManagementScreen() {
           {currentData && (
             <>
               <CashMetrics
-                summary={currentSummary ?? currentData.summary}
+                summary={
+                  currentSummary ?? {
+                    ...currentData.summary,
+                    bank_deposits:
+                      (currentData.summary as any).bank_deposits ??
+                      (currentData.summary as any).bank_deposits_total ??
+                      0,
+                  }
+                }
                 status={currentData.status}
               />
               <RecentDeposits deposits={recentTransactions} />
