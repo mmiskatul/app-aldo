@@ -87,7 +87,7 @@ export default function DataManagementScreen() {
       const response = await apiClient.get<DailyDataListResponse>("/api/v1/restaurant/daily-data", {
         params: {
           page: 1,
-          page_size: 200,
+          page_size: 100,
           view: segment,
         },
       });

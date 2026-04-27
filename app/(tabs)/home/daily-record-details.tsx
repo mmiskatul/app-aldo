@@ -25,13 +25,6 @@ interface DailyDataSection {
   fields: SectionDataField[];
 }
 
-interface DailyDataDocumentItem {
-  id: string;
-  counterparty_name?: string | null;
-  document_number?: string | null;
-  total_amount: number;
-}
-
 interface DailyRecordDetail {
   business_date: string;
   total_revenue: number;
@@ -40,8 +33,6 @@ interface DailyRecordDetail {
   total_covers: number;
   avg_revenue_per_cover: number;
   method_sections: DailyDataSection[];
-  document_count: number;
-  documents: DailyDataDocumentItem[];
 }
 
 const formatCurrency = (value: number) =>
@@ -144,45 +135,6 @@ export default function DailyRecordDetailsScreen() {
     };
   }, [record]);
 
-  const invoiceDocumentSection = useMemo<DailyDataSection | null>(() => {
-    if (!record || !record.document_count) {
-      return null;
-    }
-
-    const supplierNames = Array.from(
-      new Set(
-        (record.documents || [])
-          .map((item) => String(item.counterparty_name || item.document_number || "").trim())
-          .filter(Boolean),
-      ),
-    );
-
-    return {
-      key: "invoice_documents_section",
-      title: "Invoice Documents",
-      fields: [
-        {
-          key: "document_count",
-          label: "Document Count",
-          value: record.document_count,
-          value_type: "integer",
-        },
-        {
-          key: "invoice_document_total",
-          label: "Invoice Documents Total",
-          value: record.invoice_document_total,
-          value_type: "currency",
-        },
-        {
-          key: "document_suppliers",
-          label: "Suppliers / References",
-          value: supplierNames.length ? supplierNames.join(", ") : "-",
-          value_type: "text",
-        },
-      ],
-    };
-  }, [record]);
-
   return (
     <View style={styles.safeArea}>
       <Header title="Daily Record Details" showBack={true} />
@@ -236,13 +188,6 @@ export default function DailyRecordDetailsScreen() {
                 fields={section.fields || []}
               />
             ))}
-
-            {invoiceDocumentSection ? (
-              <SectionDataCard
-                title={invoiceDocumentSection.title}
-                fields={invoiceDocumentSection.fields}
-              />
-            ) : null}
 
             <TouchableOpacity style={styles.exportButton}>
               <Feather

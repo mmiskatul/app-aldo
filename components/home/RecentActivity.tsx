@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-import { DocumentArrowUpIcon, ClipboardDocumentListIcon, BoltIcon } from 'react-native-heroicons/outline';
+import { DocumentArrowUpIcon, ClipboardDocumentListIcon, BoltIcon, ArchiveBoxIcon, BuildingLibraryIcon } from 'react-native-heroicons/outline';
 import { useTranslation } from '../../utils/i18n';
 import Skeleton from '../ui/Skeleton';
 
@@ -45,6 +45,12 @@ export default function RecentActivity({ activities: apiActivities, loading = fa
         return { IconComponent: DocumentArrowUpIcon, iconBgColor: '#FFF0E5', iconColor: '#FA8C4C' };
       case 'expense':
         return { IconComponent: ClipboardDocumentListIcon, iconBgColor: '#FEE2E2', iconColor: '#EF4444' };
+      case 'inventory':
+        return { IconComponent: ArchiveBoxIcon, iconBgColor: '#E0F2FE', iconColor: '#0284C7' };
+      case 'cash':
+        return { IconComponent: BuildingLibraryIcon, iconBgColor: '#DCFCE7', iconColor: '#16A34A' };
+      case 'daily_record':
+        return { IconComponent: BoltIcon, iconBgColor: '#FEF3C7', iconColor: '#D97706' };
       default:
         return { IconComponent: BoltIcon, iconBgColor: '#FEF3C7', iconColor: '#D97706' };
     }
