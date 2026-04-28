@@ -156,7 +156,9 @@ export default function DailyRecordDetailsScreen() {
   const resolvedRecordId = resolvedRoute.recordId;
   const [record, setRecord] = useState<DailyRecordDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showGroupedHeader, setShowGroupedHeader] = useState(fromDataId);
+  const [showGroupedHeader, setShowGroupedHeader] = useState(
+    typeof dataId === "string" && /^(date|week|month):/.test(dataId),
+  );
 
   useEffect(() => {
     const fetchRecord = async () => {
@@ -169,7 +171,20 @@ export default function DailyRecordDetailsScreen() {
         let response;
 
         if (resolvedRecordId) {
-          if (fromDataId) {
+          try {
+            response = await apiClient.get<DailyRecordDetail>(
+              `/api/v1/restaurant/daily-data/${encodeURIComponent(resolvedRecordId)}`,
+            );
+            setShowGroupedHeader(false);
+          } catch (error: any) {
+            const isNotFound =
+              error?.response?.data?.error?.code === "not_found" ||
+              error?.response?.status === 404;
+
+            if (!isNotFound) {
+              throw error;
+            }
+
             const listResponse = await apiClient.get<DailyDataListResponse>(
               "/api/v1/restaurant/daily-data",
               {
@@ -186,52 +201,13 @@ export default function DailyRecordDetailsScreen() {
             );
 
             if (!matchedItem?.business_date) {
-              throw new Error(`Daily data item ${resolvedRecordId} not found in date list`);
+              throw error;
             }
 
             response = await apiClient.get<DailyRecordDetail>(
               endpointForSegment("date", matchedItem.business_date),
             );
             setShowGroupedHeader(true);
-          } else {
-            try {
-              response = await apiClient.get<DailyRecordDetail>(
-                `/api/v1/restaurant/daily-data/${encodeURIComponent(resolvedRecordId)}`,
-              );
-              setShowGroupedHeader(false);
-            } catch (error: any) {
-              const isNotFound =
-                error?.response?.data?.error?.code === "not_found" ||
-                error?.response?.status === 404;
-
-              if (!isNotFound) {
-                throw error;
-              }
-
-              const listResponse = await apiClient.get<DailyDataListResponse>(
-                "/api/v1/restaurant/daily-data",
-                {
-                  params: {
-                    page: 1,
-                    page_size: 100,
-                    view: "date",
-                  },
-                },
-              );
-
-              const matchedItem = (listResponse.data.items || []).find(
-                (item) => item.record_id === resolvedRecordId || item.id === resolvedRecordId,
-              );
-
-              if (!matchedItem?.business_date) {
-                throw error;
-              }
-
-              response = await apiClient.get<DailyRecordDetail>(
-                endpointForSegment("date", matchedItem.business_date),
-              );
-              setShowGroupedHeader(true);
-            }
           }
         } else {
           response = await apiClient.get<DailyRecordDetail>(

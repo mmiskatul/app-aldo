@@ -45,6 +45,18 @@ export default function DataHistoryList({
   onDeleteUnavailable,
 }: DataHistoryListProps) {
   const router = useRouter();
+  const emptyTitle =
+    selectedSegment === 'date'
+      ? 'No date data found'
+      : selectedSegment === 'week'
+        ? 'No weekly data found'
+        : 'No monthly data found';
+  const emptySubtitle =
+    selectedSegment === 'date'
+      ? 'No row data found for this date view.'
+      : selectedSegment === 'week'
+        ? 'No row data found for this week view.'
+        : 'No row data found for this month view.';
 
   return (
     <View style={styles.container}>
@@ -145,8 +157,8 @@ export default function DataHistoryList({
         ))
       ) : (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No daily data yet</Text>
-          <Text style={styles.emptySubtitle}>Add your first daily record to see the dashboard.</Text>
+          <Text style={styles.emptyTitle}>{emptyTitle}</Text>
+          <Text style={styles.emptySubtitle}>{emptySubtitle}</Text>
         </View>
       )}
     </View>

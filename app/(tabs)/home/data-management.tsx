@@ -85,8 +85,12 @@ export default function DataManagementScreen() {
   const setDailyDataScreenCache = useAppStore((state) => state.setDailyDataScreenCache);
   const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
   const [selectedSegment, setSelectedSegment] = useState<DataHistorySegment>("date");
-  const [items, setItems] = useState<DailyDataListItem[]>(dailyDataScreenCache.itemsBySegment.date || []);
-  const [loading, setLoading] = useState(!(dailyDataScreenCache.itemsBySegment.date || []).length);
+  const initialDateItems = dailyDataScreenCache.itemsBySegment.date || [];
+  const initialDateFetchedAt = dailyDataScreenCache.fetchedAtBySegment.date;
+  const [items, setItems] = useState<DailyDataListItem[]>(initialDateItems);
+  const [loading, setLoading] = useState(
+    typeof initialDateFetchedAt !== "number" && initialDateItems.length === 0,
+  );
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchDailyData = useCallback(async (segment: DataHistorySegment, silent = false) => {
@@ -104,29 +108,43 @@ export default function DataManagementScreen() {
       });
       const nextItems = response.data.items || [];
       setItems(nextItems);
+      const currentCache = useAppStore.getState().dailyDataScreenCache;
       setDailyDataScreenCache({
         itemsBySegment: {
-          ...dailyDataScreenCache.itemsBySegment,
+          ...currentCache.itemsBySegment,
           [segment]: nextItems,
         },
         fetchedAtBySegment: {
-          ...dailyDataScreenCache.fetchedAtBySegment,
+          ...currentCache.fetchedAtBySegment,
           [segment]: Date.now(),
         },
       });
     } catch (error: any) {
       console.error("Error fetching daily data:", error.response?.data || error.message);
+      setItems([]);
+      const currentCache = useAppStore.getState().dailyDataScreenCache;
+      setDailyDataScreenCache({
+        itemsBySegment: {
+          ...currentCache.itemsBySegment,
+          [segment]: [],
+        },
+        fetchedAtBySegment: {
+          ...currentCache.fetchedAtBySegment,
+          [segment]: Date.now(),
+        },
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [dailyDataScreenCache.fetchedAtBySegment, dailyDataScreenCache.itemsBySegment, setDailyDataScreenCache]);
+  }, [setDailyDataScreenCache]);
 
   useEffect(() => {
     const cachedItems = dailyDataScreenCache.itemsBySegment[selectedSegment] || [];
     const cacheTimestamp = dailyDataScreenCache.fetchedAtBySegment[selectedSegment];
+    const hasCachedResult = typeof cacheTimestamp === "number";
 
-    if (cachedItems.length > 0) {
+    if (hasCachedResult) {
       setItems(cachedItems);
       setLoading(false);
       if (!isDailyDataCacheFresh(cacheTimestamp)) {
@@ -135,6 +153,7 @@ export default function DataManagementScreen() {
       return;
     }
 
+    setItems([]);
     void fetchDailyData(selectedSegment);
   }, [dailyDataScreenCache.fetchedAtBySegment, dailyDataScreenCache.itemsBySegment, fetchDailyData, selectedSegment]);
 
