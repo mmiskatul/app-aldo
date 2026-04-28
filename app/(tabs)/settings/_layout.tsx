@@ -31,6 +31,24 @@ export default function SettingsLayout() {
           animation: 'slide_from_right' 
         }} 
       />
+      <Stack.Screen
+        name="manage-subscription"
+        options={{
+          animation: 'slide_from_right'
+        }}
+      />
+      <Stack.Screen
+        name="notification-settings"
+        options={{
+          animation: 'slide_from_right'
+        }}
+      />
+      <Stack.Screen
+        name="change-password"
+        options={{
+          animation: 'slide_from_right'
+        }}
+      />
       <Stack.Screen 
         name="tickets" 
         options={{ 

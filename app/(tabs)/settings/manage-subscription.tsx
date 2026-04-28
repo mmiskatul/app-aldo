@@ -63,6 +63,7 @@ export default function ManageSubscriptionScreen() {
   const [subscription, setSubscription] =
     useState<RestaurantSubscriptionSettings | null>(null);
   const [plans, setPlans] = useState<UserSubscriptionPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<'checkout' | 'portal' | null>(
@@ -82,6 +83,12 @@ export default function ManageSubscriptionScreen() {
       if (subscriptionData.billing_cycle) {
         setBillingCycle(subscriptionData.billing_cycle);
       }
+      const initialPlan =
+        plansData.plans.find((plan) => plan.name === subscriptionData.plan_name) ??
+        plansData.plans.find((plan) => plan.is_best_plan) ??
+        plansData.plans[0] ??
+        null;
+      setSelectedPlanId(initialPlan?.id ?? null);
     } catch (err: any) {
       setError(
         err?.response?.data?.message ??
@@ -102,6 +109,13 @@ export default function ManageSubscriptionScreen() {
       return null;
     }
 
+    if (selectedPlanId) {
+      const selected = plans.find((plan) => plan.id === selectedPlanId);
+      if (selected) {
+        return selected;
+      }
+    }
+
     if (subscription?.plan_name) {
       const currentPlan = plans.find((plan) => plan.name === subscription.plan_name);
       if (currentPlan) {
@@ -110,12 +124,13 @@ export default function ManageSubscriptionScreen() {
     }
 
     return plans.find((plan) => plan.is_best_plan) ?? plans[0];
-  }, [plans, subscription?.plan_name]);
+  }, [plans, selectedPlanId, subscription?.plan_name]);
 
   const priceValue =
     billingCycle === '1_year'
       ? selectedPlan?.annual_price ?? 0
       : selectedPlan?.monthly_price ?? 0;
+  const currentPlanName = subscription?.plan_name;
 
   const openUrl = async (url: string) => {
     const supported = await Linking.canOpenURL(url);
@@ -242,6 +257,81 @@ export default function ManageSubscriptionScreen() {
             </TouchableOpacity>
           </View>
 
+          {plans.length > 0 ? (
+            <View style={styles.planSection}>
+              <View style={styles.sectionHeadingRow}>
+                <Text style={styles.sectionTitle}>Choose a Plan</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Compare plans and switch billing before checkout.
+                </Text>
+              </View>
+
+              {plans.map((plan) => {
+                const isSelected = selectedPlan?.id === plan.id;
+                const isCurrent = currentPlanName === plan.name;
+                const planPrice =
+                  billingCycle === '1_year' ? plan.annual_price : plan.monthly_price;
+
+                return (
+                  <TouchableOpacity
+                    key={plan.id}
+                    style={[
+                      styles.planOptionCard,
+                      isSelected && styles.planOptionCardSelected,
+                    ]}
+                    onPress={() => setSelectedPlanId(plan.id)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.planOptionHeader}>
+                      <View style={styles.planOptionTitleWrap}>
+                        <Text style={styles.planOptionTitle}>{plan.name}</Text>
+                        <Text style={styles.planOptionPrice}>
+                          {formatCurrency(planPrice)}
+                          <Text style={styles.planOptionPriceSuffix}>
+                            {billingCycle === '1_year' ? ' / year' : ' / month'}
+                          </Text>
+                        </Text>
+                      </View>
+
+                      <View style={styles.planOptionBadges}>
+                        {isCurrent ? (
+                          <View style={styles.currentBadge}>
+                            <Text style={styles.currentBadgeText}>CURRENT</Text>
+                          </View>
+                        ) : null}
+                        {plan.is_best_plan ? (
+                          <View style={styles.bestPlanBadge}>
+                            <Text style={styles.bestPlanBadgeText}>BEST VALUE</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    <Text style={styles.planOptionTrial}>
+                      {plan.trial_days}-day free trial included
+                    </Text>
+
+                    <View style={styles.planOptionFooter}>
+                      <Text style={styles.planOptionFeatureCount}>
+                        {plan.features.length} features included
+                      </Text>
+                      <View
+                        style={[
+                          styles.selectionIndicator,
+                          isSelected && styles.selectionIndicatorActive,
+                        ]}
+                      >
+                        {isSelected ? (
+                          <Feather name="check" size={moderateScale(12)} color="#FFFFFF" />
+                        ) : null}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null}
+
           <View style={styles.cardContainer}>
             {selectedPlan?.is_best_plan ? (
               <View style={styles.bestValueBadge}>
@@ -250,7 +340,7 @@ export default function ManageSubscriptionScreen() {
             ) : null}
 
             <Text style={styles.planTitle}>
-              {subscription?.plan_name || selectedPlan?.name || 'Subscription Plan'}
+              {selectedPlan?.name || subscription?.plan_name || 'Subscription Plan'}
             </Text>
             <View style={styles.priceRow}>
               <Text style={styles.priceValue}>{formatCurrency(priceValue)}</Text>
@@ -343,7 +433,7 @@ export default function ManageSubscriptionScreen() {
                 ? 'No active subscription is attached to this restaurant yet. Choose a cycle above to start one.'
                 : `Your current plan is ${subscription?.plan_name || 'active'} on ${billingCycleLabel(
                     subscription?.billing_cycle ?? billingCycle
-                  ).toLowerCase()} billing. Open the billing portal to manage payment details.`}
+                  ).toLowerCase()} billing.${selectedPlan && selectedPlan.name !== subscription?.plan_name ? ` You are viewing ${selectedPlan.name} before changing plans.` : ' Open the billing portal to manage payment details.'}`}
             </Text>
           </View>
         </ScrollView>
@@ -364,6 +454,120 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: scale(20),
+  },
+  planSection: {
+    marginBottom: verticalScale(20),
+  },
+  sectionHeadingRow: {
+    marginBottom: verticalScale(12),
+  },
+  sectionTitle: {
+    fontSize: moderateScale(18, 0.3),
+    fontWeight: '800',
+    color: '#111827',
+  },
+  sectionSubtitle: {
+    fontSize: moderateScale(13, 0.3),
+    color: '#6B7280',
+    marginTop: verticalScale(4),
+    lineHeight: 18,
+  },
+  planOptionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(16),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: scale(16),
+    marginBottom: verticalScale(12),
+  },
+  planOptionCardSelected: {
+    borderColor: '#FA8C4C',
+    shadowColor: '#FA8C4C',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  planOptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  planOptionTitleWrap: {
+    flex: 1,
+    paddingRight: scale(12),
+  },
+  planOptionTitle: {
+    fontSize: moderateScale(16, 0.3),
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: verticalScale(6),
+  },
+  planOptionPrice: {
+    fontSize: moderateScale(22, 0.3),
+    fontWeight: '900',
+    color: '#111827',
+  },
+  planOptionPriceSuffix: {
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  planOptionBadges: {
+    alignItems: 'flex-end',
+  },
+  currentBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: scale(999),
+    marginBottom: verticalScale(6),
+  },
+  currentBadgeText: {
+    color: '#047857',
+    fontSize: moderateScale(10, 0.3),
+    fontWeight: '800',
+  },
+  bestPlanBadge: {
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: scale(999),
+  },
+  bestPlanBadgeText: {
+    color: '#C2410C',
+    fontSize: moderateScale(10, 0.3),
+    fontWeight: '800',
+  },
+  planOptionTrial: {
+    fontSize: moderateScale(13, 0.3),
+    color: '#6B7280',
+    marginTop: verticalScale(10),
+  },
+  planOptionFooter: {
+    marginTop: verticalScale(14),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  planOptionFeatureCount: {
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: '700',
+    color: '#374151',
+  },
+  selectionIndicator: {
+    width: moderateScale(24),
+    height: moderateScale(24),
+    borderRadius: moderateScale(12),
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  selectionIndicatorActive: {
+    backgroundColor: '#FA8C4C',
+    borderColor: '#FA8C4C',
   },
   centerState: {
     flex: 1,
