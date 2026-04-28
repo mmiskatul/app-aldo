@@ -16,6 +16,28 @@ import { ChatRouteSkeleton } from "../../components/ui/RouteSkeletons";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../utils/i18n";
 
+const CHAT_REALTIME_ENV = process.env.EXPO_PUBLIC_CHAT_REALTIME?.trim().toLowerCase();
+const CHAT_REALTIME_DISABLED_VALUES = new Set(["0", "false", "no", "off", "disabled"]);
+const CHAT_REALTIME_ENABLED_VALUES = new Set(["1", "true", "yes", "on", "enabled"]);
+
+const getHostname = (url: string): string => {
+  const match = url.trim().match(/^[a-z][a-z0-9+\-.]*:\/\/([^/:?#]+)/i);
+  return (match?.[1] || "").toLowerCase();
+};
+
+const supportsRealtimeChat = (apiUrl: string): boolean => {
+  if (CHAT_REALTIME_ENV && CHAT_REALTIME_DISABLED_VALUES.has(CHAT_REALTIME_ENV)) {
+    return false;
+  }
+
+  if (CHAT_REALTIME_ENV && CHAT_REALTIME_ENABLED_VALUES.has(CHAT_REALTIME_ENV)) {
+    return true;
+  }
+
+  const hostname = getHostname(apiUrl);
+  return hostname !== "risto-ai.vercel.app" && !hostname.endsWith(".vercel.app");
+};
+
 export default function ChatScreen() {
   const { t } = useTranslation();
   const tokens = useAppStore((state) => state.tokens);
@@ -27,6 +49,7 @@ export default function ChatScreen() {
   const socketRef = useRef<Socket | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const hasFetchedRef = useRef(false);
+  const hasLoggedRealtimeFallbackRef = useRef(false);
 
   const scrollToBottom = () => {
     setTimeout(
@@ -47,6 +70,7 @@ export default function ChatScreen() {
       apiClient.defaults.baseURL ||
       process.env.EXPO_PUBLIC_API_URL ||
       "https://risto-ai.vercel.app";
+    const realtimeEnabled = supportsRealtimeChat(apiUrl);
     let isMounted = true;
 
     if (!hasFetchedRef.current) {
@@ -70,22 +94,30 @@ export default function ChatScreen() {
       setLoading(false);
     }
 
-    if (!socketRef.current) {
+    if (!realtimeEnabled) {
+      if (!hasLoggedRealtimeFallbackRef.current) {
+        console.log("Chat realtime disabled for this API host; using REST fallback.");
+        hasLoggedRealtimeFallbackRef.current = true;
+      }
+    } else if (!socketRef.current) {
+      hasLoggedRealtimeFallbackRef.current = false;
       socketRef.current = io(`${apiUrl}/restaurant-chat`, {
         path: "/socket.io",
         auth: { token: tokens.access_token },
-        transports: ["websocket", "polling"],
+        transports: ["polling", "websocket"],
+        tryAllTransports: true,
         upgrade: true,
         reconnection: true,
-        reconnectionAttempts: Infinity,
+        reconnectionAttempts: 2,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-        rememberUpgrade: true,
+        rememberUpgrade: false,
         timeout: 20000,
       });
 
       socketRef.current.on("connect", () => {
         console.log("Chat socket connected.");
+        hasLoggedRealtimeFallbackRef.current = false;
       });
 
       socketRef.current.on("chat:conversation", (data: any) => {
@@ -99,12 +131,20 @@ export default function ChatScreen() {
 
       socketRef.current.on("connect_error", (error) => {
         const message = typeof error?.message === "string" ? error.message.toLowerCase() : "";
-        if (message.includes("timeout")) {
-          console.log("Chat connection delayed, retrying socket connection.");
+        if (message.includes("websocket") || message.includes("xhr poll") || message.includes("timeout")) {
+          if (!hasLoggedRealtimeFallbackRef.current) {
+            console.log("Chat realtime unavailable, using REST fallback.");
+            hasLoggedRealtimeFallbackRef.current = true;
+          }
         } else {
           console.error("Chat connection error:", error);
         }
         setIsAiTyping(false);
+      });
+
+      socketRef.current.io.on("reconnect_failed", () => {
+        socketRef.current?.disconnect();
+        socketRef.current = null;
       });
 
       socketRef.current.on("disconnect", (reason) => {
