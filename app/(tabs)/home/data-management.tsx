@@ -19,6 +19,7 @@ import DataMetrics from "../../../components/home/data-management/DataMetrics";
 import apiClient from "../../../api/apiClient";
 import { showErrorMessage, showInfoMessage, showSuccessMessage } from "../../../utils/feedback";
 import { useTranslation } from "../../../utils/i18n";
+import { useAppStore } from "../../../store/useAppStore";
 
 interface DailyDataListItem {
   id: string;
@@ -74,6 +75,7 @@ const labelForSegment = (segment: DataHistorySegment, value: string) => {
 export default function DataManagementScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const [selectedSegment, setSelectedSegment] = useState<DataHistorySegment>("date");
   const [items, setItems] = useState<DailyDataListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,12 +123,13 @@ export default function DataManagementScreen() {
         });
         showSuccessMessage("Collected data deleted for this date.");
       }
+      clearHomeScreenCache();
       void fetchDailyData(selectedSegment, true);
     } catch (error: any) {
       console.error("Error deleting daily data collection:", error.response?.data || error.message);
       showErrorMessage(deleteMode === "record" ? "Failed to delete daily data record." : "Failed to delete collected data for this date.");
     }
-  }, [fetchDailyData, selectedSegment]);
+  }, [clearHomeScreenCache, fetchDailyData, selectedSegment]);
 
   const metrics = useMemo(() => {
     const totalRevenue = items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0);

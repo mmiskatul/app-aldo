@@ -19,6 +19,19 @@ import Method1Form, { Method1Data } from "../../../components/home/add-daily-dat
 import Method2Form, { Method2Data } from "../../../components/home/add-daily-data/Method2Form";
 import MethodSelector from "../../../components/home/add-daily-data/MethodSelector";
 import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
+import { useAppStore } from "../../../store/useAppStore";
+
+const parseNumberInput = (value: string) => {
+  const normalized = value.replace(/,/g, ".").replace(/[^0-9.]/g, "");
+  const parsed = parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const parseIntegerInput = (value: string) => {
+  const normalized = value.replace(/[^0-9]/g, "");
+  const parsed = parseInt(normalized, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 const getLocalBusinessDate = () => {
   const now = new Date();
@@ -31,6 +44,7 @@ const getLocalBusinessDate = () => {
 export default function AddDailyDataScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const [selectedMethod, setSelectedMethod] = useState<"method1" | "method2">("method1");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -68,37 +82,47 @@ export default function AddDailyDataScreen() {
     try {
       const payload = {
         method: selectedMethod === "method1" ? "method_1" : "method_2",
-        method_one: {
-          business_date: currentBusinessDate,
-          pos_payments: parseFloat(method1Data.pos_payments) || 0,
-          cash_withdrawals: parseFloat(method1Data.cash_withdrawals) || 0,
-          cash_in: parseFloat(method1Data.cash_in) || 0,
-          cash_out: parseFloat(method1Data.cash_out) || 0,
-          expenses_in_cash: parseFloat(method1Data.expenses_in_cash) || 0,
-          notes: method1Data.notes,
-        },
-        method_two: {
-          business_date: currentBusinessDate,
-          pos_payments: parseFloat(method2Data.pos_payments) || 0,
-          cash_payments: parseFloat(method2Data.cash_payments) || 0,
-          bank_transfer_payments: parseFloat(method2Data.bank_transfer_payments) || 0,
-          lunch_covers: parseInt(method2Data.lunch_covers) || 0,
-          dinner_covers: parseInt(method2Data.dinner_covers) || 0,
-          opening_cash: parseFloat(method2Data.opening_cash) || 0,
-          closing_cash: parseFloat(method2Data.closing_cash) || 0,
-        }
+        ...(selectedMethod === "method1"
+          ? {
+              method_one: {
+                business_date: currentBusinessDate,
+                pos_payments: parseNumberInput(method1Data.pos_payments),
+                cash_withdrawals: parseNumberInput(method1Data.cash_withdrawals),
+                cash_in: parseNumberInput(method1Data.cash_in),
+                cash_out: parseNumberInput(method1Data.cash_out),
+                expenses_in_cash: parseNumberInput(method1Data.expenses_in_cash),
+                notes: method1Data.notes,
+              },
+            }
+          : {
+              method_two: {
+                business_date: currentBusinessDate,
+                pos_payments: parseNumberInput(method2Data.pos_payments),
+                cash_payments: parseNumberInput(method2Data.cash_payments),
+                bank_transfer_payments: parseNumberInput(method2Data.bank_transfer_payments),
+                lunch_covers: parseIntegerInput(method2Data.lunch_covers),
+                dinner_covers: parseIntegerInput(method2Data.dinner_covers),
+                opening_cash: parseNumberInput(method2Data.opening_cash),
+                closing_cash: parseNumberInput(method2Data.closing_cash),
+              },
+            }),
       };
 
       const res = await apiClient.post("/api/v1/restaurant/manual-entry", payload);
       console.log("Manual Entry Response:", res.data);
+      clearHomeScreenCache();
       showSuccessMessage("Daily data has been saved successfully.");
       router.back();
     } catch (error: any) {
+      const apiMessage =
+        error?.response?.data?.error?.message ||
+        error?.response?.data?.detail ||
+        error?.message;
       console.error(
         "Error saving manual entry:",
         error?.response?.data || error?.message || error,
       );
-      showErrorMessage("Could not save. Please try again.");
+      showErrorMessage(apiMessage || "Could not save. Please try again.");
     } finally {
       setIsSaving(false);
     }

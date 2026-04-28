@@ -46,6 +46,9 @@ interface ActivityItem {
   title?: string;
   subtitle?: string;
   timestamp?: string;
+  entity_id?: string;
+  reference_date?: string;
+  route?: string;
 }
 
 interface HomeShellData {
