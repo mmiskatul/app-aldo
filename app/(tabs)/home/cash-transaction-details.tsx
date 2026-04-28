@@ -73,6 +73,7 @@ export default function CashTransactionDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
+  const setHomeScreenCache = useAppStore((state) => state.setHomeScreenCache);
 
   const id = toSingleParam(params.id);
   const isReadonly = toSingleParam(params.readonly) === "true" || id.startsWith("auto-");
@@ -165,6 +166,7 @@ export default function CashTransactionDetailsScreen() {
       );
       applyTransaction(response.data);
       setCashOverviewData(null);
+      setHomeScreenCache({ cashByPeriod: {}, recentActivity: null });
       setIsEditing(false);
       showSuccessMessage("Transaction updated successfully.");
     } catch (error) {
@@ -185,6 +187,7 @@ export default function CashTransactionDetailsScreen() {
       showInfoMessage("Deleting transaction...");
       await apiClient.delete(`/api/v1/restaurant/cash/deposits/${transaction.id}`);
       setCashOverviewData(null);
+      setHomeScreenCache({ cashByPeriod: {}, recentActivity: null });
       showSuccessMessage("Transaction deleted successfully.");
       router.back();
     } catch (error) {

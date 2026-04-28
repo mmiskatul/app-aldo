@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -70,6 +71,15 @@ export default function CashManagementScreen() {
     }
     setLoading(false);
   }, [cashOverviewData?.periods?.today, fetchCashOverview]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!cashOverviewData?.periods?.today) {
+        setLoading(true);
+        void fetchCashOverview();
+      }
+    }, [cashOverviewData?.periods?.today, fetchCashOverview])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
