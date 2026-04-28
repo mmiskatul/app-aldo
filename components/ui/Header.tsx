@@ -76,7 +76,11 @@ export default function Header({
           {rightComponent ? (
             rightComponent
           ) : showBell ? (
-            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              activeOpacity={0.7}
+              onPress={() => router.push('/(tabs)/settings/notifications' as any)}
+            >
               <BellIcon size={moderateScale(20)} color="#111827" />
               <View style={styles.notificationDot} />
             </TouchableOpacity>

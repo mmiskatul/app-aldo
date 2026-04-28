@@ -44,6 +44,12 @@ export default function SettingsLayout() {
         }}
       />
       <Stack.Screen
+        name="notifications"
+        options={{
+          animation: 'slide_from_right'
+        }}
+      />
+      <Stack.Screen
         name="change-password"
         options={{
           animation: 'slide_from_right'
