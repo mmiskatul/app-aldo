@@ -33,6 +33,7 @@ const parseDateValue = (value?: string | null) => {
 export default function EditInventoryItemScreen() {
   const { t } = useTranslation();
   const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
+  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const inventoryDetailCache = useAppStore((state) => state.inventoryDetailCache);
   const setInventoryDetailCacheItem = useAppStore((state) => state.setInventoryDetailCacheItem);
   const { id } = useLocalSearchParams();
@@ -155,6 +156,7 @@ export default function EditInventoryItemScreen() {
         purchase_date: purchaseDate.toISOString().slice(0, 10),
       });
       bumpInventoryRefreshToken();
+      clearHomeScreenCache();
       setInventoryDetailCacheItem(itemId, response.data);
       router.replace({
         pathname: '/(tabs)/inventory',

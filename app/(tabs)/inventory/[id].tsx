@@ -34,6 +34,22 @@ interface InventoryDetailResponse {
 
 type HistoryEntryType = 'add' | 'remove' | 'purchase';
 
+const hasCompleteDetailCache = (value: unknown): value is InventoryDetailResponse => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<InventoryDetailResponse>;
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.product_name === 'string' &&
+    typeof candidate.category === 'string' &&
+    typeof candidate.unit_type === 'string' &&
+    typeof candidate.current_stock_value === 'number' &&
+    Array.isArray(candidate.history)
+  );
+};
+
 const formatLongDate = (value?: string | null) => {
   if (!value) {
     return 'N/A';
@@ -48,21 +64,23 @@ const formatLongDate = (value?: string | null) => {
 export default function ItemDetailScreen() {
   const { t } = useTranslation();
   const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
+  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const inventoryDetailCache = useAppStore((state) => state.inventoryDetailCache);
   const setInventoryDetailCacheItem = useAppStore((state) => state.setInventoryDetailCacheItem);
   const removeInventoryDetailCacheItem = useAppStore((state) => state.removeInventoryDetailCacheItem);
   const { id } = useLocalSearchParams();
   const itemId = Array.isArray(id) ? id[0] : id;
   const cachedItem = itemId ? inventoryDetailCache[itemId] : null;
-  const [item, setItem] = useState<InventoryDetailResponse | null>((cachedItem as InventoryDetailResponse | null) ?? null);
-  const [loading, setLoading] = useState(!cachedItem);
+  const initialItem = hasCompleteDetailCache(cachedItem) ? cachedItem : null;
+  const [item, setItem] = useState<InventoryDetailResponse | null>(initialItem);
+  const [loading, setLoading] = useState(!initialItem);
   const [deleting, setDeleting] = useState(false);
 
   const fetchItem = useCallback(async () => {
     if (!itemId) {
       return;
     }
-    if (!cachedItem) {
+    if (!hasCompleteDetailCache(cachedItem)) {
       setLoading(true);
     }
     try {
@@ -96,7 +114,7 @@ export default function ItemDetailScreen() {
         lastPurchase: formatLongDate(item.purchase_date),
         pricePerUnitLabel: `$${item.unit_price.toFixed(2)} / ${item.unit_type}`,
       },
-      history: item.history.map((entry) => ({
+      history: (Array.isArray(item.history) ? item.history : []).map((entry) => ({
         type: (entry.kind === 'stock_added' ? 'add' : entry.kind === 'stock_removed' ? 'remove' : 'purchase') as HistoryEntryType,
         label: entry.kind === 'stock_added' ? 'Stock Added' : entry.kind === 'stock_removed' ? 'Stock Removed' : 'Purchase Record',
         date: formatLongDate(entry.occurred_at),
@@ -115,6 +133,7 @@ export default function ItemDetailScreen() {
       await apiClient.delete(`/api/v1/restaurant/inventory/${itemId}`);
       showSuccessMessage('Inventory item deleted.');
       bumpInventoryRefreshToken();
+      clearHomeScreenCache();
       removeInventoryDetailCacheItem(itemId);
       router.replace({
         pathname: '/(tabs)/inventory',
@@ -167,6 +186,7 @@ export default function ItemDetailScreen() {
           itemId={itemId}
           onUpdated={(payload) => {
             bumpInventoryRefreshToken();
+            clearHomeScreenCache();
             setInventoryDetailCacheItem(itemId, payload);
             setItem(payload);
           }}

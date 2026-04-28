@@ -56,6 +56,14 @@ export default function HomeLayout() {
         }}
       />
       <Stack.Screen
+        name="expense-details"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
         name="add-expense"
         options={{
           headerShown: false,

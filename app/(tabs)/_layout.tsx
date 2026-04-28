@@ -92,6 +92,7 @@ export default function TabLayout() {
         name="inventory"
         options={{
           tabBarLabel: "Inventory",
+          popToTopOnBlur: true,
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={CheckListIcon}

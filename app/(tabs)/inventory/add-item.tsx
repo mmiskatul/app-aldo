@@ -14,6 +14,7 @@ import { useTranslation } from '../../../utils/i18n';
 export default function AddInventoryItemScreen() {
   const { t } = useTranslation();
   const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
+  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const [purchaseDate, setPurchaseDate] = useState(new Date());
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('');
@@ -82,6 +83,7 @@ export default function AddInventoryItemScreen() {
         purchase_date: purchaseDate.toISOString().slice(0, 10),
       });
       bumpInventoryRefreshToken();
+      clearHomeScreenCache();
       router.replace({
         pathname: '/(tabs)/inventory',
         params: {

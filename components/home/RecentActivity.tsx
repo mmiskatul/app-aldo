@@ -57,6 +57,36 @@ interface RecentActivityProps {
   loading?: boolean;
 }
 
+const resolveActivityRoute = (activity: any) => {
+  if (!activity) {
+    return null;
+  }
+
+  const sourceKind = activity.source_kind || activity.kind;
+  const sourceEntityId = activity.source_entity_id || activity.entity_id;
+
+  switch (sourceKind) {
+    case 'daily_record':
+      return sourceEntityId
+        ? `/(tabs)/home/daily-record-details?dataId=${sourceEntityId}`
+        : activity.route;
+    case 'inventory':
+      return sourceEntityId ? `/(tabs)/inventory/${sourceEntityId}` : activity.route;
+    case 'invoice':
+      return sourceEntityId ? `/(tabs)/documents/${sourceEntityId}` : activity.route;
+    case 'cash':
+      return sourceEntityId
+        ? `/(tabs)/home/cash-transaction-details?id=${sourceEntityId}`
+        : activity.route;
+    case 'expense':
+      return sourceEntityId
+        ? `/(tabs)/home/expense-details?id=${sourceEntityId}`
+        : activity.route;
+    default:
+      return activity.route;
+  }
+};
+
 export default function RecentActivity({ activities: apiActivities, loading = false }: RecentActivityProps) {
   const { t } = useTranslation();
 
@@ -95,10 +125,7 @@ export default function RecentActivity({ activities: apiActivities, loading = fa
           title: activity.title || 'Activity',
           subtitle: activity.subtitle || '',
           timeText: formatTimestamp(activity.timestamp),
-          route:
-            activity.kind === 'cash' && activity.entity_id
-              ? `/(tabs)/home/cash-transaction-details?id=${activity.entity_id}`
-              : activity.route,
+          route: resolveActivityRoute(activity),
           ...getIconForType(activity.kind),
         }))
       : [];

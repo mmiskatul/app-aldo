@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from '../../../components/ui/Header';
 import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { useAppStore } from '../../../store/useAppStore';
-import { showErrorMessage } from '../../../utils/feedback';
+import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 import {
   RestaurantNotificationSettings,
   getRestaurantNotificationSettings,
@@ -75,6 +75,7 @@ export default function NotificationSettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<NotificationKey | null>(null);
+  const [lastUpdatedKey, setLastUpdatedKey] = useState<NotificationKey | null>(null);
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
@@ -98,16 +99,19 @@ export default function NotificationSettingsScreen() {
   }, [fetchSettings]);
 
   const toggleSwitch = async (id: NotificationKey) => {
-    const nextValue = !settings[id];
     const previous = settings;
+    const nextValue = !previous[id];
     setSavingKey(id);
-    setSettings({ ...settings, [id]: nextValue });
+    setLastUpdatedKey(null);
+    setSettings((current) => ({ ...current, [id]: nextValue }));
 
     try {
       const updated = await updateRestaurantNotificationSettings({
         [id]: nextValue,
       });
       setSettings(updated);
+      setLastUpdatedKey(id);
+      showSuccessMessage('Notification preference updated.');
     } catch (err: any) {
       setSettings(previous);
       showErrorMessage(
@@ -162,13 +166,22 @@ export default function NotificationSettingsScreen() {
           <View style={styles.listContainer}>
             {NOTIFICATION_OPTIONS.map((option) => {
               const disabled = savingKey !== null && savingKey !== option.id;
+              const isSaving = savingKey === option.id;
+              const wasUpdated = lastUpdatedKey === option.id;
               return (
                 <View
                   key={option.id}
                   style={[styles.optionContainer, disabled && styles.optionDisabled]}
                 >
                   <View style={styles.textContainer}>
-                    <Text style={styles.optionTitle}>{option.title}</Text>
+                    <View style={styles.optionTitleRow}>
+                      <Text style={styles.optionTitle}>{option.title}</Text>
+                      {isSaving ? (
+                        <Text style={styles.optionStatus}>Saving...</Text>
+                      ) : wasUpdated ? (
+                        <Text style={styles.optionStatusSuccess}>Saved</Text>
+                      ) : null}
+                    </View>
                     <Text style={styles.optionDescription}>
                       {option.description}
                     </Text>
@@ -227,6 +240,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
     marginBottom: verticalScale(4),
+  },
+  optionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: scale(8),
+    marginBottom: verticalScale(4),
+  },
+  optionStatus: {
+    fontSize: moderateScale(11, 0.3),
+    fontWeight: '700',
+    color: '#FA8C4C',
+  },
+  optionStatusSuccess: {
+    fontSize: moderateScale(11, 0.3),
+    fontWeight: '700',
+    color: '#16A34A',
   },
   optionDescription: {
     fontSize: moderateScale(13, 0.3),

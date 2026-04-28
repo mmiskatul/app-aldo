@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 interface ExpenseItem {
   id: string;
@@ -40,7 +41,22 @@ const resolveTransactionType = (tx: ExpenseItem) => {
   return tx.section === 'bank' ? 'Bank expense' : 'Cash expense';
 };
 
+const resolveTransactionRoute = (tx: ExpenseItem) => {
+  if (tx.source_kind === 'inventory' && tx.source_inventory_item_id) {
+    return `/(tabs)/inventory/${tx.source_inventory_item_id}`;
+  }
+  if (tx.id.startsWith('uploaded-document-expense:')) {
+    return `/(tabs)/documents/${tx.id.replace('uploaded-document-expense:', '')}`;
+  }
+  if (tx.id.startsWith('daily-entry-expense:')) {
+    return `/(tabs)/home/daily-record-details?dataId=${tx.id.replace('daily-entry-expense:', '')}`;
+  }
+  return `/(tabs)/home/expense-details?id=${tx.id}`;
+};
+
 export default function RecentTransactions({ items = [] }: RecentTransactionsProps) {
+  const router = useRouter();
+
   if (items.length === 0) {
     return (
       <View style={styles.container}>
@@ -57,7 +73,12 @@ export default function RecentTransactions({ items = [] }: RecentTransactionsPro
       <Text style={styles.sectionTitle}>RECENT TRANSACTIONS</Text>
 
       {items.map((tx) => (
-        <TouchableOpacity key={tx.id} style={styles.transactionCard}>
+        <TouchableOpacity
+          key={tx.id}
+          style={styles.transactionCard}
+          activeOpacity={0.8}
+          onPress={() => router.push(resolveTransactionRoute(tx) as any)}
+        >
           <View style={styles.iconContainer}>
             <Feather name="credit-card" size={moderateScale(18)} color="#FA8C4C" />
           </View>
