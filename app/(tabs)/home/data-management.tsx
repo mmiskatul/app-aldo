@@ -35,6 +35,11 @@ interface DailyDataListResponse {
   items: DailyDataListItem[];
 }
 
+const DAILY_DATA_CACHE_TTL_MS = 60 * 1000;
+
+const isDailyDataCacheFresh = (timestamp?: number) =>
+  typeof timestamp === "number" && Date.now() - timestamp < DAILY_DATA_CACHE_TTL_MS;
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("en-GB", {
     style: "currency",
@@ -76,9 +81,12 @@ export default function DataManagementScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
+  const dailyDataScreenCache = useAppStore((state) => state.dailyDataScreenCache);
+  const setDailyDataScreenCache = useAppStore((state) => state.setDailyDataScreenCache);
+  const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
   const [selectedSegment, setSelectedSegment] = useState<DataHistorySegment>("date");
-  const [items, setItems] = useState<DailyDataListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<DailyDataListItem[]>(dailyDataScreenCache.itemsBySegment.date || []);
+  const [loading, setLoading] = useState(!(dailyDataScreenCache.itemsBySegment.date || []).length);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchDailyData = useCallback(async (segment: DataHistorySegment, silent = false) => {
@@ -90,22 +98,45 @@ export default function DataManagementScreen() {
       const response = await apiClient.get<DailyDataListResponse>("/api/v1/restaurant/daily-data", {
         params: {
           page: 1,
-          page_size: 100,
+          page_size: 60,
           view: segment,
         },
       });
-      setItems(response.data.items || []);
+      const nextItems = response.data.items || [];
+      setItems(nextItems);
+      setDailyDataScreenCache({
+        itemsBySegment: {
+          ...dailyDataScreenCache.itemsBySegment,
+          [segment]: nextItems,
+        },
+        fetchedAtBySegment: {
+          ...dailyDataScreenCache.fetchedAtBySegment,
+          [segment]: Date.now(),
+        },
+      });
     } catch (error: any) {
       console.error("Error fetching daily data:", error.response?.data || error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [dailyDataScreenCache.fetchedAtBySegment, dailyDataScreenCache.itemsBySegment, setDailyDataScreenCache]);
 
   useEffect(() => {
+    const cachedItems = dailyDataScreenCache.itemsBySegment[selectedSegment] || [];
+    const cacheTimestamp = dailyDataScreenCache.fetchedAtBySegment[selectedSegment];
+
+    if (cachedItems.length > 0) {
+      setItems(cachedItems);
+      setLoading(false);
+      if (!isDailyDataCacheFresh(cacheTimestamp)) {
+        void fetchDailyData(selectedSegment, true);
+      }
+      return;
+    }
+
     void fetchDailyData(selectedSegment);
-  }, [fetchDailyData, selectedSegment]);
+  }, [dailyDataScreenCache.fetchedAtBySegment, dailyDataScreenCache.itemsBySegment, fetchDailyData, selectedSegment]);
 
   const handleDelete = useCallback(async (deleteTarget: string) => {
     const separatorIndex = deleteTarget.indexOf(":");
@@ -124,12 +155,13 @@ export default function DataManagementScreen() {
         showSuccessMessage("Collected data deleted for this date.");
       }
       clearHomeScreenCache();
+      clearDailyDataScreenCache();
       void fetchDailyData(selectedSegment, true);
     } catch (error: any) {
       console.error("Error deleting daily data collection:", error.response?.data || error.message);
       showErrorMessage(deleteMode === "record" ? "Failed to delete daily data record." : "Failed to delete collected data for this date.");
     }
-  }, [clearHomeScreenCache, fetchDailyData, selectedSegment]);
+  }, [clearDailyDataScreenCache, clearHomeScreenCache, fetchDailyData, selectedSegment]);
 
   const metrics = useMemo(() => {
     const totalRevenue = items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0);

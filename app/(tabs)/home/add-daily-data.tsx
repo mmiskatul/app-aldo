@@ -45,6 +45,7 @@ export default function AddDailyDataScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
+  const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
   const [selectedMethod, setSelectedMethod] = useState<"method1" | "method2">("method1");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -111,6 +112,7 @@ export default function AddDailyDataScreen() {
       const res = await apiClient.post("/api/v1/restaurant/manual-entry", payload);
       console.log("Manual Entry Response:", res.data);
       clearHomeScreenCache();
+      clearDailyDataScreenCache();
       showSuccessMessage("Daily data has been saved successfully.");
       router.back();
     } catch (error: any) {

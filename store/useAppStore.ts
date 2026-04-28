@@ -263,6 +263,21 @@ export interface DocumentsScreenCache {
   fetchedAt: number | null;
 }
 
+export interface DailyDataListCacheItem {
+  id: string;
+  record_id?: string | null;
+  business_date: string;
+  total_revenue: number;
+  total_expenses: number;
+  total_covers: number;
+  avg_revenue_per_cover: number;
+}
+
+export interface DailyDataScreenCache {
+  itemsBySegment: Partial<Record<'date' | 'week' | 'month', DailyDataListCacheItem[]>>;
+  fetchedAtBySegment: Partial<Record<'date' | 'week' | 'month', number>>;
+}
+
 interface AppState {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
@@ -281,6 +296,7 @@ interface AppState {
   homeScreenCache: HomeScreenCache;
   analyticsScreenCache: AnalyticsScreenCache;
   documentsScreenCache: DocumentsScreenCache;
+  dailyDataScreenCache: DailyDataScreenCache;
   setUser: (user: User | null, tokens?: Tokens | null) => void;
   setTokens: (tokens: Tokens | null) => void;
   setAnalyticsData: (data: AnalyticsData | null) => void;
@@ -304,6 +320,8 @@ interface AppState {
   clearAnalyticsScreenCache: () => void;
   setDocumentsScreenCache: (payload: DocumentsScreenCache) => void;
   clearDocumentsScreenCache: () => void;
+  setDailyDataScreenCache: (payload: Partial<DailyDataScreenCache>) => void;
+  clearDailyDataScreenCache: () => void;
   appLanguage: 'en' | 'it';
   setAppLanguage: (lang: 'en' | 'it') => void;
   logout: () => void;
@@ -353,6 +371,10 @@ export const useAppStore = create<AppState>()(
           subtitle: '',
         },
         fetchedAt: null,
+      },
+      dailyDataScreenCache: {
+        itemsBySegment: {},
+        fetchedAtBySegment: {},
       },
       setUser: (user, tokens = null) => set({ user, tokens }),
       setTokens: (tokens: Tokens | null) => set({ tokens }),
@@ -439,6 +461,20 @@ export const useAppStore = create<AppState>()(
             fetchedAt: null,
           },
         }),
+      setDailyDataScreenCache: (payload) =>
+        set((state) => ({
+          dailyDataScreenCache: {
+            ...state.dailyDataScreenCache,
+            ...payload,
+          },
+        })),
+      clearDailyDataScreenCache: () =>
+        set({
+          dailyDataScreenCache: {
+            itemsBySegment: {},
+            fetchedAtBySegment: {},
+          },
+        }),
       appLanguage: 'en',
       setAppLanguage: (lang) => set({ appLanguage: lang }),
       logout: () =>
@@ -481,6 +517,10 @@ export const useAppStore = create<AppState>()(
               subtitle: '',
             },
             fetchedAt: null,
+          },
+          dailyDataScreenCache: {
+            itemsBySegment: {},
+            fetchedAtBySegment: {},
           },
         }),
     }),
