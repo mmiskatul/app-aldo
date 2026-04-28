@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +19,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import Input from "../../components/ui/Input";
 import { getApiBaseUrl } from "../../utils/api";
+import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -33,7 +33,7 @@ export default function ForgotPasswordScreen() {
 
   const handleRequestReset = async () => {
     if (!email) {
-      Alert.alert("Error", "Please enter your email address.");
+      showErrorMessage("Please enter your email address.");
       return;
     }
 
@@ -46,7 +46,7 @@ export default function ForgotPasswordScreen() {
 
       console.log("Forgot Password API Response:", response.data);
 
-      Alert.alert("Success", "Password reset code sent to your email.");
+      showSuccessMessage("Password reset code sent to your email.");
 
       router.push({
         pathname: "/(auth)/reset-password",
@@ -73,7 +73,7 @@ export default function ForgotPasswordScreen() {
         errorMessage = error.message;
       }
 
-      Alert.alert("Error", errorMessage);
+      showErrorMessage(errorMessage);
     } finally {
       setIsLoading(false);
     }

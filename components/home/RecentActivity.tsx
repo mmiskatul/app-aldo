@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { useRouter } from 'expo-router';
 import { DocumentArrowUpIcon, ClipboardDocumentListIcon, BoltIcon, ArchiveBoxIcon, BuildingLibraryIcon } from 'react-native-heroicons/outline';
 import { useTranslation } from '../../utils/i18n';
 import Skeleton from '../ui/Skeleton';
@@ -12,11 +13,13 @@ interface ActivityItemProps {
   IconComponent: any;
   iconBgColor: string;
   iconColor: string;
+  route?: string | null;
 }
 
-const ActivityItem = ({ title, subtitle, timeText, IconComponent, iconBgColor, iconColor }: ActivityItemProps) => {
-  return (
-    <View style={styles.itemContainer}>
+const ActivityItem = ({ title, subtitle, timeText, IconComponent, iconBgColor, iconColor, route }: ActivityItemProps) => {
+  const router = useRouter();
+  const content = (
+    <>
       <View style={styles.itemLeft}>
         <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
           <IconComponent size={moderateScale(16)} color={iconColor} />
@@ -27,6 +30,24 @@ const ActivityItem = ({ title, subtitle, timeText, IconComponent, iconBgColor, i
         </View>
       </View>
       <Text style={styles.timeText}>{timeText}</Text>
+    </>
+  );
+
+  if (route) {
+    return (
+      <TouchableOpacity
+        style={styles.itemContainer}
+        activeOpacity={0.8}
+        onPress={() => router.push(route as any)}
+      >
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View style={styles.itemContainer}>
+      {content}
     </View>
   );
 };
@@ -74,6 +95,7 @@ export default function RecentActivity({ activities: apiActivities, loading = fa
           title: activity.title || 'Activity',
           subtitle: activity.subtitle || '',
           timeText: formatTimestamp(activity.timestamp),
+          route: activity.route,
           ...getIconForType(activity.kind),
         }))
       : [];

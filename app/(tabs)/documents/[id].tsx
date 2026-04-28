@@ -2,7 +2,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -21,6 +20,7 @@ import DocumentPreview from "../../../components/documents/document-details/Docu
 import ExtractedData from "../../../components/documents/document-details/ExtractedData";
 import { DetailRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 import { useTranslation } from "../../../utils/i18n";
+import { showDialog, showErrorMessage, showInfoMessage, showSuccessMessage } from "../../../utils/feedback";
 const { StorageAccessFramework } = FileSystem;
 
 export default function DocumentDetailsScreen() {
@@ -38,9 +38,6 @@ export default function DocumentDetailsScreen() {
 
   const apiUrl =
     process.env.EXPO_PUBLIC_API_URL || "https://risto-ai.vercel.app";
-  // Add a cache-busting timestamp to the image URL
-  const [timestamp, setTimestamp] = useState(Date.now());
-  const imageUrl = `${apiUrl}/api/v1/restaurant/documents/${id}/download-image?t=${timestamp}`;
 
   const fetchDetails = async () => {
     try {
@@ -48,7 +45,6 @@ export default function DocumentDetailsScreen() {
         `/api/v1/restaurant/documents/${id}`,
       );
       setData(response.data);
-      setTimestamp(Date.now());
     } catch (error) {
       console.error("Error fetching document details:", error);
     } finally {
@@ -160,19 +156,18 @@ export default function DocumentDetailsScreen() {
       );
 
       setData(response.data);
-      setTimestamp(Date.now());
       setIsEditing(false);
-      Alert.alert(t('success'), t('document_updated'));
+      showSuccessMessage(t('document_updated'), t('success'));
     } catch (error) {
       console.error("Error updating document:", error);
-      Alert.alert(t('error'), t('document_update_failed'));
+      showErrorMessage(t('document_update_failed'), t('error'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = () => {
-    Alert.alert(
+    showDialog(
       t('delete_document_title'),
       t('delete_document_msg'),
       [
@@ -183,14 +178,13 @@ export default function DocumentDetailsScreen() {
           onPress: async () => {
             try {
               setLoading(true);
+              showInfoMessage('Deleting document...');
               await apiClient.delete(`/api/v1/restaurant/documents/${id}`);
+              showSuccessMessage('Document deleted.');
               router.back();
             } catch (error) {
               console.error("Error deleting document:", error);
-              Alert.alert(
-                t('error'),
-                t('document_delete_failed'),
-              );
+              showErrorMessage(t('document_delete_failed'), t('error'));
               setLoading(false);
             }
           },
@@ -204,7 +198,7 @@ export default function DocumentDetailsScreen() {
 
     try {
       setDownloading(true);
-      const downloadUrl = `${apiUrl}/api/v1/restaurant/documents/${id}/download?t=${timestamp}`;
+      const downloadUrl = `${apiUrl}/api/v1/restaurant/documents/${id}/download?t=${Date.now()}`;
       const fileName = `invoice_${id}.pdf`;
 
       if (Platform.OS === "android") {
@@ -226,16 +220,16 @@ export default function DocumentDetailsScreen() {
           const blob = await response.blob();
 
           // Need to convert blob to base64 to write to SAF
-          const reader = new FileReader();
-          reader.onload = async () => {
-            const base64 = (reader.result as string).split(",")[1];
-            await FileSystem.writeAsStringAsync(fileUri, base64, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
-            alert(t('download_success'));
-          };
-          reader.readAsDataURL(blob);
-        }
+            const reader = new FileReader();
+            reader.onload = async () => {
+              const base64 = (reader.result as string).split(",")[1];
+              await FileSystem.writeAsStringAsync(fileUri, base64, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              showSuccessMessage(t('download_success'));
+            };
+            reader.readAsDataURL(blob);
+          }
       } else {
         // iOS/Web fallback - on iOS users expect the Share Sheet to "Save to Files"
         const fileUri = `${FileSystem.documentDirectory}${fileName}`;
@@ -249,7 +243,7 @@ export default function DocumentDetailsScreen() {
       }
     } catch (error) {
       console.error("Download Error:", error);
-      alert(t('download_failed'));
+      showErrorMessage(t('download_failed'));
     } finally {
       setDownloading(false);
     }
@@ -309,8 +303,20 @@ export default function DocumentDetailsScreen() {
       >
         <DocumentPreview
           status={data.status === "processed" ? "Processed" : "Pending Review"}
-          imageUrl={imageUrl}
-          token={tokens?.access_token}
+          supplierName={data.counterparty_name || data.supplier_name}
+          invoiceNumber={
+            data.document_number ||
+            data.invoice_number_display ||
+            data.invoice_number
+          }
+          invoiceDate={data.document_date || data.invoice_date_formatted || data.invoice_date}
+          totalAmount={data.total_amount}
+          vatAmount={
+            data.vat_amount !== undefined
+              ? data.vat_amount
+              : (data.line_items || []).reduce((sum: number, item: any) => sum + (item.total_price || 0), 0) * 0.1
+          }
+          lineItems={data.line_items || []}
         />
 
         <DocumentInformation

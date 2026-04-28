@@ -9,12 +9,14 @@ export type DataHistorySegment = 'date' | 'week' | 'month';
 
 export interface DataHistoryEntry {
   id: string;
+  deleteId?: string | null;
   label: string;
   date: string;
   referenceDate: string;
   revenue: string;
   covers: string;
   average: string;
+  canDelete?: boolean;
 }
 
 interface DataHistoryListProps {
@@ -23,6 +25,7 @@ interface DataHistoryListProps {
   selectedSegment: DataHistorySegment;
   onSegmentChange: (segment: DataHistorySegment) => void;
   onDelete: (recordId: string) => void;
+  onDeleteUnavailable?: () => void;
 }
 
 const SEGMENTS: { key: DataHistorySegment; label: string }[] = [
@@ -37,6 +40,7 @@ export default function DataHistoryList({
   selectedSegment,
   onSegmentChange,
   onDelete,
+  onDeleteUnavailable,
 }: DataHistoryListProps) {
   const router = useRouter();
 
@@ -102,8 +106,21 @@ export default function DataHistoryList({
                   <Feather name="eye" size={moderateScale(16)} color="#374151" />
                 </TouchableOpacity>
                 {selectedSegment === 'date' ? (
-                  <TouchableOpacity style={styles.actionIcon} onPress={() => onDelete(entry.id)}>
-                    <Feather name="trash-2" size={moderateScale(16)} color="#EF4444" />
+                  <TouchableOpacity
+                    style={styles.actionIcon}
+                    onPress={() => {
+                      if (entry.canDelete) {
+                        onDelete(entry.deleteId || entry.id);
+                        return;
+                      }
+                      onDeleteUnavailable?.();
+                    }}
+                  >
+                    <Feather
+                      name="trash-2"
+                      size={moderateScale(16)}
+                      color={entry.canDelete ? '#EF4444' : '#CBD5E1'}
+                    />
                   </TouchableOpacity>
                 ) : null}
               </View>

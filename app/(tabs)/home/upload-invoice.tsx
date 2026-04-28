@@ -19,6 +19,7 @@ import SupplierInfo from "../../../components/home/upload-invoice/SupplierInfo";
 import UploadActions from "../../../components/home/upload-invoice/UploadActions";
 import Header from "../../../components/ui/Header";
 import { useAppStore } from "../../../store/useAppStore";
+import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
 
 export default function UploadInvoiceScreen() {
   const navigation = useNavigation();
@@ -92,7 +93,7 @@ export default function UploadInvoiceScreen() {
     } catch (error: any) {
       console.log("Upload Error:", error.response?.data || error.message);
       setIsExtracting(false);
-      alert("Failed to extract data from invoice. Please try again.");
+      showErrorMessage("Failed to extract data from invoice. Please try again.");
     }
   };
 
@@ -130,11 +131,11 @@ export default function UploadInvoiceScreen() {
         payload,
       );
 
-      alert("Invoice saved successfully!");
+      showSuccessMessage("Invoice saved successfully!");
       router.replace("/(tabs)/documents");
     } catch (error: any) {
       console.log("Save Error:", error.response?.data || error.message);
-      alert("Failed to save invoice. Please check the data and try again.");
+      showErrorMessage("Failed to save invoice. Please check the data and try again.");
     } finally {
       setIsSaving(false);
     }

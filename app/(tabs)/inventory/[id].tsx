@@ -2,10 +2,11 @@ import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import apiClient from '../../../api/apiClient';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
+import { showErrorMessage, showInfoMessage, showSuccessMessage } from '../../../utils/feedback';
 import { useTranslation } from '../../../utils/i18n';
 
 import { HistoryList } from '../../../components/inventory/view-stock/HistoryList';
@@ -69,7 +70,7 @@ export default function ItemDetailScreen() {
       setItem(response.data);
       setInventoryDetailCacheItem(itemId, response.data);
     } catch (error: any) {
-      Alert.alert('Load failed', error.response?.data?.detail || error.message || 'Unable to load item.');
+      showErrorMessage(error.response?.data?.detail || error.message || 'Unable to load item.', 'Load failed');
     } finally {
       setLoading(false);
     }
@@ -110,7 +111,9 @@ export default function ItemDetailScreen() {
     }
     setDeleting(true);
     try {
+      showInfoMessage('Deleting inventory item...');
       await apiClient.delete(`/api/v1/restaurant/inventory/${itemId}`);
+      showSuccessMessage('Inventory item deleted.');
       bumpInventoryRefreshToken();
       removeInventoryDetailCacheItem(itemId);
       router.replace({
@@ -121,7 +124,7 @@ export default function ItemDetailScreen() {
         },
       });
     } catch (error: any) {
-      Alert.alert('Delete failed', error.response?.data?.detail || error.message || 'Unable to delete item.');
+      showErrorMessage(error.response?.data?.detail || error.message || 'Unable to delete item.', 'Delete failed');
     } finally {
       setDeleting(false);
     }

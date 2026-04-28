@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Image,
   Linking,
   ScrollView,
@@ -16,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from '../../../components/ui/Header';
 import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { useAppStore } from '../../../store/useAppStore';
+import { showErrorMessage } from '../../../utils/feedback';
 import {
   BillingCycle,
   RestaurantSubscriptionSettings,
@@ -135,11 +135,11 @@ export default function ManageSubscriptionScreen() {
       );
       await openUrl(response.checkout_url);
     } catch (err: any) {
-      Alert.alert(
-        'Unable to open checkout',
+      showErrorMessage(
         err?.response?.data?.message ??
           err?.message ??
-          'Please try again in a moment.'
+          'Please try again in a moment.',
+        'Unable to open checkout'
       );
     } finally {
       setActionLoading(null);
@@ -152,11 +152,11 @@ export default function ManageSubscriptionScreen() {
       const response = await createCustomerPortalSession();
       await openUrl(response.portal_url);
     } catch (err: any) {
-      Alert.alert(
-        'Unable to open billing portal',
+      showErrorMessage(
         err?.response?.data?.message ??
           err?.message ??
-          'Please try again in a moment.'
+          'Please try again in a moment.',
+        'Unable to open billing portal'
       );
     } finally {
       setActionLoading(null);

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useNavigation } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,6 +13,7 @@ import VatBalance from '../../../components/home/VatBalance';
 import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore"; 
+import { showErrorMessage } from "../../../utils/feedback";
 
 // @ts-ignore
 const HugeiconsIcon = HugeiconsModule.HugeiconsIcon || HugeiconsModule.default?.HugeiconsIcon || (HugeiconsModule as any);
@@ -111,11 +112,11 @@ export default function VatScreen() {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
       } else {
-        Alert.alert("Error", "Sharing is not available on this device.");
+        showErrorMessage("Sharing is not available on this device.");
       }
     } catch (error) {
       console.error("Error generating PDF:", error);
-      Alert.alert("Error", "Failed to generate VAT report PDF.");
+      showErrorMessage("Failed to generate VAT report PDF.");
     }
   };
 

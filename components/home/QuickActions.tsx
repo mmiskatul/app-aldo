@@ -52,7 +52,7 @@ export default function QuickActions({ items: apiItems, loading = false }: Quick
 
   const fallbackActions = [
     { key: 'upload_invoice', label: t('upload_invoice') },
-    { key: 'daily_data', label: t('add_daily_data') },
+    { key: 'daily_data', label: 'Daily Data' },
     { key: 'expenses', label: t('expenses') },
     { key: 'cash', label: t('cash') },
   ];
@@ -60,7 +60,7 @@ export default function QuickActions({ items: apiItems, loading = false }: Quick
   const displayActions = (apiItems && apiItems.length > 0 ? apiItems : fallbackActions).map(item => {
     const { IconComponent, route } = getActionData(item.key);
     return {
-      title: item.key === 'daily_data' ? t('daily_data_dashboard') : item.label,
+      title: item.key === 'daily_data' ? 'Daily Data' : item.label,
       IconComponent,
       onPress: () => router.push(route as any),
     };

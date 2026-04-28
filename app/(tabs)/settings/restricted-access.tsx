@@ -1,10 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, AppState, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { AppState, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getRestrictedAccessStatus, useAppStore } from "../../../store/useAppStore";
 import { getCurrentUser } from "../../../api/auth";
+import { showSuccessMessage } from "../../../utils/feedback";
 
 const ACCESS_REFRESH_INTERVAL_MS = 8000;
 
@@ -34,7 +35,7 @@ export default function RestrictedAccessScreen() {
 
       if (getRestrictedAccessStatus(refreshedUser as any) === null) {
         if (showRestoredMessage) {
-          Alert.alert("Access Restored", "Your account access has been restored.");
+          showSuccessMessage("Your account access has been restored.", "Access Restored");
         }
         router.replace("/(tabs)/home" as any);
       }

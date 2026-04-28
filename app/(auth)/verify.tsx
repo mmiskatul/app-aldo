@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,6 +21,7 @@ import OTPVerification from "../../components/ui/OTPVerification";
 import SecurityIcon from "../../assets/images/Security Icon.svg";
 import { useAppStore } from "../../store/useAppStore";
 import { getApiBaseUrl } from "../../utils/api";
+import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 
 export default function VerifyIdentityScreen() {
   const router = useRouter();
@@ -44,29 +44,29 @@ export default function VerifyIdentityScreen() {
 
   const handleResendCode = async () => {
     if (!pendingRegistration) {
-      Alert.alert("Error", "Missing registration details. Please restart the signup process.");
+      showErrorMessage("Missing registration details. Please restart the signup process.");
       return;
     }
     
     try {
       const response = await axios.post(`${apiUrl}/api/v1/auth/restaurant/register`, pendingRegistration);
       console.log("Resend API Response:", response.data);
-      Alert.alert("Success", response.data?.message || "Verification code resent to your email.");
+      showSuccessMessage(response.data?.message || "Verification code resent to your email.");
     } catch (error: any) {
       console.log("Resend API Error:", error.response?.data || error.message);
-      Alert.alert("Error", getApiErrorMessage(error, "An unexpected error occurred."));
+      showErrorMessage(getApiErrorMessage(error, "An unexpected error occurred."));
     }
   };
 
   const handleConfirm = async () => {
     const otp = code.join("");
     if (otp.length !== 4) {
-      Alert.alert("Error", "Please enter the 4-digit code.");
+      showErrorMessage("Please enter the 4-digit code.");
       return;
     }
 
     if (!email) {
-      Alert.alert("Error", "Email not found. Please try signing up again.");
+      showErrorMessage("Email not found. Please try signing up again.");
       return;
     }
 
@@ -84,7 +84,7 @@ export default function VerifyIdentityScreen() {
       setUser(data.user, data.tokens);
       clearPendingRegistration(null);
 
-      Alert.alert("Success", "Email verified successfully!");
+      showSuccessMessage("Email verified successfully!");
       router.replace("/(auth)/subscription" as any);
       
     } catch (error: any) {
@@ -93,7 +93,7 @@ export default function VerifyIdentityScreen() {
         error,
         "An unexpected error occurred during verification."
       );
-      Alert.alert("Verification Failed", errorMessage);
+      showErrorMessage(errorMessage, "Verification Failed");
     } finally {
       setIsLoading(false);
     }

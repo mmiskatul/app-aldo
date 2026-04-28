@@ -2,7 +2,6 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -18,10 +17,12 @@ import DataHistoryList, {
 } from "../../../components/home/data-management/DataHistoryList";
 import DataMetrics from "../../../components/home/data-management/DataMetrics";
 import apiClient from "../../../api/apiClient";
+import { showErrorMessage, showInfoMessage, showSuccessMessage } from "../../../utils/feedback";
 import { useTranslation } from "../../../utils/i18n";
 
 interface DailyDataListItem {
   id: string;
+  record_id?: string | null;
   business_date: string;
   total_revenue: number;
   total_expenses: number;
@@ -104,13 +105,17 @@ export default function DataManagementScreen() {
     void fetchDailyData(selectedSegment);
   }, [fetchDailyData, selectedSegment]);
 
-  const handleDelete = useCallback(async (recordId: string) => {
+  const handleDelete = useCallback(async (businessDate: string) => {
     try {
-      await apiClient.delete(`/api/v1/restaurant/daily-data/${recordId}`);
+      showInfoMessage("Deleting collected data for this date...");
+      await apiClient.delete("/api/v1/restaurant/daily-data/by-date", {
+        params: { business_date: businessDate },
+      });
+      showSuccessMessage("Collected data deleted for this date.");
       void fetchDailyData(selectedSegment, true);
     } catch (error: any) {
-      console.error("Error deleting daily data record:", error.response?.data || error.message);
-      Alert.alert("Error", "Failed to delete the daily data record.");
+      console.error("Error deleting daily data collection:", error.response?.data || error.message);
+      showErrorMessage("Failed to delete collected data for this date.");
     }
   }, [fetchDailyData, selectedSegment]);
 
@@ -134,12 +139,14 @@ export default function DataManagementScreen() {
     () =>
       items.map((item) => ({
         id: item.id,
+        deleteId: item.business_date,
         label: labelForSegment(selectedSegment, item.business_date),
         date: formatBusinessDate(item.business_date),
         referenceDate: item.business_date,
         revenue: formatCurrency(Number(item.total_revenue || 0)),
         covers: Number(item.total_covers || 0).toLocaleString(),
         average: formatCurrency(Number(item.avg_revenue_per_cover || 0)),
+        canDelete: selectedSegment === "date",
       })),
     [items, selectedSegment],
   );
@@ -181,6 +188,7 @@ export default function DataManagementScreen() {
           selectedSegment={selectedSegment}
           onSegmentChange={setSelectedSegment}
           onDelete={handleDelete}
+          onDeleteUnavailable={() => showInfoMessage("Only date cards can be deleted from this dashboard.")}
         />
       </ScrollView>
 

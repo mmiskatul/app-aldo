@@ -192,14 +192,6 @@ export default function InventoryScreen() {
         });
       }
 
-      setTimeout(() => {
-        void Promise.allSettled(
-          response.data.items.slice(0, 8).map(async (item) => {
-            const detailResponse = await apiClient.get(`/api/v1/restaurant/inventory/${item.id}`);
-            setInventoryDetailCacheItem(item.id, detailResponse.data);
-          }),
-        );
-      }, 0);
     } catch (error: any) {
       console.log('Inventory list error:', error.response?.data || error.message);
     } finally {

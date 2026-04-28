@@ -4,7 +4,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +19,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import Input from "../../components/ui/Input";
 import { getApiBaseUrl } from "../../utils/api";
+import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -37,18 +37,18 @@ export default function ResetPasswordFormScreen() {
 
   const handleResetPassword = async () => {
     if (!email || !code) {
-      Alert.alert("Error", "Verification details are missing. Please restart the reset process.");
+      showErrorMessage("Verification details are missing. Please restart the reset process.");
       router.replace("/(auth)/forgot-password" as any);
       return;
     }
 
     if (!newPassword || !confirmPassword) {
-      Alert.alert("Error", "Please enter your new password.");
+      showErrorMessage("Please enter your new password.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match.");
+      showErrorMessage("Passwords do not match.");
       return;
     }
 
@@ -62,11 +62,10 @@ export default function ResetPasswordFormScreen() {
         confirm_password: confirmPassword,
       });
 
-      Alert.alert(
-        "Success",
-        response.data?.message || "Restaurant account password reset successful",
-        [{ text: "OK", onPress: () => router.replace("/(auth)" as any) }]
+      showSuccessMessage(
+        response.data?.message || "Restaurant account password reset successful"
       );
+      router.replace("/(auth)" as any);
     } catch (error: any) {
       console.log("Reset Password API Error:", error.response?.data || error.message);
       let errorMessage = "An unexpected error occurred.";
@@ -88,7 +87,7 @@ export default function ResetPasswordFormScreen() {
         errorMessage = error.message;
       }
 
-      Alert.alert("Error", errorMessage);
+      showErrorMessage(errorMessage);
     } finally {
       setIsLoading(false);
     }

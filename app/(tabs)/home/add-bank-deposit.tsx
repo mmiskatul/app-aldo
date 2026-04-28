@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -18,6 +17,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../../api/apiClient";
 import DatePicker from "../../../components/ui/DatePicker";
 import Header from "../../../components/ui/Header";
+import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
 
 interface BankAccount {
   id?: string;
@@ -38,9 +38,9 @@ export default function AddBankDepositScreen() {
 
   const handleSaveDeposit = async () => {
     if (!amount || !selectedAccount) {
-      Alert.alert(
-        "Missing Fields",
+      showErrorMessage(
         "Please enter an amount and select a bank account.",
+        "Missing Fields"
       );
       return;
     }
@@ -60,11 +60,11 @@ export default function AddBankDepositScreen() {
 
       await apiClient.post("/api/v1/restaurant/cash/deposits", payload);
 
-      // Navigate back on success
+      showSuccessMessage("Bank deposit saved successfully.");
       router.back();
     } catch (error) {
       console.error("Error saving deposit:", error);
-      Alert.alert("Error", "Could not save deposit. Please try again.");
+      showErrorMessage("Could not save deposit. Please try again.");
     } finally {
       setIsSavingDeposit(false);
     }

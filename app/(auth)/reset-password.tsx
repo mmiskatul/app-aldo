@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -19,6 +18,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import OTPVerification from "../../components/ui/OTPVerification";
 import { getApiBaseUrl } from "../../utils/api";
+import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -33,7 +33,7 @@ export default function ResetPasswordScreen() {
 
   const handleResendCode = async () => {
     if (!email) {
-      Alert.alert("Error", "Email not found. Please go back and enter your email again.");
+      showErrorMessage("Email not found. Please go back and enter your email again.");
       return;
     }
 
@@ -44,7 +44,7 @@ export default function ResetPasswordScreen() {
         email,
       });
 
-      Alert.alert("Success", response.data?.message || "Password reset code resent to your email.");
+      showSuccessMessage(response.data?.message || "Password reset code resent to your email.");
     } catch (error: any) {
       console.log("Resend API Error:", error.response?.data || error.message);
       const errData = error.response?.data;
@@ -66,7 +66,7 @@ export default function ResetPasswordScreen() {
         errorMessage = error.message;
       }
 
-      Alert.alert("Error", errorMessage);
+      showErrorMessage(errorMessage);
     } finally {
       setIsResending(false);
     }
@@ -75,12 +75,12 @@ export default function ResetPasswordScreen() {
   const handleVerifyCode = () => {
     const otp = code.join("");
     if (otp.length !== 4) {
-      Alert.alert("Error", "Please enter the complete 4-digit code.");
+      showErrorMessage("Please enter the complete 4-digit code.");
       return;
     }
 
     if (!email) {
-      Alert.alert("Error", "Email not found. Please restart the process.");
+      showErrorMessage("Email not found. Please restart the process.");
       return;
     }
 

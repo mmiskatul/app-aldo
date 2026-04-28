@@ -34,7 +34,6 @@ export default function TabLayout() {
   const isRootScreen = segments.length <= 2 || (segments.length === 3 && (segments as any[])[2] === 'index');
   const shouldHideTabBar = isRestrictedAccess || !isRootScreen;
 
-  console.log("Current segments:", segments, "Should Hide:", shouldHideTabBar);
   return (
     <Tabs
       screenOptions={{

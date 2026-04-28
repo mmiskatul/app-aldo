@@ -4,6 +4,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
 import * as ImagePicker from "expo-image-picker";
 import ImagePickerModal from "../../ui/ImagePickerModal";
+import { showErrorMessage } from "../../../utils/feedback";
 
 interface Step3Props {
   interiorPhoto: string | null;
@@ -32,7 +33,7 @@ export default function Step3PhotoUpload({
         const permissionResult =
           await ImagePicker.requestCameraPermissionsAsync();
         if (permissionResult.granted === false) {
-          alert("You've refused to allow this app to access your camera!");
+          showErrorMessage("You've refused to allow this app to access your camera!");
           return;
         }
         result = await ImagePicker.launchCameraAsync({

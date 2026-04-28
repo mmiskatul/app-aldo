@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
 import { changeRestaurantPassword } from '../../../api/settings';
+import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 
 export default function ChangePasswordScreen() {
   const profile = useAppStore((state) => state.profile);
@@ -56,14 +56,14 @@ export default function ChangePasswordScreen() {
         new_password: newPassword,
         confirm_password: confirmPassword,
       });
-      Alert.alert('Password changed', response.message);
+      showSuccessMessage(response.message, 'Password changed');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: any) {
-      Alert.alert(
-        'Unable to change password',
-        err?.message || 'Something went wrong. Please try again.'
+      showErrorMessage(
+        err?.message || 'Something went wrong. Please try again.',
+        'Unable to change password'
       );
     } finally {
       setIsSaving(false);

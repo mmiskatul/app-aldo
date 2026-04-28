@@ -17,33 +17,32 @@ interface CashMetricsProps {
   };
 }
 
-export default function CashMetrics({ summary, status }: CashMetricsProps) {
-  // Helpers
-  const formatCurrency = (val: any) => {
-    if (val === undefined || val === null) return '$0.00';
-    let cleanVal = val;
-    if (typeof val === 'string') {
-      cleanVal = val.replace(/,/g, '').replace('$', '').replace('€', '');
-    }
-    const num = Number(cleanVal);
-    return `$${!isNaN(num) ? num.toFixed(2) : '0.00'}`;
-  };
+const formatCurrency = (value: number | string | null | undefined) => {
+  if (value === undefined || value === null) {
+    return "\u20AC0.00";
+  }
 
+  const normalizedValue =
+    typeof value === "string"
+      ? value.replace(/,/g, "").replace("$", "").replace("\u20AC", "")
+      : value;
+
+  const amount = Number(normalizedValue);
+  return `\u20AC${Number.isFinite(amount) ? amount.toFixed(2) : "0.00"}`;
+};
+
+export default function CashMetrics({ summary, status }: CashMetricsProps) {
   return (
     <View style={styles.container}>
       <View style={styles.row}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Total Collected</Text>
-          <Text style={styles.cardValue}>
-            {formatCurrency(summary.total_collected)}
-          </Text>
+          <Text style={styles.cardTitle}>Total Collection</Text>
+          <Text style={styles.cardValue}>{formatCurrency(summary.total_collected)}</Text>
           <Text style={styles.tagGreen}>{status.total_collected}</Text>
         </View>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Cash Available</Text>
-          <Text style={styles.cardValue}>
-            {formatCurrency(summary.cash_available)}
-          </Text>
+          <Text style={styles.cardValue}>{formatCurrency(summary.cash_available)}</Text>
           <Text style={styles.tagOrange}>{status.cash_available}</Text>
         </View>
       </View>
@@ -51,16 +50,12 @@ export default function CashMetrics({ summary, status }: CashMetricsProps) {
       <View style={styles.row}>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Withdrawals</Text>
-          <Text style={styles.cardValue}>
-            {formatCurrency(summary.withdrawals_total)}
-          </Text>
+          <Text style={styles.cardValue}>{formatCurrency(summary.withdrawals_total)}</Text>
           <Text style={styles.tagGrey}>{status.withdrawals}</Text>
         </View>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Bank Deposits</Text>
-          <Text style={styles.cardValue}>
-            {formatCurrency(summary.bank_deposits ?? (summary as any).bank_deposits_total)}
-          </Text>
+          <Text style={styles.cardTitle}>Cash Deposit</Text>
+          <Text style={styles.cardValue}>{formatCurrency(summary.bank_deposits)}</Text>
           <Text style={styles.tagGrey}>{status.bank_deposits}</Text>
         </View>
       </View>
@@ -101,19 +96,19 @@ const styles = StyleSheet.create({
   tagGreen: {
     fontSize: moderateScale(10, 0.3),
     fontWeight: "800",
-    color: "#10B981", // Emerald green
+    color: "#10B981",
     letterSpacing: 0.5,
   },
   tagOrange: {
     fontSize: moderateScale(10, 0.3),
     fontWeight: "800",
-    color: "#FA8C4C", // Orange
+    color: "#FA8C4C",
     letterSpacing: 0.5,
   },
   tagGrey: {
     fontSize: moderateScale(10, 0.3),
     fontWeight: "800",
-    color: "#9CA3AF", // Grey
+    color: "#9CA3AF",
     letterSpacing: 0.5,
   },
 });

@@ -9,7 +9,9 @@ interface ExpenseItem {
   amount: number;
   expense_date: string;
   notes: string;
-  subtitle: string;
+  section?: string;
+  source_kind?: string | null;
+  source_inventory_item_id?: string | null;
   created_at: string;
 }
 
@@ -17,13 +19,34 @@ interface RecentTransactionsProps {
   items: ExpenseItem[];
 }
 
+const formatAmount = (amount: number) =>
+  new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(amount) ? amount : 0);
+
+const resolveTransactionType = (tx: ExpenseItem) => {
+  if (tx.source_kind === 'inventory') {
+    return 'Inventory expense';
+  }
+  if (tx.source_kind === 'document') {
+    return 'Document expense';
+  }
+  if (tx.id.startsWith('daily-entry-expense:')) {
+    return 'Daily data expense';
+  }
+  return tx.section === 'bank' ? 'Bank expense' : 'Cash expense';
+};
+
 export default function RecentTransactions({ items = [] }: RecentTransactionsProps) {
   if (items.length === 0) {
     return (
       <View style={styles.container}>
         <Text style={styles.sectionTitle}>RECENT TRANSACTIONS</Text>
         <View style={[styles.transactionCard, { justifyContent: 'center', paddingVertical: verticalScale(30) }]}>
-          <Text style={{ color: '#9CA3AF', fontSize: moderateScale(14) }}>No transactions found</Text>
+          <Text style={styles.emptyText}>No transactions found</Text>
         </View>
       </View>
     );
@@ -38,15 +61,19 @@ export default function RecentTransactions({ items = [] }: RecentTransactionsPro
           <View style={styles.iconContainer}>
             <Feather name="credit-card" size={moderateScale(18)} color="#FA8C4C" />
           </View>
-          
+
           <View style={styles.detailsContainer}>
             <View style={styles.titleRow}>
-              <Text style={styles.title} numberOfLines={1}>{tx.category}</Text>
-              <Text style={styles.amount}>-€{tx.amount.toFixed(2)}</Text>
+              <Text style={styles.title} numberOfLines={1}>
+                {tx.category}
+              </Text>
+              <Text style={styles.amount}>-{formatAmount(tx.amount)}</Text>
             </View>
             <View style={styles.subRow}>
-              <Text style={styles.subtitle} numberOfLines={1}>{tx.notes || tx.category} • {tx.expense_date}</Text>
-              <Text style={styles.typeText}>{tx.subtitle}</Text>
+              <Text style={styles.subtitle} numberOfLines={1}>
+                {tx.notes || tx.category} | {tx.expense_date}
+              </Text>
+              <Text style={styles.typeText}>{resolveTransactionType(tx)}</Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -75,6 +102,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     alignItems: 'center',
+  },
+  emptyText: {
+    color: '#9CA3AF',
+    fontSize: moderateScale(14),
   },
   iconContainer: {
     width: moderateScale(40),

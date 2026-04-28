@@ -18,28 +18,6 @@ import { useAppStore } from "../../../store/useAppStore";
 import CashMetrics from "../../../components/home/cash/CashMetrics";
 import RecentDeposits from "../../../components/home/cash/RecentDeposits";
 
-interface HomeCashItem {
-  label: string;
-  amount: number;
-  subtitle: string;
-}
-
-interface HomeCashDataResponse {
-  available_periods?: string[];
-  weekly?: {
-    cash_management?: HomeCashItem[];
-  };
-  monthly?: {
-    cash_management?: HomeCashItem[];
-  };
-  recent_activity?: Array<{
-    kind?: string;
-    title?: string;
-    subtitle?: string;
-    timestamp?: string;
-  }>;
-}
-
 type CashSummary = {
   total_collected: number;
   cash_available: number;
@@ -56,8 +34,7 @@ export default function CashManagementScreen() {
 
   const [activeFilter, setActiveFilter] = useState("Today");
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [homeCashData, setHomeCashData] = useState<HomeCashDataResponse | null>(null);
+  const [loading, setLoading] = useState(!cashOverviewData?.periods?.today);
 
   const filters = ["Today", "This Week", "This Month"];
 
@@ -76,13 +53,8 @@ export default function CashManagementScreen() {
 
   const fetchCashOverview = useCallback(async () => {
     try {
-      const [cashOverviewRes, homeRes] = await Promise.all([
-        apiClient.get("/api/v1/restaurant/cash/overview"),
-        apiClient.get("/api/v1/restaurant/home"),
-      ]);
-
+      const cashOverviewRes = await apiClient.get("/api/v1/restaurant/cash/overview");
       setCashOverviewData(cashOverviewRes.data);
-      setHomeCashData(homeRes.data);
     } catch (error) {
       console.error("Error fetching cash overview:", error);
     } finally {
@@ -92,8 +64,12 @@ export default function CashManagementScreen() {
   }, [setCashOverviewData]);
 
   useEffect(() => {
-    fetchCashOverview();
-  }, [fetchCashOverview]);
+    if (!cashOverviewData?.periods?.today) {
+      fetchCashOverview();
+      return;
+    }
+    setLoading(false);
+  }, [cashOverviewData?.periods?.today, fetchCashOverview]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -102,36 +78,19 @@ export default function CashManagementScreen() {
 
   const periodKey = filterToPeriodKey(activeFilter);
   const currentData = cashOverviewData?.periods?.[periodKey];
-  const homePeriodKey = activeFilter === "This Month" ? "monthly" : "weekly";
-  const homeCashManagementData = homeCashData?.[homePeriodKey]?.cash_management;
-  const hasScreenData = Boolean(currentData && homeCashData);
+  const hasScreenData = Boolean(currentData);
 
   const currentSummary: CashSummary | null = currentData?.summary
     ? {
         ...currentData.summary,
-        total_collected:
-          homeCashManagementData?.find((item) => item.label.toLowerCase() === "total cash collected")?.amount ??
-          currentData.summary.total_collected,
-        cash_available:
-          homeCashManagementData?.find((item) => item.label.toLowerCase() === "cash available")?.amount ??
-          currentData.summary.cash_available,
         bank_deposits:
-          homeCashManagementData?.find((item) => item.label.toLowerCase() === "cash deposited")?.amount ??
           (currentData.summary as any).bank_deposits ??
           (currentData.summary as any).bank_deposits_total ??
           0,
       }
     : null;
 
-  const recentTransactions = homeCashData?.recent_activity?.length
-    ? homeCashData.recent_activity.map((item, index) => ({
-        id: `${item.kind || "activity"}-${item.timestamp || index}-${index}`,
-        display_title: item.title || "Transaction",
-        deposit_date_formatted: item.subtitle || item.timestamp || "",
-        amount_formatted: "",
-        amount: item.kind === "expense" ? -1 : 1,
-      }))
-    : currentData?.recent_deposits;
+  const recentTransactions = currentData?.recent_deposits;
 
   return (
     <View style={styles.safeArea}>

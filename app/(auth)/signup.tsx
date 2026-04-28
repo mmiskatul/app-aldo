@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,6 +23,7 @@ import SplashLogo from "../../assets/images/splash-logo.svg";
 import Input from "../../components/ui/Input";
 import { useAppStore } from "../../store/useAppStore";
 import { getApiBaseUrl } from "../../utils/api";
+import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 
 const getApiErrorMessage = (error: any, fallback: string) => {
   const errData = error.response?.data;
@@ -54,11 +54,11 @@ export default function AuthSignupScreen() {
 
   const handleSignup = async () => {
     if (!restaurantName || !ownerName || !email || !password) {
-      Alert.alert("Error", "Please fill in all fields.");
+      showErrorMessage("Please fill in all fields.");
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match.");
+      showErrorMessage("Passwords do not match.");
       return;
     }
 
@@ -80,7 +80,7 @@ export default function AuthSignupScreen() {
       console.log("Signup API Response:", data);
       setPendingRegistration(normalizedPayload);
 
-      Alert.alert("Success", data.message || "Account created successfully.");
+      showSuccessMessage(data.message || "Account created successfully.");
       router.push("/(auth)/verify" as any);
       
     } catch (error: any) {
@@ -94,9 +94,9 @@ export default function AuthSignupScreen() {
         error.response?.data?.error?.code === "conflict" ||
         errorMessage === "An account with this email already exists"
       ) {
-        Alert.alert("Error", "An account with this email already exists.");
+        showErrorMessage("An account with this email already exists.");
       } else {
-        Alert.alert("Error", errorMessage);
+        showErrorMessage(errorMessage);
       }
     } finally {
       setIsLoading(false);

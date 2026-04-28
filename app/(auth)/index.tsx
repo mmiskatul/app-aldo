@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +18,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Input from "../../components/ui/Input";
 import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
 import { getApiBaseUrl } from "../../utils/api";
+import { showErrorMessage } from "../../utils/feedback";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -44,7 +44,7 @@ export default function AuthLoginScreen() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+      showErrorMessage("Please fill in all fields");
       return;
     }
 
@@ -76,7 +76,7 @@ export default function AuthLoginScreen() {
         error,
         "An unexpected error occurred"
       );
-      Alert.alert("Login Failed", errorMessage);
+      showErrorMessage(errorMessage, "Login Failed");
     } finally {
       setIsLoading(false);
     }

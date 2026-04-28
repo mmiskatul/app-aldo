@@ -487,6 +487,13 @@ export const useAppStore = create<AppState>()(
     {
       name: "app-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        isDarkMode: state.isDarkMode,
+        user: state.user,
+        tokens: state.tokens,
+        pendingRegistration: state.pendingRegistration,
+        appLanguage: state.appLanguage,
+      }),
     },
   ),
 );

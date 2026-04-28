@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
 import apiClient from '../../../api/apiClient';
 import { useTranslation } from '../../../utils/i18n';
+import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 
 // Components
 import Header from '../../../components/ui/Header';
@@ -74,6 +75,7 @@ export default function EditProfileScreen() {
         });
       }
 
+      showSuccessMessage('Profile updated successfully.');
       router.replace({
         pathname: '/(tabs)/settings',
         params: {
@@ -83,7 +85,7 @@ export default function EditProfileScreen() {
       } as any);
     } catch (error: any) {
       console.error('Error saving profile:', error.response?.data || error.message);
-      Alert.alert('Error', 'Failed to save profile changes. Please try again.');
+      showErrorMessage('Failed to save profile changes. Please try again.');
     } finally {
       setLoading(false);
     }

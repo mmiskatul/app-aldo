@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import ImagePickerModal from '../../../components/ui/ImagePickerModal';
+import { showErrorMessage } from '../../../utils/feedback';
 
 interface UploadActionsProps {
   onFileSelected: (file: {uri: string, type: 'image' | 'pdf', name: string} | null) => void;
@@ -36,7 +37,7 @@ export default function UploadActions({ onFileSelected }: UploadActionsProps) {
     setModalVisible(false);
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      alert('Sorry, we need camera permissions to make this work!');
+      showErrorMessage('Sorry, we need camera permissions to make this work!');
       return;
     }
 

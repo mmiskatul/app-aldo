@@ -2,19 +2,13 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import { BillingCycle, UserSubscriptionPlan, getUserSubscriptionPlans } from "../../api/settings";
 import { ListRouteSkeleton } from "../../components/ui/RouteSkeletons";
+import { showErrorMessage } from "../../utils/feedback";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -32,9 +26,9 @@ export default function SubscriptionScreen() {
         const response = await getUserSubscriptionPlans();
         setPlans(response.plans);
       } catch (error: any) {
-        Alert.alert(
-          "Unable to load plans",
-          error?.response?.data?.message || error?.message || "Please try again."
+        showErrorMessage(
+          error?.response?.data?.message || error?.message || "Please try again.",
+          "Unable to load plans"
         );
       } finally {
         setLoading(false);

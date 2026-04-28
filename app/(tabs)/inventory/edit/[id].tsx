@@ -2,11 +2,12 @@ import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import apiClient from '../../../../api/apiClient';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import DatePicker from '../../../../components/ui/DatePicker';
 import Header from '../../../../components/ui/Header';
 import { useAppStore } from '../../../../store/useAppStore';
+import { showErrorMessage } from '../../../../utils/feedback';
 import { useTranslation } from '../../../../utils/i18n';
 
 interface InventoryDetailResponse {
@@ -94,7 +95,7 @@ export default function EditInventoryItemScreen() {
         setAlertThreshold(String(item.alert_threshold));
         setPurchaseDate(parseDateValue(item.purchase_date));
       } catch (error: any) {
-        Alert.alert('Load failed', buildErrorMessage(error));
+        showErrorMessage(buildErrorMessage(error), 'Load failed');
       } finally {
         setLoading(false);
       }
@@ -117,27 +118,27 @@ export default function EditInventoryItemScreen() {
     const parsedAlertThreshold = Number(alertThreshold || 0);
 
     if (trimmedProductName.length < 2) {
-      Alert.alert('Validation', 'Product name must be at least 2 characters.');
+      showErrorMessage('Product name must be at least 2 characters.', 'Validation');
       return;
     }
     if (trimmedCategory.length < 2) {
-      Alert.alert('Validation', 'Category must be at least 2 characters.');
+      showErrorMessage('Category must be at least 2 characters.', 'Validation');
       return;
     }
     if (trimmedUnitType.length < 1) {
-      Alert.alert('Validation', 'Unit type is required.');
+      showErrorMessage('Unit type is required.', 'Validation');
       return;
     }
     if (!Number.isFinite(parsedStockQuantity) || parsedStockQuantity < 0) {
-      Alert.alert('Validation', 'Stock quantity must be a valid number.');
+      showErrorMessage('Stock quantity must be a valid number.', 'Validation');
       return;
     }
     if (!Number.isFinite(parsedUnitPrice) || parsedUnitPrice < 0) {
-      Alert.alert('Validation', 'Unit price must be a valid number.');
+      showErrorMessage('Unit price must be a valid number.', 'Validation');
       return;
     }
     if (!Number.isFinite(parsedAlertThreshold) || parsedAlertThreshold < 0) {
-      Alert.alert('Validation', 'Alert threshold must be a valid number.');
+      showErrorMessage('Alert threshold must be a valid number.', 'Validation');
       return;
     }
 
@@ -163,7 +164,7 @@ export default function EditInventoryItemScreen() {
         },
       });
     } catch (error: any) {
-      Alert.alert('Save failed', buildErrorMessage(error));
+      showErrorMessage(buildErrorMessage(error), 'Save failed');
     } finally {
       setSaving(false);
     }

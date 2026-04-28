@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   Image,
   Platform,
   ScrollView,
@@ -17,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from '../../../components/ui/Header';
 import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { useAppStore } from '../../../store/useAppStore';
+import { showErrorMessage } from '../../../utils/feedback';
 import {
   RestaurantNotificationSettings,
   getRestaurantNotificationSettings,
@@ -110,11 +110,11 @@ export default function NotificationSettingsScreen() {
       setSettings(updated);
     } catch (err: any) {
       setSettings(previous);
-      Alert.alert(
-        'Update failed',
+      showErrorMessage(
         err?.response?.data?.message ??
           err?.message ??
-          'Could not update notification settings.'
+          'Could not update notification settings.',
+        'Update failed'
       );
     } finally {
       setSavingKey(null);

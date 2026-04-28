@@ -79,6 +79,14 @@ export default function HomeLayout() {
           animation: "slide_from_right",
         }}
       />
+      <Stack.Screen
+        name="cash-transaction-details"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
     </Stack>
   );
 }

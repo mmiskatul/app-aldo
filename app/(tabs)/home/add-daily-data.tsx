@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
@@ -19,6 +18,15 @@ import apiClient from "../../../api/apiClient";
 import Method1Form, { Method1Data } from "../../../components/home/add-daily-data/Method1Form";
 import Method2Form, { Method2Data } from "../../../components/home/add-daily-data/Method2Form";
 import MethodSelector from "../../../components/home/add-daily-data/MethodSelector";
+import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
+
+const getLocalBusinessDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = `${now.getMonth() + 1}`.padStart(2, "0");
+  const day = `${now.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 export default function AddDailyDataScreen() {
   const router = useRouter();
@@ -53,7 +61,7 @@ export default function AddDailyDataScreen() {
     setMethod2Data((prev) => ({ ...prev, [key]: val }));
   };
 
-  const currentBusinessDate = new Date().toISOString().split("T")[0];
+  const currentBusinessDate = getLocalBusinessDate();
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -83,11 +91,14 @@ export default function AddDailyDataScreen() {
 
       const res = await apiClient.post("/api/v1/restaurant/manual-entry", payload);
       console.log("Manual Entry Response:", res.data);
-      Alert.alert("Success", "Daily data has been saved successfully.");
+      showSuccessMessage("Daily data has been saved successfully.");
       router.back();
-    } catch (error) {
-      console.error("Error saving manual entry:", error);
-      Alert.alert("Error", "Could not save. Please try again.");
+    } catch (error: any) {
+      console.error(
+        "Error saving manual entry:",
+        error?.response?.data || error?.message || error,
+      );
+      showErrorMessage("Could not save. Please try again.");
     } finally {
       setIsSaving(false);
     }

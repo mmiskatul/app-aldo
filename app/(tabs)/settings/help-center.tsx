@@ -3,7 +3,6 @@ import * as DocumentPicker from "expo-document-picker";
 import React, { useState } from "react";
 import { useRouter } from "expo-router";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -19,6 +18,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
 import { createSupportTicket } from "../../../api/support";
 import { getRestrictedAccessStatus, useAppStore } from "../../../store/useAppStore";
+import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
 
 export default function HelpCenterScreen() {
   const router = useRouter();
@@ -37,7 +37,7 @@ export default function HelpCenterScreen() {
 
   const handleSubmit = async () => {
     if (!issue.trim() || !description.trim()) {
-      Alert.alert("Error", "Please fill in all fields");
+      showErrorMessage("Please fill in all fields");
       return;
     }
 
@@ -55,9 +55,9 @@ export default function HelpCenterScreen() {
 
       const res = await createSupportTicket(payload);
       console.log('[HelpCenter] Create ticket response:', JSON.stringify(res, null, 2));
-      Alert.alert(
-        "Ticket Created",
-        `${res.message}\nTicket #${res.ticket.ticket_number}`
+      showSuccessMessage(
+        `${res.message}\nTicket #${res.ticket.ticket_number}`,
+        "Ticket Created"
       );
       setIssue("");
       setDescription("");
@@ -67,7 +67,7 @@ export default function HelpCenterScreen() {
         err?.response?.data?.message ||
         err?.message ||
         "Something went wrong. Please try again.";
-      Alert.alert("Error", msg);
+      showErrorMessage(msg);
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +85,7 @@ export default function HelpCenterScreen() {
       }
     } catch (err) {
       console.log("Error picking document:", err);
-      Alert.alert("Error", "Failed to pick document.");
+      showErrorMessage("Failed to pick document.");
     }
   };
 

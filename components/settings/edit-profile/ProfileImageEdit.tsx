@@ -4,6 +4,7 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import PhotoPickerModal from '../../ui/PhotoPickerModal';
+import { showErrorMessage } from '../../../utils/feedback';
 import { useTranslation } from '../../../utils/i18n';
 
 interface ProfileImageEditProps {
@@ -25,7 +26,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
   const handleCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) {
-      alert("You need to allow camera access to take a photo!");
+      showErrorMessage("You need to allow camera access to take a photo!");
       return;
     }
 
@@ -45,7 +46,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
   const handleGallery = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      alert("You need to allow gallery access to choose a photo!");
+      showErrorMessage("You need to allow gallery access to choose a photo!");
       return;
     }
 

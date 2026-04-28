@@ -9,11 +9,12 @@ interface CashItemProps {
   title: string;
   value: string;
   IconComponent: any;
+  onPress?: () => void;
 }
 
-const CashItem = ({ title, value, IconComponent }: CashItemProps) => {
+const CashItem = ({ title, value, IconComponent, onPress }: CashItemProps) => {
   return (
-    <TouchableOpacity style={styles.itemContainer}>
+    <TouchableOpacity style={styles.itemContainer} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.itemLeft}>
         <View style={styles.iconContainer}>
           <IconComponent size={moderateScale(16)} color="#FA8C4C" />
@@ -35,17 +36,20 @@ interface CashManagementProps {
     subtitle: string;
   }[];
   loading?: boolean;
+  onItemPress?: () => void;
 }
 
-export default function CashManagement({ cashData, loading = false }: CashManagementProps) {
+export default function CashManagement({ cashData, loading = false, onItemPress }: CashManagementProps) {
   const { t } = useTranslation();
 
   const getIconData = (label: string) => {
     switch (label.toLowerCase()) {
+      case 'total collection':
       case 'total cash collected':
         return CreditCardIcon;
       case 'cash available':
         return BanknotesIcon;
+      case 'cash deposit':
       case 'cash deposited':
         return BuildingLibraryIcon;
       default:
@@ -64,9 +68,9 @@ export default function CashManagement({ cashData, loading = false }: CashManage
           IconComponent: getIconData(cashItem.label),
         }))
       : [
-          { title: 'Total Cash Collected', value: '\u20AC0.00', IconComponent: CreditCardIcon },
+          { title: 'Total Collection', value: '\u20AC0.00', IconComponent: CreditCardIcon },
           { title: 'Cash Available', value: '\u20AC0.00', IconComponent: BanknotesIcon },
-          { title: 'Cash Deposited to Bank', value: '\u20AC0.00', IconComponent: BuildingLibraryIcon },
+          { title: 'Cash Deposit', value: '\u20AC0.00', IconComponent: BuildingLibraryIcon },
         ];
 
   const skeletonRows = [0, 1, 2];
@@ -99,7 +103,7 @@ export default function CashManagement({ cashData, loading = false }: CashManage
             ))
           : parsedCashData.map((item, index) => (
               <View key={item.title + index}>
-                <CashItem {...item} />
+                <CashItem {...item} onPress={onItemPress} />
                 {index < parsedCashData.length - 1 && <View style={styles.divider} />}
               </View>
             ))}

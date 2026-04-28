@@ -17,6 +17,7 @@ import RecentActivity from "../../../components/home/RecentActivity";
 import RevenueChart from "../../../components/home/RevenueChart";
 import VatBalance from "../../../components/home/VatBalance";
 import { generatePdfExport, generateExcelExport } from "../../../utils/exportData";
+import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
 
 interface MetricCard {
   label: string;
@@ -82,6 +83,29 @@ interface HomeSectionRecentActivityResponse {
 
 interface HomeSectionVatBalanceResponse {
   balance: number;
+}
+
+interface HomeOverviewResponse {
+  greeting_name: string;
+  restaurant_name: string | null;
+  preferred_language: string;
+  available_periods: string[];
+  weekly: {
+    metrics: MetricCard[];
+    cash_management: CashItem[];
+    vat_balance: number;
+    revenue: RevenuePoint[];
+    featured_insight?: FeaturedInsight | null;
+  };
+  monthly: {
+    metrics: MetricCard[];
+    cash_management: CashItem[];
+    vat_balance: number;
+    revenue: RevenuePoint[];
+    featured_insight?: FeaturedInsight | null;
+  };
+  quick_actions: any[];
+  recent_activity: ActivityItem[];
 }
 
 type PeriodKey = "weekly" | "monthly";
@@ -184,6 +208,81 @@ export default function TabsIndex() {
       );
     }
   }, [setHomeScreenCache]);
+
+  const applyHomeOverview = useCallback((data: HomeOverviewResponse, period: PeriodKey, includeFeaturedInsight = false) => {
+    const nextShellData = {
+      greeting_name: data.greeting_name,
+      restaurant_name: data.restaurant_name || "",
+      preferred_language: data.preferred_language,
+      available_periods: data.available_periods,
+      quick_actions: data.quick_actions,
+    };
+    const nextMetricsByPeriod = {
+      weekly: data.weekly.metrics,
+      monthly: data.monthly.metrics,
+    };
+    const nextCashByPeriod = {
+      weekly: data.weekly.cash_management,
+      monthly: data.monthly.cash_management,
+    };
+    const nextRevenueByPeriod = {
+      weekly: data.weekly.revenue,
+      monthly: data.monthly.revenue,
+    };
+    const nextInsightByPeriod: Partial<Record<PeriodKey, FeaturedInsight | null>> = {};
+
+    if (includeFeaturedInsight && data.weekly.featured_insight !== undefined) {
+      nextInsightByPeriod.weekly = data.weekly.featured_insight;
+    }
+    if (includeFeaturedInsight && data.monthly.featured_insight !== undefined) {
+      nextInsightByPeriod.monthly = data.monthly.featured_insight;
+    }
+
+    setShellData(nextShellData);
+    setMetricsByPeriod(nextMetricsByPeriod);
+    setCashByPeriod(nextCashByPeriod);
+    setRevenueByPeriod(nextRevenueByPeriod);
+    setVatBalance(data[period].vat_balance);
+    if (data.recent_activity?.length) {
+      setRecentActivity(data.recent_activity);
+    }
+    if (Object.keys(nextInsightByPeriod).length > 0) {
+      setInsightByPeriod((current) => ({ ...current, ...nextInsightByPeriod }));
+    }
+
+    setHomeScreenCache({
+      shellData: nextShellData,
+      metricsByPeriod: nextMetricsByPeriod,
+      cashByPeriod: nextCashByPeriod,
+      revenueByPeriod: nextRevenueByPeriod,
+      vatBalance: data[period].vat_balance,
+      ...(data.recent_activity?.length ? { recentActivity: data.recent_activity } : {}),
+      ...(Object.keys(nextInsightByPeriod).length > 0 ? { insightByPeriod: nextInsightByPeriod } : {}),
+    });
+
+    if (data.available_periods?.length > 0) {
+      setActivePeriod((currentPeriod) =>
+        data.available_periods.includes(currentPeriod)
+          ? currentPeriod
+          : data.available_periods[0] as PeriodKey
+      );
+    }
+  }, [setHomeScreenCache]);
+
+  const fetchHomeOverview = useCallback(async (period: PeriodKey, includeSupportingSections = false) => {
+    const includeFeaturedInsight = false;
+    const response = await apiClient.get<HomeOverviewResponse>("/api/v1/restaurant/home", {
+      params: {
+        period,
+        include_metrics: true,
+        include_cash_management: true,
+        include_revenue: true,
+        include_featured_insight: includeFeaturedInsight,
+        include_recent_activity: includeSupportingSections,
+      },
+    });
+    applyHomeOverview(response.data, period, includeFeaturedInsight);
+  }, [applyHomeOverview]);
 
   const fetchMetricsSection = useCallback(async (period: PeriodKey) => {
     setMetricsLoading(true);
@@ -313,7 +412,9 @@ export default function TabsIndex() {
         return;
       }
       tasks.push((async () => {
-        await waitForDelay(order * HOME_SECTION_LOAD_DELAY_MS);
+        if (!force) {
+          await waitForDelay(order * HOME_SECTION_LOAD_DELAY_MS);
+        }
         await fetcher();
       })());
     };
@@ -321,13 +422,14 @@ export default function TabsIndex() {
     scheduleSection(force || !metricsByPeriod[period], 0, () => fetchMetricsSection(period));
     scheduleSection(force || !cashByPeriod[period], 1, () => fetchCashSection(period));
     scheduleSection(force || vatBalance === null, 2, () => fetchVatSection());
+    scheduleSection(force || !revenueByPeriod[period], 3, () => fetchRevenueSection(period));
 
     if (tasks.length > 0) {
       await Promise.all(tasks);
     }
-  }, [cashByPeriod, fetchCashSection, fetchMetricsSection, fetchVatSection, metricsByPeriod, vatBalance, waitForDelay]);
+  }, [cashByPeriod, fetchCashSection, fetchMetricsSection, fetchRevenueSection, fetchVatSection, metricsByPeriod, revenueByPeriod, vatBalance, waitForDelay]);
 
-  const fetchHomeData = useCallback(async (period: PeriodKey, silent = false) => {
+  const fetchHomeData = useCallback(async (period: PeriodKey, silent = false, force = false) => {
     try {
       if (!silent) {
         setLoading(true);
@@ -337,23 +439,31 @@ export default function TabsIndex() {
         insight: false,
         recentActivity: false,
       };
-      await fetchHomeShell();
-      await fetchTopPrioritySections(period, true);
-      void hydrateSupportingData();
+      await fetchHomeOverview(period, force);
+      if (force) {
+        await hydrateSupportingData();
+        showSuccessMessage("Home data refreshed.");
+      } else {
+        void hydrateSupportingData();
+      }
     } catch (error: any) {
       console.log("Home shell error:", error.response?.data || error.message);
+      if (force) {
+        showErrorMessage("Could not refresh home data.");
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fetchHomeShell, fetchTopPrioritySections, hydrateSupportingData]);
+  }, [fetchHomeOverview, hydrateSupportingData]);
 
   useFocusEffect(
     useCallback(() => {
       hasFocusedRef.current = true;
       previousPeriodRef.current = activePeriod;
-      void fetchHomeData(activePeriod, !!homeScreenCache.shellData);
-    }, [activePeriod, fetchHomeData])
+      const hasCachedShell = !!homeScreenCache.shellData;
+      void fetchHomeData(activePeriod, hasCachedShell, !hasCachedShell);
+    }, [activePeriod, fetchHomeData, homeScreenCache.shellData])
   );
 
   useEffect(() => {
@@ -378,7 +488,7 @@ export default function TabsIndex() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    void fetchHomeData(activePeriod);
+    void fetchHomeData(activePeriod, false, true);
   };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -466,7 +576,11 @@ export default function TabsIndex() {
           onExport={handleExport}
         />
         <KPIGrid metrics={currentMetrics} loading={metricsSectionLoading} />
-        <CashManagement cashData={currentCashManagement} loading={cashSectionLoading} />
+        <CashManagement
+          cashData={currentCashManagement}
+          loading={cashSectionLoading}
+          onItemPress={() => router.push("/(tabs)/home/cash-management")}
+        />
         <QuickActions items={shellData?.quick_actions} loading={quickActionsLoading} />
         <VatBalance
           balance={vatBalance ?? undefined}

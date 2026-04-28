@@ -89,6 +89,19 @@ interface AnalyticsSupplierAlertsResponse {
   items: SupplierAlert[];
 }
 
+interface AnalyticsOverviewResponse {
+  insight_banner: InsightBanner;
+  revenue_total: number;
+  revenue_change_percent: number;
+  weekly_revenue: RevenuePoint[];
+  metric_tiles: MetricTile[];
+  summary_stats: SummaryStat[];
+  revenue_comparison: RevenueComparison[];
+  covers_activity: SummaryStat[];
+  cost_breakdown: SummaryStat[];
+  supplier_price_alerts: SupplierAlert[];
+}
+
 const SECTION_LOAD_DELAY_MS = 180;
 
 export default function AnalyticsScreen() {
@@ -277,6 +290,70 @@ export default function AnalyticsScreen() {
     }
   }, [setAnalyticsScreenCache]);
 
+  const applyAnalyticsOverview = React.useCallback((period: PeriodKey, data: AnalyticsOverviewResponse) => {
+    const nextRevenueTrend = {
+      period,
+      revenue_total: data.revenue_total,
+      change_percent: data.revenue_change_percent,
+      points: data.weekly_revenue,
+    };
+
+    setBusinessInsight(data.insight_banner);
+    setMetricTilesByPeriod((current) => ({ ...current, [period]: data.metric_tiles }));
+    setRevenueTrendByPeriod((current) => ({ ...current, [period]: nextRevenueTrend }));
+    setSummaryStatsByPeriod((current) => ({ ...current, [period]: data.summary_stats }));
+    setRevenueComparisonByPeriod((current) => ({ ...current, [period]: data.revenue_comparison }));
+    setCoversActivityByPeriod((current) => ({ ...current, [period]: data.covers_activity }));
+    setCostBreakdownByPeriod((current) => ({ ...current, [period]: data.cost_breakdown }));
+    setSupplierAlertsByPeriod((current) => ({ ...current, [period]: data.supplier_price_alerts }));
+    setAnalyticsScreenCache({
+      businessInsight: data.insight_banner,
+      metricTilesByPeriod: { ...metricTilesByPeriod, [period]: data.metric_tiles },
+      revenueTrendByPeriod: { ...revenueTrendByPeriod, [period]: nextRevenueTrend },
+      summaryStatsByPeriod: { ...summaryStatsByPeriod, [period]: data.summary_stats },
+      revenueComparisonByPeriod: { ...revenueComparisonByPeriod, [period]: data.revenue_comparison },
+      coversActivityByPeriod: { ...coversActivityByPeriod, [period]: data.covers_activity },
+      costBreakdownByPeriod: { ...costBreakdownByPeriod, [period]: data.cost_breakdown },
+      supplierAlertsByPeriod: { ...supplierAlertsByPeriod, [period]: data.supplier_price_alerts },
+    });
+  }, [
+    costBreakdownByPeriod,
+    coversActivityByPeriod,
+    metricTilesByPeriod,
+    revenueComparisonByPeriod,
+    revenueTrendByPeriod,
+    setAnalyticsScreenCache,
+    summaryStatsByPeriod,
+    supplierAlertsByPeriod,
+  ]);
+
+  const fetchAnalyticsOverview = React.useCallback(async (period: PeriodKey) => {
+    setMetricTilesLoading(true);
+    setRevenueTrendLoading(true);
+    setSummaryStatsLoading(true);
+    setRevenueComparisonLoading(true);
+    setCoversActivityLoading(true);
+    setCostBreakdownLoading(true);
+    setSupplierAlertsLoading(true);
+
+    try {
+      const response = await apiClient.get<AnalyticsOverviewResponse>('/api/v1/restaurant/analytics/overview', {
+        params: { period },
+      });
+      applyAnalyticsOverview(period, response.data);
+    } catch (error) {
+      console.error('Error fetching analytics overview:', error);
+    } finally {
+      setMetricTilesLoading(false);
+      setRevenueTrendLoading(false);
+      setSummaryStatsLoading(false);
+      setRevenueComparisonLoading(false);
+      setCoversActivityLoading(false);
+      setCostBreakdownLoading(false);
+      setSupplierAlertsLoading(false);
+    }
+  }, [applyAnalyticsOverview]);
+
   const waitForDelay = React.useCallback((delayMs: number) => {
     return new Promise<void>((resolve) => {
       setTimeout(resolve, delayMs);
@@ -327,20 +404,42 @@ export default function AnalyticsScreen() {
     waitForDelay,
   ]);
 
-  const fetchAnalyticsData = React.useCallback(async (period: PeriodKey) => {
+  const fetchAnalyticsData = React.useCallback(async (period: PeriodKey, force = false) => {
     try {
+      if (force) {
+        await fetchAnalyticsOverview(period);
+        return;
+      }
       if (businessInsight === null) {
         void fetchBusinessInsight();
       }
-      await fetchNonAiSectionsStaggered(period, true);
+      await fetchNonAiSectionsStaggered(period, false);
     } finally {
       setRefreshing(false);
     }
-  }, [businessInsight, fetchBusinessInsight, fetchNonAiSectionsStaggered]);
+  }, [businessInsight, fetchAnalyticsOverview, fetchBusinessInsight, fetchNonAiSectionsStaggered]);
 
   React.useEffect(() => {
-    void fetchAnalyticsData(activePeriod);
-  }, [activePeriod, fetchAnalyticsData]);
+    const hasCachedPeriodData =
+      !!metricTilesByPeriod[activePeriod] &&
+      !!revenueTrendByPeriod[activePeriod] &&
+      !!summaryStatsByPeriod[activePeriod] &&
+      !!revenueComparisonByPeriod[activePeriod] &&
+      !!coversActivityByPeriod[activePeriod] &&
+      !!costBreakdownByPeriod[activePeriod] &&
+      !!supplierAlertsByPeriod[activePeriod];
+    void fetchAnalyticsData(activePeriod, !hasCachedPeriodData);
+  }, [
+    activePeriod,
+    costBreakdownByPeriod,
+    coversActivityByPeriod,
+    fetchAnalyticsData,
+    metricTilesByPeriod,
+    revenueComparisonByPeriod,
+    revenueTrendByPeriod,
+    supplierAlertsByPeriod,
+    summaryStatsByPeriod,
+  ]);
 
   const handlePeriodChange = (period: string) => {
     setActivePeriod(period as PeriodKey);
@@ -348,8 +447,7 @@ export default function AnalyticsScreen() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    void fetchBusinessInsight();
-    void fetchAnalyticsData(activePeriod);
+    void fetchAnalyticsData(activePeriod, true);
   };
 
   const handleExport = async (format: 'pdf' | 'excel') => {

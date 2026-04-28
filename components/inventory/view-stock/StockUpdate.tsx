@@ -1,8 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import apiClient from '../../../api/apiClient';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import { showErrorMessage } from '../../../utils/feedback';
 import { useTranslation } from '../../../utils/i18n';
 
 interface StockUpdateProps {
@@ -29,7 +30,7 @@ export function StockUpdate({ itemId, onUpdated }: StockUpdateProps) {
       setStockToUpdate({ add: 0, remove: 0 });
       onUpdated(response.data);
     } catch (error: any) {
-      Alert.alert('Update failed', error.response?.data?.detail || error.message || 'Unable to update stock.');
+      showErrorMessage(error.response?.data?.detail || error.message || 'Unable to update stock.', 'Update failed');
     } finally {
       setSubmitting(false);
     }
