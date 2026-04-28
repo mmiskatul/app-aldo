@@ -8,6 +8,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import * as HugeiconsModule from "@hugeicons/react-native";
 import { Redirect, Tabs, useSegments } from "expo-router";
+import { CommonActions } from "@react-navigation/native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
 
@@ -90,9 +91,22 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="inventory"
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.dispatch(
+              CommonActions.navigate({
+                name: "inventory",
+                params: {
+                  screen: "index",
+                },
+              })
+            );
+          },
+        })}
         options={{
           tabBarLabel: "Inventory",
           popToTopOnBlur: true,
+          unmountOnBlur: true,
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={CheckListIcon}
