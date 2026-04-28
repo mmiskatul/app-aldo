@@ -1,6 +1,7 @@
 import axios from "axios";
 import { useAppStore } from "../store/useAppStore";
 import { getApiBaseUrl } from "../utils/api";
+import { showErrorMessage } from "../utils/feedback";
 
 const apiUrl = getApiBaseUrl();
 
@@ -10,6 +11,28 @@ const apiClient = axios.create({
 
 let isRefreshing = false;
 let failedQueue: any[] = [];
+let lastConnectionErrorShownAt = 0;
+
+const CONNECTION_ERROR_THROTTLE_MS = 4000;
+
+const isConnectionError = (error: any) => {
+  return (
+    !error?.response &&
+    (error?.code === "ERR_NETWORK" ||
+      error?.code === "ECONNABORTED" ||
+      error?.message === "Network Error" ||
+      String(error?.message || "").toLowerCase().includes("network"))
+  );
+};
+
+const showConnectionError = () => {
+  const now = Date.now();
+  if (now - lastConnectionErrorShownAt < CONNECTION_ERROR_THROTTLE_MS) {
+    return;
+  }
+  lastConnectionErrorShownAt = now;
+  showErrorMessage("Please check your internet connection and try again.", "Connection error");
+};
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {
@@ -44,6 +67,10 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (isConnectionError(error)) {
+      showConnectionError();
+    }
+
     const originalRequest = error.config;
     const accessToken = useAppStore.getState().tokens?.access_token;
     const refreshToken = useAppStore.getState().tokens?.refresh_token;

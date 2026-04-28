@@ -26,7 +26,9 @@ interface DailyDataSection {
 }
 
 interface DailyRecordDetail {
+  id?: string;
   business_date: string;
+  method?: string;
   total_revenue: number;
   total_expenses: number;
   invoice_document_total: number;
@@ -92,9 +94,10 @@ const endpointForSegment = (segment: DetailSegment, referenceDate: string) => {
 };
 
 export default function DailyRecordDetailsScreen() {
-  const { segment, referenceDate } = useLocalSearchParams<{
+  const { segment, referenceDate, recordId } = useLocalSearchParams<{
     segment?: DetailSegment;
     referenceDate?: string;
+    recordId?: string;
   }>();
   const selectedSegment: DetailSegment = segment === "week" || segment === "month" ? segment : "date";
   const [record, setRecord] = useState<DailyRecordDetail | null>(null);
@@ -102,14 +105,16 @@ export default function DailyRecordDetailsScreen() {
 
   useEffect(() => {
     const fetchRecord = async () => {
-      if (!referenceDate) {
+      if (!referenceDate && !recordId) {
         setLoading(false);
         return;
       }
 
       try {
         const response = await apiClient.get<DailyRecordDetail>(
-          endpointForSegment(selectedSegment, referenceDate),
+          recordId
+            ? `/api/v1/restaurant/daily-data/${encodeURIComponent(recordId)}`
+            : endpointForSegment(selectedSegment, referenceDate as string),
         );
         setRecord(response.data);
       } catch (error: any) {
@@ -123,7 +128,7 @@ export default function DailyRecordDetailsScreen() {
     };
 
     void fetchRecord();
-  }, [referenceDate, selectedSegment]);
+  }, [recordId, referenceDate, selectedSegment]);
 
   const summary = useMemo(() => {
     const expenses = (record?.total_expenses ?? 0) + (record?.invoice_document_total ?? 0);
@@ -159,19 +164,23 @@ export default function DailyRecordDetailsScreen() {
           <>
             <View style={styles.reportHeaderRow}>
               <View>
-                <Text style={styles.reportsForLabel}>{segmentLabel(selectedSegment)}</Text>
+                <Text style={styles.reportsForLabel}>
+                  {recordId ? "DAILY RECORD" : segmentLabel(selectedSegment)}
+                </Text>
                 <Text style={styles.reportsForDate}>
                   {formatBusinessDate(record.business_date, selectedSegment)}
                 </Text>
               </View>
               <View style={styles.statusBadge}>
                 <Feather
-                  name="layers"
+                  name={recordId ? "file-text" : "layers"}
                   size={moderateScale(12)}
                   color="#B45309"
                   style={styles.badgeIcon}
                 />
-                <Text style={styles.statusBadgeText}>COLLECTED</Text>
+                <Text style={styles.statusBadgeText}>
+                  {recordId ? String(record.method || "RECORD").replace("_", " ").toUpperCase() : "COLLECTED"}
+                </Text>
               </View>
             </View>
 

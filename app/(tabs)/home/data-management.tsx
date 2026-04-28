@@ -105,17 +105,26 @@ export default function DataManagementScreen() {
     void fetchDailyData(selectedSegment);
   }, [fetchDailyData, selectedSegment]);
 
-  const handleDelete = useCallback(async (businessDate: string) => {
+  const handleDelete = useCallback(async (deleteTarget: string) => {
+    const separatorIndex = deleteTarget.indexOf(":");
+    const deleteMode = separatorIndex > -1 ? deleteTarget.slice(0, separatorIndex) : "date";
+    const deleteId = separatorIndex > -1 ? deleteTarget.slice(separatorIndex + 1) : deleteTarget;
+
     try {
-      showInfoMessage("Deleting collected data for this date...");
-      await apiClient.delete("/api/v1/restaurant/daily-data/by-date", {
-        params: { business_date: businessDate },
-      });
-      showSuccessMessage("Collected data deleted for this date.");
+      showInfoMessage(deleteMode === "record" ? "Deleting daily data record..." : "Deleting collected data for this date...");
+      if (deleteMode === "record") {
+        await apiClient.delete(`/api/v1/restaurant/daily-data/${deleteId}`);
+        showSuccessMessage("Daily data record deleted.");
+      } else {
+        await apiClient.delete("/api/v1/restaurant/daily-data/by-date", {
+          params: { business_date: deleteId },
+        });
+        showSuccessMessage("Collected data deleted for this date.");
+      }
       void fetchDailyData(selectedSegment, true);
     } catch (error: any) {
       console.error("Error deleting daily data collection:", error.response?.data || error.message);
-      showErrorMessage("Failed to delete collected data for this date.");
+      showErrorMessage(deleteMode === "record" ? "Failed to delete daily data record." : "Failed to delete collected data for this date.");
     }
   }, [fetchDailyData, selectedSegment]);
 
@@ -139,7 +148,9 @@ export default function DataManagementScreen() {
     () =>
       items.map((item) => ({
         id: item.id,
-        deleteId: item.business_date,
+        recordId: item.record_id ?? null,
+        deleteId: item.record_id ?? item.business_date,
+        deleteMode: item.record_id ? "record" : "date",
         label: labelForSegment(selectedSegment, item.business_date),
         date: formatBusinessDate(item.business_date),
         referenceDate: item.business_date,

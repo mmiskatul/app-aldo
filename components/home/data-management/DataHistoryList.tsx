@@ -9,7 +9,9 @@ export type DataHistorySegment = 'date' | 'week' | 'month';
 
 export interface DataHistoryEntry {
   id: string;
+  recordId?: string | null;
   deleteId?: string | null;
+  deleteMode?: "record" | "date";
   label: string;
   date: string;
   referenceDate: string;
@@ -97,11 +99,13 @@ export default function DataHistoryList({
               <View style={styles.cardActions}>
                 <TouchableOpacity
                   style={styles.actionIcon}
-                  onPress={() =>
-                    router.push(
-                      `/(tabs)/home/daily-record-details?segment=${selectedSegment}&referenceDate=${encodeURIComponent(entry.referenceDate)}` as any,
-                    )
-                  }
+                  onPress={() => {
+                    const detailRoute =
+                      selectedSegment === 'date' && entry.recordId
+                        ? `/(tabs)/home/daily-record-details?recordId=${encodeURIComponent(entry.recordId)}`
+                        : `/(tabs)/home/daily-record-details?segment=${selectedSegment}&referenceDate=${encodeURIComponent(entry.referenceDate)}`;
+                    router.push(detailRoute as any);
+                  }}
                 >
                   <Feather name="eye" size={moderateScale(16)} color="#374151" />
                 </TouchableOpacity>
@@ -110,7 +114,7 @@ export default function DataHistoryList({
                     style={styles.actionIcon}
                     onPress={() => {
                       if (entry.canDelete) {
-                        onDelete(entry.deleteId || entry.id);
+                        onDelete(`${entry.deleteMode || 'date'}:${entry.deleteId || entry.id}`);
                         return;
                       }
                       onDeleteUnavailable?.();

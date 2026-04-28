@@ -17,7 +17,6 @@ import RecentActivity from "../../../components/home/RecentActivity";
 import RevenueChart from "../../../components/home/RevenueChart";
 import VatBalance from "../../../components/home/VatBalance";
 import { generatePdfExport, generateExcelExport } from "../../../utils/exportData";
-import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
 
 interface MetricCard {
   label: string;
@@ -442,15 +441,11 @@ export default function TabsIndex() {
       await fetchHomeOverview(period, force);
       if (force) {
         await hydrateSupportingData();
-        showSuccessMessage("Home data refreshed.");
       } else {
         void hydrateSupportingData();
       }
     } catch (error: any) {
       console.log("Home shell error:", error.response?.data || error.message);
-      if (force) {
-        showErrorMessage("Could not refresh home data.");
-      }
     } finally {
       setLoading(false);
       setRefreshing(false);

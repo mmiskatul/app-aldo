@@ -95,7 +95,10 @@ export default function RecentActivity({ activities: apiActivities, loading = fa
           title: activity.title || 'Activity',
           subtitle: activity.subtitle || '',
           timeText: formatTimestamp(activity.timestamp),
-          route: activity.route,
+          route:
+            activity.kind === 'cash' && activity.entity_id
+              ? `/(tabs)/home/cash-transaction-details?id=${activity.entity_id}`
+              : activity.route,
           ...getIconForType(activity.kind),
         }))
       : [];
