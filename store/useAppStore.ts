@@ -493,6 +493,7 @@ export const useAppStore = create<AppState>()(
         tokens: state.tokens,
         pendingRegistration: state.pendingRegistration,
         appLanguage: state.appLanguage,
+        documentsScreenCache: state.documentsScreenCache,
       }),
     },
   ),

@@ -37,6 +37,16 @@ interface DailyRecordDetail {
   method_sections: DailyDataSection[];
 }
 
+interface DailyDataListItem {
+  id: string;
+  record_id?: string | null;
+  business_date: string;
+}
+
+interface DailyDataListResponse {
+  items: DailyDataListItem[];
+}
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("en-GB", {
     style: "currency",
@@ -94,28 +104,142 @@ const endpointForSegment = (segment: DetailSegment, referenceDate: string) => {
 };
 
 export default function DailyRecordDetailsScreen() {
-  const { segment, referenceDate, recordId } = useLocalSearchParams<{
+  const { segment, referenceDate, recordId, dataId } = useLocalSearchParams<{
     segment?: DetailSegment;
     referenceDate?: string;
     recordId?: string;
+    dataId?: string;
   }>();
-  const selectedSegment: DetailSegment = segment === "week" || segment === "month" ? segment : "date";
+  const fromDataId = typeof dataId === "string" && dataId.length > 0;
+  const resolvedRoute = useMemo<{
+    segment: DetailSegment;
+    referenceDate?: string;
+    recordId?: string;
+  }>(() => {
+    if (typeof dataId === "string" && dataId.length > 0) {
+      if (dataId.startsWith("week:")) {
+        return {
+          segment: "week" as DetailSegment,
+          referenceDate: dataId.slice("week:".length),
+          recordId: undefined,
+        };
+      }
+      if (dataId.startsWith("month:")) {
+        return {
+          segment: "month" as DetailSegment,
+          referenceDate: dataId.slice("month:".length),
+          recordId: undefined,
+        };
+      }
+      if (dataId.startsWith("date:")) {
+        return {
+          segment: "date" as DetailSegment,
+          referenceDate: dataId.slice("date:".length),
+          recordId: undefined,
+        };
+      }
+      return {
+        segment: "date" as DetailSegment,
+        referenceDate: undefined,
+        recordId: dataId,
+      };
+    }
+
+    return {
+      segment: segment === "week" || segment === "month" ? segment : "date",
+      referenceDate,
+      recordId,
+    };
+  }, [dataId, recordId, referenceDate, segment]);
+  const selectedSegment: DetailSegment = resolvedRoute.segment;
+  const resolvedReferenceDate = resolvedRoute.referenceDate;
+  const resolvedRecordId = resolvedRoute.recordId;
   const [record, setRecord] = useState<DailyRecordDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showGroupedHeader, setShowGroupedHeader] = useState(fromDataId);
 
   useEffect(() => {
     const fetchRecord = async () => {
-      if (!referenceDate && !recordId) {
+      if (!resolvedReferenceDate && !resolvedRecordId) {
         setLoading(false);
         return;
       }
 
       try {
-        const response = await apiClient.get<DailyRecordDetail>(
-          recordId
-            ? `/api/v1/restaurant/daily-data/${encodeURIComponent(recordId)}`
-            : endpointForSegment(selectedSegment, referenceDate as string),
-        );
+        let response;
+
+        if (resolvedRecordId) {
+          if (fromDataId) {
+            const listResponse = await apiClient.get<DailyDataListResponse>(
+              "/api/v1/restaurant/daily-data",
+              {
+                params: {
+                  page: 1,
+                  page_size: 100,
+                  view: "date",
+                },
+              },
+            );
+
+            const matchedItem = (listResponse.data.items || []).find(
+              (item) => item.record_id === resolvedRecordId || item.id === resolvedRecordId,
+            );
+
+            if (!matchedItem?.business_date) {
+              throw new Error(`Daily data item ${resolvedRecordId} not found in date list`);
+            }
+
+            response = await apiClient.get<DailyRecordDetail>(
+              endpointForSegment("date", matchedItem.business_date),
+            );
+            setShowGroupedHeader(true);
+          } else {
+            try {
+              response = await apiClient.get<DailyRecordDetail>(
+                `/api/v1/restaurant/daily-data/${encodeURIComponent(resolvedRecordId)}`,
+              );
+              setShowGroupedHeader(false);
+            } catch (error: any) {
+              const isNotFound =
+                error?.response?.data?.error?.code === "not_found" ||
+                error?.response?.status === 404;
+
+              if (!isNotFound) {
+                throw error;
+              }
+
+              const listResponse = await apiClient.get<DailyDataListResponse>(
+                "/api/v1/restaurant/daily-data",
+                {
+                  params: {
+                    page: 1,
+                    page_size: 100,
+                    view: "date",
+                  },
+                },
+              );
+
+              const matchedItem = (listResponse.data.items || []).find(
+                (item) => item.record_id === resolvedRecordId || item.id === resolvedRecordId,
+              );
+
+              if (!matchedItem?.business_date) {
+                throw error;
+              }
+
+              response = await apiClient.get<DailyRecordDetail>(
+                endpointForSegment("date", matchedItem.business_date),
+              );
+              setShowGroupedHeader(true);
+            }
+          }
+        } else {
+          response = await apiClient.get<DailyRecordDetail>(
+            endpointForSegment(selectedSegment, resolvedReferenceDate as string),
+          );
+          setShowGroupedHeader(true);
+        }
+
         setRecord(response.data);
       } catch (error: any) {
         console.error(
@@ -128,7 +252,7 @@ export default function DailyRecordDetailsScreen() {
     };
 
     void fetchRecord();
-  }, [recordId, referenceDate, selectedSegment]);
+  }, [fromDataId, resolvedRecordId, resolvedReferenceDate, selectedSegment]);
 
   const summary = useMemo(() => {
     const expenses = (record?.total_expenses ?? 0) + (record?.invoice_document_total ?? 0);
@@ -165,7 +289,7 @@ export default function DailyRecordDetailsScreen() {
             <View style={styles.reportHeaderRow}>
               <View>
                 <Text style={styles.reportsForLabel}>
-                  {recordId ? "DAILY RECORD" : segmentLabel(selectedSegment)}
+                  {showGroupedHeader ? segmentLabel(selectedSegment) : "DAILY RECORD"}
                 </Text>
                 <Text style={styles.reportsForDate}>
                   {formatBusinessDate(record.business_date, selectedSegment)}
@@ -173,13 +297,13 @@ export default function DailyRecordDetailsScreen() {
               </View>
               <View style={styles.statusBadge}>
                 <Feather
-                  name={recordId ? "file-text" : "layers"}
+                  name={showGroupedHeader ? "layers" : "file-text"}
                   size={moderateScale(12)}
                   color="#B45309"
                   style={styles.badgeIcon}
                 />
                 <Text style={styles.statusBadgeText}>
-                  {recordId ? String(record.method || "RECORD").replace("_", " ").toUpperCase() : "COLLECTED"}
+                  {showGroupedHeader ? "COLLECTED" : String(record.method || "RECORD").replace("_", " ").toUpperCase()}
                 </Text>
               </View>
             </View>

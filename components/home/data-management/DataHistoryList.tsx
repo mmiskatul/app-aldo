@@ -100,10 +100,7 @@ export default function DataHistoryList({
                 <TouchableOpacity
                   style={styles.actionIcon}
                   onPress={() => {
-                    const detailRoute =
-                      selectedSegment === 'date' && entry.recordId
-                        ? `/(tabs)/home/daily-record-details?recordId=${encodeURIComponent(entry.recordId)}`
-                        : `/(tabs)/home/daily-record-details?segment=${selectedSegment}&referenceDate=${encodeURIComponent(entry.referenceDate)}`;
+                    const detailRoute = `/(tabs)/home/daily-record-details?dataId=${encodeURIComponent(entry.id)}`;
                     router.push(detailRoute as any);
                   }}
                 >

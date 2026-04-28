@@ -28,9 +28,12 @@ export default function DocumentsScreen() {
   const router = useRouter();
   const documentsScreenCache = useAppStore((state) => state.documentsScreenCache);
   const setDocumentsScreenCache = useAppStore((state) => state.setDocumentsScreenCache);
+  const hasCachedContent =
+    documentsScreenCache.documents.length > 0 ||
+    Boolean(documentsScreenCache.bannerData.title || documentsScreenCache.bannerData.subtitle);
   const [documents, setDocuments] = useState<any[]>(documentsScreenCache.documents);
   const [bannerData, setBannerData] = useState(documentsScreenCache.bannerData);
-  const [loading, setLoading] = useState(documentsScreenCache.documents.length === 0);
+  const [loading, setLoading] = useState(!hasCachedContent);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchDocuments = async (silent = false) => {
@@ -41,7 +44,7 @@ export default function DocumentsScreen() {
       const response = await apiClient.get("/api/v1/restaurant/documents", {
         params: {
           page: 1,
-          page_size: 12,
+          page_size: 8,
         },
       });
       const nextDocuments = response.data.items || [];
@@ -67,7 +70,7 @@ export default function DocumentsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (documentsScreenCache.documents.length === 0) {
+      if (!hasCachedContent) {
         void fetchDocuments(false);
         return;
       }
@@ -75,7 +78,7 @@ export default function DocumentsScreen() {
       if (!isDocumentsCacheFresh(documentsScreenCache.fetchedAt)) {
         void fetchDocuments(true);
       }
-    }, [documentsScreenCache.documents.length, documentsScreenCache.fetchedAt])
+    }, [documentsScreenCache.fetchedAt, hasCachedContent])
   );
 
   const onRefresh = () => {
