@@ -270,7 +270,7 @@ export default function DataManagementScreen() {
             color="#FFFFFF"
             style={{ marginRight: scale(6) }}
           />
-          <Text style={styles.fabText}>{t("add_daily_data_record")}</Text>
+          <Text style={styles.fabText}>Add Data</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -285,6 +285,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: scale(20),
     paddingTop: verticalScale(16),
+    paddingBottom: verticalScale(150),
   },
   pageTitle: {
     fontSize: moderateScale(22, 0.3),
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
   },
   floatingButtonContainer: {
     position: "absolute",
-    bottom: verticalScale(40),
+    bottom: verticalScale(96),
     right: scale(20),
   },
   fab: {
