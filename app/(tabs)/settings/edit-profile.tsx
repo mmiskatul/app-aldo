@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
 import apiClient from '../../../api/apiClient';
 import { getCurrentUser } from '../../../api/auth';
+import { getApiErrorMessage } from '../../../utils/api';
 import { useTranslation } from '../../../utils/i18n';
 import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 
@@ -85,7 +86,7 @@ export default function EditProfileScreen() {
       } as any);
     } catch (error: any) {
       console.error('Error saving profile:', error.response?.data || error.message);
-      showErrorMessage('Failed to save profile changes. Please try again.');
+      showErrorMessage(getApiErrorMessage(error, 'Failed to save profile changes. Please try again.'));
     } finally {
       setLoading(false);
     }

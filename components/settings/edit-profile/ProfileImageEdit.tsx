@@ -29,54 +29,64 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
   }, [profileImageUrl]);
 
   const handleCamera = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) {
-      showErrorMessage("You need to allow camera access to take a photo!");
-      return;
-    }
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        showErrorMessage("You need to allow camera access to take a photo!");
+        return;
+      }
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      const mimeType = inferMimeType(asset.fileName || asset.uri, (asset as any).mimeType);
-      setLocalImageUri(asset.uri);
-      onImageChange?.({
-        uri: asset.uri,
-        name: buildFileName(asset.fileName, asset.uri, 'profile-photo', mimeType),
-        mimeType,
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
       });
+
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        const mimeType = inferMimeType(asset.fileName || asset.uri, (asset as any).mimeType);
+        setLocalImageUri(asset.uri);
+        onImageChange?.({
+          uri: asset.uri,
+          name: buildFileName(asset.fileName, asset.uri, 'profile-photo', mimeType),
+          mimeType,
+        });
+      }
+    } catch (error) {
+      console.log("Error selecting camera photo:", error);
+      showErrorMessage("Could not capture the image. Please try again.");
     }
   };
 
   const handleGallery = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      showErrorMessage("You need to allow gallery access to choose a photo!");
-      return;
-    }
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        showErrorMessage("You need to allow gallery access to choose a photo!");
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      const mimeType = inferMimeType(asset.fileName || asset.uri, (asset as any).mimeType);
-      setLocalImageUri(asset.uri);
-      onImageChange?.({
-        uri: asset.uri,
-        name: buildFileName(asset.fileName, asset.uri, 'profile-photo', mimeType),
-        mimeType,
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
       });
+
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        const mimeType = inferMimeType(asset.fileName || asset.uri, (asset as any).mimeType);
+        setLocalImageUri(asset.uri);
+        onImageChange?.({
+          uri: asset.uri,
+          name: buildFileName(asset.fileName, asset.uri, 'profile-photo', mimeType),
+          mimeType,
+        });
+      }
+    } catch (error) {
+      console.log("Error selecting gallery photo:", error);
+      showErrorMessage("Could not choose the image. Please try again.");
     }
   };
 

@@ -23,6 +23,7 @@ import Step5BiggestChallenge from "../../components/auth/restoAi/Step5BiggestCha
 import Step6Success from "../../components/auth/restoAi/Step6Success";
 import { useAppStore } from "../../store/useAppStore";
 import { buildFileName, inferMimeType } from "../../utils/fileMetadata";
+import { getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 
 type OnboardingProfileResponse = {
@@ -184,7 +185,7 @@ export default function SetupScreen() {
       showSuccessMessage("Onboarding saved successfully.");
     } catch (error: any) {
       console.error("Error saving onboarding:", error?.response?.data || error?.message);
-      showErrorMessage("Could not save onboarding details.");
+      showErrorMessage(getApiErrorMessage(error, "Could not save onboarding details."));
     } finally {
       setSubmitting(false);
     }
