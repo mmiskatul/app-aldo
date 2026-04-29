@@ -85,7 +85,10 @@ export default function EditProfileScreen() {
         },
       } as any);
     } catch (error: any) {
-      console.error('Error saving profile:', error.response?.data || error.message);
+      console.error(
+        'Error saving profile:',
+        JSON.stringify(error.response?.data || error.message, null, 2)
+      );
       showErrorMessage(getApiErrorMessage(error, 'Failed to save profile changes. Please try again.'));
     } finally {
       setLoading(false);

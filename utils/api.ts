@@ -4,7 +4,7 @@ import { Platform } from "react-native";
 const DEFAULT_API_URL = "http://127.0.0.1:8000";
 export const API_REQUEST_TIMEOUT_MS = 15_000;
 
-const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
+const LOCAL_HOSTS = new Set(["0.0.0.0", "127.0.0.1", "localhost"]);
 
 type ParsedUrl = {
   protocol: string;
@@ -119,6 +119,15 @@ export const getApiErrorMessage = (
     contentType.includes("text/plain")
   ) {
     return `The app is calling ${apiUrl}, but that URL does not look like the FastAPI backend. Check EXPO_PUBLIC_API_URL and make sure it points to the API server.`;
+  }
+
+  const missingFields = error?.response?.data?.error?.details?.missing_fields;
+  if (Array.isArray(missingFields) && missingFields.length > 0) {
+    const baseMessage =
+      error?.response?.data?.error?.message ||
+      error?.response?.data?.message ||
+      fallback;
+    return `${baseMessage}. Missing: ${missingFields.join(", ")}`;
   }
 
   return (
