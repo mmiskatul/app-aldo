@@ -81,6 +81,7 @@ export default function DataManagementScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
+  const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
   const dailyDataScreenCache = useAppStore((state) => state.dailyDataScreenCache);
   const setDailyDataScreenCache = useAppStore((state) => state.setDailyDataScreenCache);
   const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
@@ -175,12 +176,13 @@ export default function DataManagementScreen() {
       }
       clearHomeScreenCache();
       clearDailyDataScreenCache();
+      setCashOverviewData(null);
       void fetchDailyData(selectedSegment, true);
     } catch (error: any) {
       console.error("Error deleting daily data collection:", error.response?.data || error.message);
       showErrorMessage(deleteMode === "record" ? "Failed to delete daily data record." : "Failed to delete collected data for this date.");
     }
-  }, [clearDailyDataScreenCache, clearHomeScreenCache, fetchDailyData, selectedSegment]);
+  }, [clearDailyDataScreenCache, clearHomeScreenCache, fetchDailyData, selectedSegment, setCashOverviewData]);
 
   const metrics = useMemo(() => {
     const totalRevenue = items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0);

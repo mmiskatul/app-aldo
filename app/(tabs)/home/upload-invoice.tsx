@@ -1,9 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useNavigation, useRouter } from "expo-router";
+import { Image } from "expo-image";
 import React, { useState } from "react";
 import {
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,18 +19,22 @@ import SupplierInfo from "../../../components/home/upload-invoice/SupplierInfo";
 import UploadActions from "../../../components/home/upload-invoice/UploadActions";
 import Header from "../../../components/ui/Header";
 import { useAppStore } from "../../../store/useAppStore";
+import { inferMimeType } from "../../../utils/fileMetadata";
 import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
+
+type UploadFile = {
+  uri: string;
+  type: "image" | "pdf";
+  name: string;
+  mimeType: string;
+};
 
 export default function UploadInvoiceScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const tokens = useAppStore((state) => state.tokens);
 
-  const [selectedFile, setSelectedFile] = useState<{
-    uri: string;
-    type: "image" | "pdf";
-    name: string;
-  } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<UploadFile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -38,11 +42,7 @@ export default function UploadInvoiceScreen() {
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleFileUpload = async (file: {
-    uri: string;
-    type: string;
-    name: string;
-  }) => {
+  const handleFileUpload = async (file: UploadFile) => {
     if (!tokens?.access_token) return;
 
     setIsExtracting(true);
@@ -52,7 +52,7 @@ export default function UploadInvoiceScreen() {
     // @ts-ignore - FormData expects an object with uri, type, name for React Native file uploads
     formData.append("file", {
       uri: file.uri,
-      type: file.type === "pdf" ? "application/pdf" : "image/jpeg",
+      type: file.mimeType || inferMimeType(file.name || file.uri),
       name: file.name,
     });
 
@@ -103,6 +103,17 @@ export default function UploadInvoiceScreen() {
   );
   const vat = subtotal * 0.1;
   const totalAmount = subtotal + vat;
+  const saveTotalAmount =
+    totalAmount > 0 ? totalAmount : Number(extractionData?.total_amount || 0);
+
+  const optionalText = (value: unknown): string | undefined => {
+    const text = typeof value === "string" ? value.trim() : "";
+    return text || undefined;
+  };
+
+  const requiredText = (value: unknown, fallback: string): string => {
+    return optionalText(value) || fallback;
+  };
 
   const handleConfirmSave = async () => {
     if (!extractionData || !tokens?.access_token) return;
@@ -110,11 +121,18 @@ export default function UploadInvoiceScreen() {
     setIsSaving(true);
     try {
       const payload = {
-        supplier_name: extractionData.counterparty_name || "Unknown",
-        invoice_number: extractionData.document_number || "Unknown",
-        invoice_date:
-          extractionData.document_date || new Date().toISOString().split("T")[0],
-        total_amount: totalAmount,
+        document_type: extractionData.document_type || "unknown",
+        document_label: requiredText(extractionData.document_label, "Uploaded Document"),
+        counterparty_name: optionalText(extractionData.counterparty_name),
+        supplier_name: requiredText(extractionData.counterparty_name, "Unknown Supplier"),
+        invoice_number: optionalText(extractionData.document_number),
+        invoice_date: extractionData.document_date || new Date().toISOString().split("T")[0],
+        total_amount: saveTotalAmount,
+        currency: extractionData.currency || "EUR",
+        expense_amount: Number(extractionData.expense_amount || 0),
+        cash_amount: Number(extractionData.cash_amount || 0),
+        revenue_amount: Number(extractionData.revenue_amount || 0),
+        profit_amount: Number(extractionData.profit_amount || 0),
         line_items: lineItems.map((item) => ({
           product_name: item.product,
           quantity: parseFloat(item.qty) || 0,
@@ -142,7 +160,7 @@ export default function UploadInvoiceScreen() {
   };
 
   const onFileSelected = (
-    file: { uri: string; type: "image" | "pdf"; name: string } | null,
+    file: UploadFile | null,
   ) => {
     setSelectedFile(file);
     setExtractionData(null);
@@ -197,7 +215,8 @@ export default function UploadInvoiceScreen() {
               <Image
                 source={{ uri: selectedFile.uri }}
                 style={styles.imagePreview}
-                resizeMode="cover"
+                contentFit="contain"
+                cachePolicy="memory-disk"
               />
             ) : (
               <View style={styles.pdfPreview}>

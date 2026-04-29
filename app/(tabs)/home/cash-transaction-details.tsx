@@ -12,7 +12,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { BuildingLibraryIcon } from "react-native-heroicons/outline";
+import {
+  BanknotesIcon,
+  BuildingLibraryIcon,
+  CreditCardIcon,
+} from "react-native-heroicons/outline";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../../api/apiClient";
 import DatePicker from "../../../components/ui/DatePicker";
@@ -25,16 +29,29 @@ import {
   showSuccessMessage,
 } from "../../../utils/feedback";
 
+type CashTransactionType =
+  | "bank_deposit"
+  | "cash_deposit"
+  | "pos_payment"
+  | "cash_in"
+  | "bank_transfer_payment"
+  | "cash_withdrawal"
+  | "cash_out"
+  | "cash_expense";
+
 type CashTransaction = {
   id: string;
   deposit_date: string;
   deposit_date_formatted?: string;
   amount: number;
   amount_formatted?: string;
-  type: "bank_deposit" | "cash_deposit";
+  type: CashTransactionType;
   bank_account: string;
   display_title?: string;
   notes?: string | null;
+  source_kind?: string | null;
+  source_id?: string | null;
+  source_subtype?: string | null;
   created_at?: string;
 };
 
@@ -66,8 +83,63 @@ const formatDateForApi = (value: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const formatType = (type: CashTransaction["type"]) =>
-  type === "cash_deposit" ? "Cash Deposit" : "Bank Deposit";
+const CASH_TRANSACTION_TYPES = new Set<string>([
+  "bank_deposit",
+  "cash_deposit",
+  "pos_payment",
+  "cash_in",
+  "bank_transfer_payment",
+  "cash_withdrawal",
+  "cash_out",
+  "cash_expense",
+]);
+
+const resolveCashTransactionType = (value: string): CashTransactionType =>
+  CASH_TRANSACTION_TYPES.has(value) ? (value as CashTransactionType) : "bank_deposit";
+
+const formatType = (type: CashTransaction["type"]) => {
+  switch (type) {
+    case "cash_deposit":
+      return "Cash Deposit";
+    case "pos_payment":
+      return "POS Payment";
+    case "cash_in":
+      return "Cash In";
+    case "bank_transfer_payment":
+      return "Bank Transfer";
+    case "cash_withdrawal":
+      return "Cash Withdrawal";
+    case "cash_out":
+      return "Cash Out";
+    case "cash_expense":
+      return "Cash Expense";
+    default:
+      return "Bank Deposit";
+  }
+};
+
+const getSummaryIconType = (type: CashTransaction["type"]): "bank" | "cash" | "pos" => {
+  if (type === "pos_payment") {
+    return "pos";
+  }
+  if (
+    type === "cash_deposit" ||
+    type === "cash_in" ||
+    type === "cash_withdrawal" ||
+    type === "cash_out" ||
+    type === "cash_expense"
+  ) {
+    return "cash";
+  }
+  return "bank";
+};
+
+const formatSourceLabel = (value?: string | null) => {
+  if (!value) {
+    return "Manual";
+  }
+  return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 export default function CashTransactionDetailsScreen() {
   const router = useRouter();
@@ -91,10 +163,13 @@ export default function CashTransactionDetailsScreen() {
       deposit_date_formatted: toSingleParam(params.depositDateFormatted),
       amount,
       amount_formatted: toSingleParam(params.amountFormatted),
-      type: typeParam === "cash_deposit" ? "cash_deposit" : "bank_deposit",
+      type: resolveCashTransactionType(typeParam),
       bank_account: toSingleParam(params.bankAccount) || toSingleParam(params.displayTitle),
       display_title: toSingleParam(params.displayTitle),
       notes: toSingleParam(params.notes),
+      source_kind: toSingleParam(params.sourceKind) || null,
+      source_id: toSingleParam(params.sourceId) || null,
+      source_subtype: toSingleParam(params.sourceSubtype) || null,
       created_at: toSingleParam(params.createdAt),
     };
   }, [id, params]);
@@ -156,7 +231,7 @@ export default function CashTransactionDetailsScreen() {
       const payload = {
         deposit_date: formatDateForApi(date),
         amount: parsedAmount,
-        type: transaction.type,
+        type: transaction.type === "cash_deposit" ? "cash_deposit" : "bank_deposit",
         bank_account: bankAccount.trim(),
         notes: notes.trim(),
       };
@@ -213,6 +288,9 @@ export default function CashTransactionDetailsScreen() {
 
   const displayAmount = formatCurrency(transaction?.amount ?? 0);
   const displayDate = transaction?.deposit_date_formatted || transaction?.deposit_date || "-";
+  const isSourceControlled = Boolean(transaction?.source_kind);
+  const isReadOnlyTransaction = isReadonly || isSourceControlled;
+  const summaryIconType = transaction ? getSummaryIconType(transaction.type) : "bank";
 
   return (
     <View style={styles.safeArea}>
@@ -238,19 +316,25 @@ export default function CashTransactionDetailsScreen() {
           >
             <View style={styles.summaryCard}>
               <View style={styles.summaryIcon}>
-                <BuildingLibraryIcon size={moderateScale(28)} color="#FFFFFF" />
+                {summaryIconType === "pos" ? (
+                  <CreditCardIcon size={moderateScale(28)} color="#FFFFFF" />
+                ) : summaryIconType === "cash" ? (
+                  <BanknotesIcon size={moderateScale(28)} color="#FFFFFF" />
+                ) : (
+                  <BuildingLibraryIcon size={moderateScale(28)} color="#FFFFFF" />
+                )}
               </View>
               <Text style={styles.summaryLabel}>{formatType(transaction.type)}</Text>
               <Text style={styles.summaryAmount}>{displayAmount}</Text>
               <Text style={styles.summaryMeta}>{displayDate}</Text>
             </View>
 
-            {isReadonly ? (
+            {isReadOnlyTransaction ? (
               <View style={styles.noticeCard}>
                 <Feather name="info" size={moderateScale(18)} color="#FA8C4C" />
                 <Text style={styles.noticeText}>
-                  This transaction is generated from daily data. Edit or delete the
-                  source daily data record to change it.
+                  This transaction is generated from another source. Edit or delete
+                  the source record to change it.
                 </Text>
               </View>
             ) : null}
@@ -312,12 +396,16 @@ export default function CashTransactionDetailsScreen() {
                 <DetailRow label="Account" value={transaction.bank_account || "-"} />
                 <DetailRow label="Type" value={formatType(transaction.type)} />
                 <DetailRow label="Date" value={displayDate} />
+                <DetailRow label="Source" value={formatSourceLabel(transaction.source_kind)} />
+                {transaction.source_subtype ? (
+                  <DetailRow label="Source Field" value={formatSourceLabel(transaction.source_subtype)} />
+                ) : null}
                 <DetailRow label="Notes" value={transaction.notes || "No notes"} />
               </View>
             )}
           </ScrollView>
 
-          {!isReadonly ? (
+          {!isReadOnlyTransaction ? (
             <View style={styles.footer}>
               {isEditing ? (
                 <>

@@ -8,7 +8,11 @@ const PROMPTS = [
   { id: 3, text: "Show me today's cover count", type: 'secondary' },
 ];
 
-export default function QuickPrompts() {
+interface QuickPromptsProps {
+  onSelectPrompt?: (text: string) => void;
+}
+
+export default function QuickPrompts({ onSelectPrompt }: QuickPromptsProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.subtitle}>Ask AI about your restaurant performance and insights.</Text>
@@ -21,6 +25,7 @@ export default function QuickPrompts() {
           <TouchableOpacity 
             key={prompt.id} 
             style={[styles.pill, prompt.type === 'primary' ? styles.pillPrimary : styles.pillSecondary]}
+            onPress={() => onSelectPrompt?.(prompt.text)}
           >
             <Text style={[styles.pillText, prompt.type === 'primary' ? styles.textPrimary : styles.textSecondary]}>
               {prompt.text}

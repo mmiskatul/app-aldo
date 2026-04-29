@@ -5,8 +5,19 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
   BanknotesIcon,
   BuildingLibraryIcon,
+  CreditCardIcon,
 } from "react-native-heroicons/outline";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+
+type CashTransactionType =
+  | "bank_deposit"
+  | "cash_deposit"
+  | "pos_payment"
+  | "cash_in"
+  | "bank_transfer_payment"
+  | "cash_withdrawal"
+  | "cash_out"
+  | "cash_expense";
 
 interface Deposit {
   id: string;
@@ -15,15 +26,35 @@ interface Deposit {
   amount_formatted: string;
   amount: number;
   deposit_date?: string;
-  type?: "bank_deposit" | "cash_deposit";
+  type?: CashTransactionType;
   bank_account?: string;
   notes?: string | null;
+  source_kind?: string | null;
+  source_id?: string | null;
+  source_subtype?: string | null;
   created_at?: string;
 }
 
 interface RecentDepositsProps {
   deposits?: Deposit[];
 }
+
+const getIconType = (item: Deposit): "bank" | "cash" | "pos" => {
+  if (item.type === "pos_payment" || item.source_subtype === "pos_payments") {
+    return "pos";
+  }
+  if (
+    item.type === "cash_deposit" ||
+    item.type === "cash_in" ||
+    item.type === "cash_withdrawal" ||
+    item.type === "cash_out" ||
+    item.type === "cash_expense" ||
+    item.amount < 0
+  ) {
+    return "cash";
+  }
+  return "bank";
+};
 
 export default function RecentDeposits({ deposits }: RecentDepositsProps) {
   const router = useRouter();
@@ -34,7 +65,7 @@ export default function RecentDeposits({ deposits }: RecentDepositsProps) {
       pathname: "/(tabs)/home/cash-transaction-details",
       params: {
         id: item.id,
-        readonly: item.id.startsWith("auto-") ? "true" : "false",
+        readonly: item.id.startsWith("auto-") || item.source_kind ? "true" : "false",
         amount: String(item.amount ?? 0),
         displayTitle: item.display_title,
         depositDate: item.deposit_date || item.deposit_date_formatted,
@@ -43,6 +74,9 @@ export default function RecentDeposits({ deposits }: RecentDepositsProps) {
         type: item.type || "bank_deposit",
         bankAccount: item.bank_account || item.display_title,
         notes: item.notes || "",
+        sourceKind: item.source_kind || "",
+        sourceId: item.source_id || "",
+        sourceSubtype: item.source_subtype || "",
         createdAt: item.created_at || "",
       },
     });
@@ -67,16 +101,18 @@ export default function RecentDeposits({ deposits }: RecentDepositsProps) {
               ? `+${item.amount_formatted}`
               : `-${item.amount_formatted.replace("-", "")}`
             : null;
-          const iconType = item.amount < 0 ? "vendor" : "bank";
+          const iconType = getIconType(item);
 
           return (
             <View key={item.id} style={styles.transactionCard}>
               <View
                 style={[
                   styles.iconContainer,
-                  iconType === "vendor"
-                    ? styles.iconContainerVendor
-                    : styles.iconContainerBank,
+                  iconType === "pos"
+                    ? styles.iconContainerPos
+                    : iconType === "cash"
+                      ? styles.iconContainerCash
+                      : styles.iconContainerBank,
                 ]}
               >
                 {iconType === "bank" ? (
@@ -84,6 +120,8 @@ export default function RecentDeposits({ deposits }: RecentDepositsProps) {
                     size={moderateScale(20)}
                     color="#FA8C4C"
                   />
+                ) : iconType === "pos" ? (
+                  <CreditCardIcon size={moderateScale(20)} color="#2563EB" />
                 ) : (
                   <BanknotesIcon size={moderateScale(20)} color="#6B7280" />
                 )}
@@ -170,8 +208,11 @@ const styles = StyleSheet.create({
   iconContainerBank: {
     backgroundColor: "#FFF0E5",
   },
-  iconContainerVendor: {
+  iconContainerCash: {
     backgroundColor: "#E5E7EB",
+  },
+  iconContainerPos: {
+    backgroundColor: "#DBEAFE",
   },
   detailsContainer: {
     flex: 1,

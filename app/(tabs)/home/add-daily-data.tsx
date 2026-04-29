@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useNavigation, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -43,9 +43,9 @@ const getLocalBusinessDate = () => {
 
 export default function AddDailyDataScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
+  const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
   const [selectedMethod, setSelectedMethod] = useState<"method1" | "method2">("method1");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -113,6 +113,7 @@ export default function AddDailyDataScreen() {
       console.log("Manual Entry Response:", res.data);
       clearHomeScreenCache();
       clearDailyDataScreenCache();
+      setCashOverviewData(null);
       showSuccessMessage("Daily data has been saved successfully.");
       router.back();
     } catch (error: any) {
@@ -144,7 +145,7 @@ export default function AddDailyDataScreen() {
         >
           <Text style={styles.pageTitle}>Add Daily Business Data</Text>
           <Text style={styles.pageSubtitle}>
-            Enter today's revenue and expenses to track your restaurant performance.
+            Enter today&apos;s revenue and expenses to track your restaurant performance.
           </Text>
 
           <MethodSelector selected={selectedMethod} onSelect={setSelectedMethod} />

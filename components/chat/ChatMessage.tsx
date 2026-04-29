@@ -21,6 +21,7 @@ interface ChatMessageProps {
   attachment_name?: string | null;
   attachment_source?: string | null;
   isTyping?: boolean;
+  hideAvatar?: boolean;
 }
 
 function parseInlineMarkdown(text: string): MarkdownNode[] {
@@ -197,7 +198,7 @@ function parseMarkdown(message: string): MarkdownNode {
   return { type: 'root', children };
 }
 
-export default function ChatMessage({ message, sender, attachment_name, attachment_source, isTyping }: ChatMessageProps) {
+export default function ChatMessage({ message, sender, attachment_name, attachment_source, isTyping, hideAvatar }: ChatMessageProps) {
   const isUser = sender === 'user';
   
   // Determine if we should show an image preview (local URI or remote valid URL)
@@ -372,17 +373,19 @@ export default function ChatMessage({ message, sender, attachment_name, attachme
     });
 
   return (
-    <View style={[styles.container, isUser ? styles.containerUser : styles.containerAi]}>
+    <View style={[styles.container, isUser ? styles.containerUser : styles.containerAi, hideAvatar && { marginBottom: verticalScale(4) }]}>
       {!isUser && (
-        <View style={styles.aiAvatar}>
-          <HugeiconsIcon icon={BotIcon} size={moderateScale(16)} color="#FFFFFF" />
+        <View style={[styles.aiAvatar, hideAvatar && { backgroundColor: 'transparent' }]}>
+          {!hideAvatar && <HugeiconsIcon icon={BotIcon} size={moderateScale(16)} color="#FFFFFF" />}
         </View>
       )}
       
       <View style={styles.messageContent}>
-        <Text style={[styles.senderName, isUser ? styles.nameUser : styles.nameAi]}>
-          {isUser ? 'YOU' : 'RISTO AI'}
-        </Text>
+        {!hideAvatar && (
+          <Text style={[styles.senderName, isUser ? styles.nameUser : styles.nameAi]}>
+            {isUser ? 'YOU' : 'RISTO AI'}
+          </Text>
+        )}
         <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAi]}>
           {(attachment_source || attachment_name) && (
             <View style={styles.attachmentWrapper}>

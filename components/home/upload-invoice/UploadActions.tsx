@@ -6,9 +6,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import ImagePickerModal from '../../../components/ui/ImagePickerModal';
 import { showErrorMessage } from '../../../utils/feedback';
+import { buildFileName, inferMimeType, isImageFile } from '../../../utils/fileMetadata';
 
 interface UploadActionsProps {
-  onFileSelected: (file: {uri: string, type: 'image' | 'pdf', name: string} | null) => void;
+  onFileSelected: (file: {uri: string, type: 'image' | 'pdf', name: string, mimeType: string} | null) => void;
 }
 
 export default function UploadActions({ onFileSelected }: UploadActionsProps) {
@@ -17,15 +18,18 @@ export default function UploadActions({ onFileSelected }: UploadActionsProps) {
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
+        type: ['application/pdf', 'image/*'],
         copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const mimeType = inferMimeType(asset.name || asset.uri, asset.mimeType);
         onFileSelected({
-          uri: result.assets[0].uri,
-          type: 'pdf',
-          name: result.assets[0].name,
+          uri: asset.uri,
+          type: isImageFile(asset.name || asset.uri, mimeType) ? 'image' : 'pdf',
+          name: buildFileName(asset.name, asset.uri, 'invoice-file', mimeType),
+          mimeType,
         });
       }
     } catch (err) {
@@ -48,10 +52,13 @@ export default function UploadActions({ onFileSelected }: UploadActionsProps) {
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const mimeType = inferMimeType(asset.fileName || asset.uri, (asset as any).mimeType);
       onFileSelected({
-        uri: result.assets[0].uri,
+        uri: asset.uri,
         type: 'image',
-        name: result.assets[0].fileName || 'photo.jpg',
+        name: buildFileName(asset.fileName, asset.uri, 'photo', mimeType),
+        mimeType,
       });
     }
   };
@@ -65,10 +72,13 @@ export default function UploadActions({ onFileSelected }: UploadActionsProps) {
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const mimeType = inferMimeType(asset.fileName || asset.uri, (asset as any).mimeType);
       onFileSelected({
-        uri: result.assets[0].uri,
+        uri: asset.uri,
         type: 'image',
-        name: result.assets[0].fileName || 'image.jpg',
+        name: buildFileName(asset.fileName, asset.uri, 'image', mimeType),
+        mimeType,
       });
     }
   };

@@ -76,8 +76,8 @@ export default function CashManagementScreen() {
     useCallback(() => {
       if (!cashOverviewData?.periods?.today) {
         setLoading(true);
-        void fetchCashOverview();
       }
+      void fetchCashOverview();
     }, [cashOverviewData?.periods?.today, fetchCashOverview])
   );
 
@@ -121,7 +121,7 @@ export default function CashManagementScreen() {
           }
         >
           <Text style={styles.pageSubtitle}>
-            Track and manage your restaurant's physical cash flow and bank
+            Track and manage your restaurant&apos;s physical cash flow and bank
             deposits.
           </Text>
 

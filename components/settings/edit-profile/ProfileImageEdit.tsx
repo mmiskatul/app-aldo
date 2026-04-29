@@ -5,11 +5,18 @@ import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import PhotoPickerModal from '../../ui/PhotoPickerModal';
 import { showErrorMessage } from '../../../utils/feedback';
+import { buildFileName, inferMimeType } from '../../../utils/fileMetadata';
 import { useTranslation } from '../../../utils/i18n';
+
+export type ProfileImageFile = {
+  uri: string;
+  name: string;
+  mimeType: string;
+};
 
 interface ProfileImageEditProps {
   profileImageUrl?: string | null;
-  onImageChange?: (uri: string) => void;
+  onImageChange?: (file: ProfileImageFile) => void;
 }
 
 export default function ProfileImageEdit({ profileImageUrl, onImageChange }: ProfileImageEditProps) {
@@ -18,9 +25,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
   const [localImageUri, setLocalImageUri] = useState<string | null>(profileImageUrl || null);
 
   React.useEffect(() => {
-    if (profileImageUrl && !localImageUri) {
-      setLocalImageUri(profileImageUrl);
-    }
+    setLocalImageUri(profileImageUrl || null);
   }, [profileImageUrl]);
 
   const handleCamera = async () => {
@@ -38,8 +43,14 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
     });
 
     if (!result.canceled) {
-      setLocalImageUri(result.assets[0].uri);
-      onImageChange?.(result.assets[0].uri);
+      const asset = result.assets[0];
+      const mimeType = inferMimeType(asset.fileName || asset.uri, (asset as any).mimeType);
+      setLocalImageUri(asset.uri);
+      onImageChange?.({
+        uri: asset.uri,
+        name: buildFileName(asset.fileName, asset.uri, 'profile-photo', mimeType),
+        mimeType,
+      });
     }
   };
 
@@ -58,8 +69,14 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
     });
 
     if (!result.canceled) {
-      setLocalImageUri(result.assets[0].uri);
-      onImageChange?.(result.assets[0].uri);
+      const asset = result.assets[0];
+      const mimeType = inferMimeType(asset.fileName || asset.uri, (asset as any).mimeType);
+      setLocalImageUri(asset.uri);
+      onImageChange?.({
+        uri: asset.uri,
+        name: buildFileName(asset.fileName, asset.uri, 'profile-photo', mimeType),
+        mimeType,
+      });
     }
   };
 

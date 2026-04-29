@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
+import { verticalScale } from "react-native-size-matters";
 import { io, Socket } from "socket.io-client";
 import apiClient from "../../api/apiClient";
 import ChatInput from "../../components/chat/ChatInput";
@@ -50,6 +52,23 @@ export default function ChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const hasFetchedRef = useRef(false);
   const hasLoggedRealtimeFallbackRef = useRef(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
 
   const scrollToBottom = () => {
     setTimeout(
@@ -263,26 +282,39 @@ export default function ChatScreen() {
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             onContentSizeChange={() =>
               scrollViewRef.current?.scrollToEnd({ animated: true })
             }
           >
-            <QuickPrompts />
+            {messages.length === 0 && (
+              <QuickPrompts onSelectPrompt={(text) => handleSendMessage(text)} />
+            )}
 
-            {messages.map((msg, index) => (
-              <ChatMessage
-                key={msg.id || index}
-                sender={msg.role === "assistant" ? "ai" : msg.role}
-                message={msg.message}
-                attachment_name={msg.attachment_name}
-                attachment_source={msg.attachment_source}
-              />
-            ))}
-            {isAiTyping && <ChatMessage sender="ai" isTyping={true} />}
+            {messages.map((msg, index) => {
+              const currentSender = msg.role === "assistant" ? "ai" : msg.role;
+              const prevMsg = index > 0 ? messages[index - 1] : null;
+              const prevSender = prevMsg ? (prevMsg.role === "assistant" ? "ai" : prevMsg.role) : null;
+              const hideAvatar = currentSender === prevSender;
+
+              return (
+                <ChatMessage
+                  key={msg.id || index}
+                  sender={currentSender}
+                  message={msg.message}
+                  attachment_name={msg.attachment_name}
+                  attachment_source={msg.attachment_source}
+                  hideAvatar={hideAvatar}
+                />
+              );
+            })}
+            {isAiTyping && <ChatMessage sender="ai" isTyping={true} hideAvatar={messages.length > 0 && (messages[messages.length - 1].role === "assistant")} />}
           </ScrollView>
         )}
 
         <ChatInput onSend={handleSendMessage} />
+        {!isKeyboardVisible && <View style={{ height: verticalScale(76) }} />}
       </KeyboardAvoidingView>
     </View>
   );

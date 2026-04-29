@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
@@ -10,7 +9,7 @@ import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 
 // Components
 import Header from '../../../components/ui/Header';
-import ProfileImageEdit from '../../../components/settings/edit-profile/ProfileImageEdit';
+import ProfileImageEdit, { ProfileImageFile } from '../../../components/settings/edit-profile/ProfileImageEdit';
 import FormInput from '../../../components/settings/edit-profile/FormInput';
 import RestaurantDetailsForm from '../../../components/settings/edit-profile/RestaurantDetailsForm';
 
@@ -30,10 +29,10 @@ export default function EditProfileScreen() {
     restaurant_type: profile?.restaurant_type || '',
     city_location: profile?.city_location || '',
     number_of_seats: profile?.number_of_seats?.toString() || '',
-    profile_image: null as string | null
+    profile_image: null as ProfileImageFile | null
   });
 
-  const updateField = (field: string, value: string | null) => {
+  const updateField = (field: string, value: string | ProfileImageFile | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -50,11 +49,11 @@ export default function EditProfileScreen() {
       if (appLanguage) data.append('preferred_language', appLanguage);
 
       if (formData.profile_image) {
-        const localUri = formData.profile_image;
-        const filename = localUri.split('/').pop() || 'profile.jpg';
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : `image/jpeg`;
-        data.append('profile_image', { uri: localUri, name: filename, type } as any);
+        data.append('profile_image', {
+          uri: formData.profile_image.uri,
+          name: formData.profile_image.name,
+          type: formData.profile_image.mimeType,
+        } as any);
       }
 
       console.log('Submitting FormData payload:', data);
@@ -102,7 +101,7 @@ export default function EditProfileScreen() {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <ProfileImageEdit 
             profileImageUrl={profile?.profile_image_url || null} 
-            onImageChange={(uri) => updateField('profile_image', uri)}
+            onImageChange={(file) => updateField('profile_image', file)}
           />
 
           <View style={styles.formSection}>

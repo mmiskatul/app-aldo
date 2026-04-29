@@ -36,6 +36,11 @@ const SEGMENTS: { key: DataHistorySegment; label: string }[] = [
   { key: 'month', label: 'Month' },
 ];
 
+const shortId = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed.length > 8 ? trimmed.slice(-8) : trimmed;
+};
+
 export default function DataHistoryList({
   items,
   loading = false,
@@ -107,6 +112,9 @@ export default function DataHistoryList({
               <View>
                 <Text style={styles.entryLabel}>{entry.label}</Text>
                 <Text style={styles.entryDate}>{entry.date}</Text>
+                {selectedSegment === 'date' && entry.recordId ? (
+                  <Text style={styles.entryId}>ID {shortId(entry.recordId)}</Text>
+                ) : null}
               </View>
               <View style={styles.cardActions}>
                 <TouchableOpacity
@@ -222,6 +230,12 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(15, 0.3),
     fontWeight: '700',
     color: '#111827',
+  },
+  entryId: {
+    marginTop: verticalScale(3),
+    fontSize: moderateScale(10, 0.3),
+    fontWeight: '700',
+    color: '#9CA3AF',
   },
   cardActions: {
     flexDirection: 'row',

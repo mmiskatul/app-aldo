@@ -29,28 +29,19 @@ const formatAmount = (amount: number) =>
   }).format(Number.isFinite(amount) ? amount : 0);
 
 const resolveTransactionType = (tx: ExpenseItem) => {
-  if (tx.source_kind === 'inventory') {
-    return 'Inventory expense';
+  if (tx.source_kind === 'manual_entry') {
+    return 'Daily data expense';
   }
   if (tx.source_kind === 'document') {
     return 'Document expense';
   }
-  if (tx.id.startsWith('daily-entry-expense:')) {
-    return 'Daily data expense';
+  if (tx.source_kind === 'inventory') {
+    return 'Inventory expense';
   }
   return tx.section === 'bank' ? 'Bank expense' : 'Cash expense';
 };
 
 const resolveTransactionRoute = (tx: ExpenseItem) => {
-  if (tx.source_kind === 'inventory' && tx.source_inventory_item_id) {
-    return `/(tabs)/inventory/${tx.source_inventory_item_id}`;
-  }
-  if (tx.id.startsWith('uploaded-document-expense:')) {
-    return `/(tabs)/documents/${tx.id.replace('uploaded-document-expense:', '')}`;
-  }
-  if (tx.id.startsWith('daily-entry-expense:')) {
-    return `/(tabs)/home/daily-record-details?dataId=${tx.id.replace('daily-entry-expense:', '')}`;
-  }
   return `/(tabs)/home/expense-details?id=${tx.id}`;
 };
 

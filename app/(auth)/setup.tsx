@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -12,16 +13,39 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
 import { Feather } from "@expo/vector-icons";
+import apiClient from "../../api/apiClient";
+import { getCurrentUser } from "../../api/auth";
 import Step1RestaurantInfo from "../../components/auth/restoAi/Step1RestaurantInfo";
 import Step2RestaurantDetails from "../../components/auth/restoAi/Step2RestaurantDetails";
 import Step3PhotoUpload from "../../components/auth/restoAi/Step3PhotoUpload";
 import Step4BusinessGoal from "../../components/auth/restoAi/Step4BusinessGoal";
 import Step5BiggestChallenge from "../../components/auth/restoAi/Step5BiggestChallenge";
 import Step6Success from "../../components/auth/restoAi/Step6Success";
+import { useAppStore } from "../../store/useAppStore";
+import { buildFileName, inferMimeType } from "../../utils/fileMetadata";
+import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
+
+type OnboardingProfileResponse = {
+  restaurant_name?: string | null;
+  restaurant_type?: string | null;
+  city_location?: string | null;
+  number_of_seats?: number | null;
+  average_spend_per_customer?: number | null;
+  interior_photo_url?: string | null;
+  exterior_photo_url?: string | null;
+  main_business_goal?: string | null;
+  biggest_problem?: string | null;
+  improvement_focus?: string | null;
+};
 
 export default function SetupScreen() {
   const router = useRouter();
+  const setProfile = useAppStore((state) => state.setProfile);
+  const setUser = useAppStore((state) => state.setUser);
+  const tokens = useAppStore((state) => state.tokens);
   const [step, setStep] = useState(1);
+  const [loadingInitialData, setLoadingInitialData] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   // Step 1 State
   const [restaurantName, setRestaurantName] = useState("");
@@ -45,12 +69,130 @@ export default function SetupScreen() {
 
   const totalSteps = 5;
 
+  useEffect(() => {
+    const loadSetupData = async () => {
+      try {
+        const [user, onboardingResponse] = await Promise.all([
+          getCurrentUser(),
+          apiClient.get<OnboardingProfileResponse | null>("/api/v1/onboarding/profile"),
+        ]);
+        const onboarding = onboardingResponse.data;
+
+        setRestaurantName(onboarding?.restaurant_name || user.restaurant_name || "");
+        setRestaurantType(onboarding?.restaurant_type || "");
+        setCity(onboarding?.city_location || "");
+        setSeats(
+          onboarding?.number_of_seats !== undefined && onboarding?.number_of_seats !== null
+            ? String(onboarding.number_of_seats)
+            : ""
+        );
+        setAverageSpend(
+          onboarding?.average_spend_per_customer !== undefined && onboarding?.average_spend_per_customer !== null
+            ? String(onboarding.average_spend_per_customer)
+            : ""
+        );
+        setInteriorPhoto(onboarding?.interior_photo_url || null);
+        setExteriorPhoto(onboarding?.exterior_photo_url || null);
+        setBusinessGoal(onboarding?.main_business_goal || "Increase revenue");
+        setBiggestProblem(onboarding?.biggest_problem || "");
+        setImprovementGoal(onboarding?.improvement_focus || "");
+      } catch (error: any) {
+        console.error("Error loading onboarding data:", error?.response?.data || error?.message);
+      } finally {
+        setLoadingInitialData(false);
+      }
+    };
+
+    void loadSetupData();
+  }, []);
+
+  const appendImageFile = (formData: FormData, fieldName: "interior_photo" | "exterior_photo", uri: string | null) => {
+    if (!uri || /^https?:\/\//i.test(uri)) {
+      return;
+    }
+    const mimeType = inferMimeType(uri);
+    formData.append(fieldName, {
+      uri,
+      name: buildFileName(null, uri, fieldName, mimeType),
+      type: mimeType,
+    } as any);
+  };
+
+  const submitOnboarding = async () => {
+    if (!restaurantName.trim()) {
+      showErrorMessage("Restaurant name is required.");
+      setStep(1);
+      return;
+    }
+    if (!restaurantType.trim()) {
+      showErrorMessage("Restaurant type is required.");
+      setStep(1);
+      return;
+    }
+    if (!city.trim() || !seats.trim() || !averageSpend.trim()) {
+      showErrorMessage("Complete the restaurant details before continuing.");
+      setStep(2);
+      return;
+    }
+    if (!biggestProblem.trim() || !improvementGoal.trim()) {
+      showErrorMessage("Complete the challenge section before finishing setup.");
+      setStep(5);
+      return;
+    }
+
+    const parsedSeats = Number.parseInt(seats, 10);
+    const parsedAverageSpend = Number.parseFloat(averageSpend);
+    if (!Number.isFinite(parsedSeats) || parsedSeats <= 0 || !Number.isFinite(parsedAverageSpend) || parsedAverageSpend < 0) {
+      showErrorMessage("Enter a valid number of seats and average spend.");
+      setStep(2);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const formData = new FormData();
+      formData.append("restaurant_name", restaurantName.trim());
+      formData.append("restaurant_type", restaurantType.trim());
+      formData.append("city_location", city.trim());
+      formData.append("number_of_seats", String(parsedSeats));
+      formData.append("average_spend_per_customer", String(parsedAverageSpend));
+      formData.append("main_business_goal", businessGoal.trim());
+      formData.append("biggest_problem", biggestProblem.trim());
+      formData.append("improvement_focus", improvementGoal.trim());
+      appendImageFile(formData, "interior_photo", interiorPhoto);
+      appendImageFile(formData, "exterior_photo", exteriorPhoto);
+
+      await apiClient.post("/api/v1/onboarding/profile", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Accept: "application/json",
+        },
+        transformRequest: (data) => data,
+      });
+
+      const [user, profileResponse] = await Promise.all([
+        getCurrentUser(),
+        apiClient.get("/api/v1/restaurant/settings/profile"),
+      ]);
+      setUser(user, tokens);
+      setProfile(profileResponse.data);
+      setStep(6);
+      showSuccessMessage("Onboarding saved successfully.");
+    } catch (error: any) {
+      console.error("Error saving onboarding:", error?.response?.data || error?.message);
+      showErrorMessage("Could not save onboarding details.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleNext = () => {
+    if (step === 5) {
+      void submitOnboarding();
+      return;
+    }
     if (step < 6) {
       setStep(step + 1);
-    } else {
-      // End of setup, navigate to tabs wrapper
-      router.replace("/(tabs)/home");
     }
   };
 
@@ -110,6 +252,11 @@ export default function SetupScreen() {
       >
         <View style={styles.container}>
           {renderHeader()}
+          {loadingInitialData ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator size="large" color="#FA8C4C" />
+            </View>
+          ) : (
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={styles.scrollContent}
@@ -159,13 +306,14 @@ export default function SetupScreen() {
                 setBiggestProblem={setBiggestProblem}
                 improvementGoal={improvementGoal}
                 setImprovementGoal={setImprovementGoal}
-                onNext={handleNext}
+                onNext={submitting ? () => undefined : handleNext}
               />
             )}
             {step === 6 && (
               <Step6Success />
             )}
           </ScrollView>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -179,6 +327,11 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  loadingState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTopArea: {
     paddingHorizontal: scale(20),

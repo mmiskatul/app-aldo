@@ -38,6 +38,10 @@ export interface Profile {
   location: string | null;
   city_location: string | null;
   number_of_seats: string | number | null;
+  average_spend_per_customer: number | null;
+  main_business_goal: string | null;
+  biggest_problem: string | null;
+  improvement_focus: string | null;
   preferred_language: string;
   profile_image_url: string | null;
 }
