@@ -1,6 +1,5 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import axios from "axios";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -15,9 +14,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import apiClient from "../../api/apiClient";
 import Input from "../../components/ui/Input";
 import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
-import { getApiBaseUrl } from "../../utils/api";
+import { getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage } from "../../utils/feedback";
 
 // @ts-ignore
@@ -33,13 +33,6 @@ export default function AuthLoginScreen() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const getApiErrorMessage = (error: any, fallback: string) =>
-    error?.response?.data?.error?.message ||
-    error?.response?.data?.message ||
-    error?.response?.data?.detail ||
-    error?.message ||
-    fallback;
-
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -50,9 +43,12 @@ export default function AuthLoginScreen() {
 
     setIsLoading(true);
     try {
-      const apiUrl = getApiBaseUrl();
-      const response = await axios.post(
-        `${apiUrl}/api/v1/auth/restaurant/login`,
+      console.log(
+        "[login] POST",
+        `${apiClient.defaults.baseURL || ""}/api/v1/auth/restaurant/login`
+      );
+      const response = await apiClient.post(
+        "/api/v1/auth/restaurant/login",
         { email: normalizedEmail, password }
       );
 

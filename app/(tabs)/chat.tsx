@@ -16,6 +16,7 @@ import QuickPrompts from "../../components/chat/QuickPrompts";
 import Header from "../../components/ui/Header";
 import { ChatRouteSkeleton } from "../../components/ui/RouteSkeletons";
 import { useAppStore } from "../../store/useAppStore";
+import { getApiBaseUrl } from "../../utils/api";
 import { useTranslation } from "../../utils/i18n";
 
 const CHAT_REALTIME_ENV = process.env.EXPO_PUBLIC_CHAT_REALTIME?.trim().toLowerCase();
@@ -87,8 +88,7 @@ export default function ChatScreen() {
 
     const apiUrl =
       apiClient.defaults.baseURL ||
-      process.env.EXPO_PUBLIC_API_URL ||
-      "https://risto-ai.vercel.app";
+      getApiBaseUrl();
     const realtimeEnabled = supportsRealtimeChat(apiUrl);
     let isMounted = true;
 

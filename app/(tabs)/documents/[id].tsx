@@ -19,6 +19,7 @@ import DocumentInformation from "../../../components/documents/document-details/
 import DocumentPreview from "../../../components/documents/document-details/DocumentPreview";
 import ExtractedData from "../../../components/documents/document-details/ExtractedData";
 import { DetailRouteSkeleton } from "../../../components/ui/RouteSkeletons";
+import { getApiBaseUrl } from "../../../utils/api";
 import { useTranslation } from "../../../utils/i18n";
 import { showDialog, showErrorMessage, showInfoMessage, showSuccessMessage } from "../../../utils/feedback";
 const { StorageAccessFramework } = FileSystem;
@@ -36,8 +37,7 @@ export default function DocumentDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
-  const apiUrl =
-    process.env.EXPO_PUBLIC_API_URL || "https://risto-ai.vercel.app";
+  const apiUrl = getApiBaseUrl();
 
   const fetchDetails = async () => {
     try {

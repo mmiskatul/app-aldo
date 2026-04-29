@@ -1,12 +1,15 @@
 import axios from "axios";
 import { useAppStore } from "../store/useAppStore";
-import { getApiBaseUrl } from "../utils/api";
+import { API_REQUEST_TIMEOUT_MS, getApiBaseUrl, getApiErrorMessage, isNetworkLikeApiError } from "../utils/api";
 import { showErrorMessage } from "../utils/feedback";
 
 const apiUrl = getApiBaseUrl();
 
+console.log("[apiClient] resolved baseURL:", apiUrl);
+
 const apiClient = axios.create({
   baseURL: apiUrl,
+  timeout: API_REQUEST_TIMEOUT_MS,
 });
 
 let isRefreshing = false;
@@ -15,23 +18,20 @@ let lastConnectionErrorShownAt = 0;
 
 const CONNECTION_ERROR_THROTTLE_MS = 4000;
 
-const isConnectionError = (error: any) => {
-  return (
-    !error?.response &&
-    (error?.code === "ERR_NETWORK" ||
-      error?.code === "ECONNABORTED" ||
-      error?.message === "Network Error" ||
-      String(error?.message || "").toLowerCase().includes("network"))
-  );
-};
-
 const showConnectionError = () => {
   const now = Date.now();
   if (now - lastConnectionErrorShownAt < CONNECTION_ERROR_THROTTLE_MS) {
     return;
   }
   lastConnectionErrorShownAt = now;
-  showErrorMessage("Please check your internet connection and try again.", "Connection error");
+  showErrorMessage(
+    getApiErrorMessage(
+      { code: "ERR_NETWORK" },
+      "Please check your internet connection and try again.",
+      apiUrl
+    ),
+    "Connection error"
+  );
 };
 
 const processQueue = (error: any, token: string | null = null) => {
@@ -67,7 +67,7 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (isConnectionError(error)) {
+    if (isNetworkLikeApiError(error)) {
       showConnectionError();
     }
 

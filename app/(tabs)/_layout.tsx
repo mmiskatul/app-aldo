@@ -9,7 +9,9 @@ import {
 import * as HugeiconsModule from "@hugeicons/react-native";
 import { Redirect, Tabs, useSegments } from "expo-router";
 import { CommonActions } from "@react-navigation/native";
+import React, { useEffect, useState } from "react";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { getCurrentUser } from "../../api/auth";
 import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
 
 const hugeiconsAny = HugeiconsModule as any;
@@ -17,10 +19,60 @@ const HugeiconsIcon = hugeiconsAny.HugeiconsIcon || hugeiconsAny.default?.Hugeic
 
 export default function TabLayout() {
   const segments = useSegments();
+  const hasHydrated = useAppStore((state) => state.hasHydrated);
   const user = useAppStore((state) => state.user);
   const tokens = useAppStore((state) => state.tokens);
+  const setUser = useAppStore((state) => state.setUser);
+  const logout = useAppStore((state) => state.logout);
+  const [isSessionChecking, setIsSessionChecking] = useState(true);
   const isRestrictedAccess = getRestrictedAccessStatus(user) !== null;
   const currentLeaf = (segments as string[])[2];
+
+  useEffect(() => {
+    if (!hasHydrated) {
+      return;
+    }
+
+    if (!tokens?.access_token) {
+      setIsSessionChecking(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const validateSession = async () => {
+      try {
+        const currentUser = await getCurrentUser();
+        if (!isMounted) {
+          return;
+        }
+        setUser(currentUser, tokens);
+      } catch (error: any) {
+        console.log(
+          "[auth bootstrap] session invalid:",
+          error?.response?.data || error?.message
+        );
+        if (!isMounted) {
+          return;
+        }
+        logout();
+      } finally {
+        if (isMounted) {
+          setIsSessionChecking(false);
+        }
+      }
+    };
+
+    void validateSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [hasHydrated, logout, setUser, tokens]);
+
+  if (!hasHydrated || isSessionChecking) {
+    return null;
+  }
 
   if (!user || !tokens?.access_token) {
     return <Redirect href="/(auth)" />;

@@ -283,7 +283,9 @@ export interface DailyDataScreenCache {
 }
 
 interface AppState {
+  hasHydrated: boolean;
   isDarkMode: boolean;
+  setHasHydrated: (value: boolean) => void;
   toggleDarkMode: () => void;
   user: User | null;
   tokens: Tokens | null;
@@ -334,7 +336,9 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
+      hasHydrated: false,
       isDarkMode: false,
+      setHasHydrated: (value) => set({ hasHydrated: value }),
       toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
 
       user: null,
@@ -531,6 +535,9 @@ export const useAppStore = create<AppState>()(
     {
       name: "app-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
       partialize: (state) => ({
         isDarkMode: state.isDarkMode,
         user: state.user,
