@@ -442,6 +442,7 @@ export default function TabsIndex() {
         recentActivity: false,
       };
       await fetchHomeOverview(period, force);
+      void fetchRecentActivitySection();
       if (force) {
         await hydrateSupportingData();
       } else {
@@ -453,7 +454,7 @@ export default function TabsIndex() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fetchHomeOverview, hydrateSupportingData]);
+  }, [fetchHomeOverview, fetchRecentActivitySection, hydrateSupportingData]);
 
   useFocusEffect(
     useCallback(() => {

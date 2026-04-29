@@ -59,7 +59,7 @@ export default function ExpensesScreen() {
       case "Today": return expenseData.today;
       case "This Week": return expenseData.this_week;
       case "This Month": return expenseData.this_month;
-      case "This Year": return expenseData.this_month; // Fallback
+      case "This Year": return expenseData.this_year;
       default: return expenseData.today;
     }
   };
