@@ -107,7 +107,11 @@ export default function SetupScreen() {
   }, []);
 
   const appendImageFile = (formData: FormData, fieldName: "interior_photo" | "exterior_photo", uri: string | null) => {
-    if (!uri || /^https?:\/\//i.test(uri)) {
+    if (!uri) {
+      return;
+    }
+    if (/^https?:\/\//i.test(uri)) {
+      formData.append(`${fieldName}_url`, uri);
       return;
     }
     const mimeType = inferMimeType(uri);

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { useAppStore } from '../../../store/useAppStore';
 import apiClient from '../../../api/apiClient';
+import { getCurrentUser } from '../../../api/auth';
 import { useTranslation } from '../../../utils/i18n';
 import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 
@@ -19,6 +20,8 @@ export default function EditProfileScreen() {
   const profile = useAppStore((state) => state.profile);
   const appLanguage = useAppStore((state) => state.appLanguage);
   const setProfile = useAppStore((state) => state.setProfile);
+  const setUser = useAppStore((state) => state.setUser);
+  const tokens = useAppStore((state) => state.tokens);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -66,13 +69,11 @@ export default function EditProfileScreen() {
         transformRequest: (data) => data,
       });
 
-      // Update the store
       if (response.data) {
-        setProfile({
-          ...profile,
-          ...response.data
-        });
+        setProfile(response.data);
       }
+      const refreshedUser = await getCurrentUser();
+      setUser(refreshedUser, tokens);
 
       showSuccessMessage('Profile updated successfully.');
       router.replace({

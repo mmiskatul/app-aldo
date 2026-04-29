@@ -5,6 +5,8 @@ export interface AuthenticatedUser {
   email: string;
   full_name: string;
   role: string;
+  avatar_url?: string | null;
+  profile_image_url?: string | null;
   is_active: boolean;
   email_verified: boolean;
   restaurant_name?: string | null;
