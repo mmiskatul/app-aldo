@@ -106,8 +106,10 @@ const SECTION_LOAD_DELAY_MS = 180;
 
 export default function AnalyticsScreen() {
   const { t } = useTranslation();
+  const appLanguage = useAppStore((state) => state.appLanguage);
   const analyticsScreenCache = useAppStore((state) => state.analyticsScreenCache);
   const setAnalyticsScreenCache = useAppStore((state) => state.setAnalyticsScreenCache);
+  const clearAnalyticsScreenCache = useAppStore((state) => state.clearAnalyticsScreenCache);
 
   const [activePeriod, setActivePeriod] = React.useState<PeriodKey>('weekly');
   const [refreshing, setRefreshing] = React.useState(false);
@@ -438,8 +440,21 @@ export default function AnalyticsScreen() {
     revenueComparisonByPeriod,
     revenueTrendByPeriod,
     supplierAlertsByPeriod,
-    summaryStatsByPeriod,
+      summaryStatsByPeriod,
   ]);
+
+  React.useEffect(() => {
+    clearAnalyticsScreenCache();
+    setBusinessInsight(null);
+    setMetricTilesByPeriod({});
+    setRevenueTrendByPeriod({});
+    setSummaryStatsByPeriod({});
+    setRevenueComparisonByPeriod({});
+    setCoversActivityByPeriod({});
+    setCostBreakdownByPeriod({});
+    setSupplierAlertsByPeriod({});
+    void fetchAnalyticsData(activePeriod, true);
+  }, [appLanguage, clearAnalyticsScreenCache, fetchAnalyticsData]);
 
   const handlePeriodChange = (period: string) => {
     setActivePeriod(period as PeriodKey);

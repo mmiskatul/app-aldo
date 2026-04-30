@@ -115,14 +115,14 @@ export default function RecentActivity({ activities: apiActivities, loading = fa
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
 
     if (diffHrs < 1) return t('just_now');
-    if (diffHrs < 24) return `${diffHrs}H AGO`;
-    return `${Math.floor(diffHrs / 24)}D AGO`;
+    if (diffHrs < 24) return `${diffHrs}${t('hours_ago_suffix')}`;
+    return `${Math.floor(diffHrs / 24)}${t('days_ago_suffix')}`;
   };
 
   const displayActivities: ActivityItemProps[] =
     apiActivities && apiActivities.length > 0
       ? apiActivities.map((activity) => ({
-          title: activity.title || 'Activity',
+          title: activity.title || t('activity'),
           subtitle: activity.subtitle || '',
           timeText: formatTimestamp(activity.timestamp),
           route: resolveActivityRoute(activity),

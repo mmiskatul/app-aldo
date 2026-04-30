@@ -120,12 +120,14 @@ const HOME_SECTION_LOAD_DELAY_MS = 160;
 export default function TabsIndex() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const appLanguage = useAppStore((state) => state.appLanguage);
 
   const setAnalyticsData = useAppStore((state) => state.setAnalyticsData);
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
   const setProfile = useAppStore((state) => state.setProfile);
   const homeScreenCache = useAppStore((state) => state.homeScreenCache);
   const setHomeScreenCache = useAppStore((state) => state.setHomeScreenCache);
+  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
 
   const [shellData, setShellData] = useState<HomeShellData | null>(homeScreenCache.shellData);
   const [activePeriod, setActivePeriod] = useState<PeriodKey>("weekly");
@@ -484,6 +486,26 @@ export default function TabsIndex() {
       }
     }
   }, [activePeriod, fetchInsightSection, fetchRevenueSection, fetchTopPrioritySections, insightByPeriod, loading, revenueByPeriod]);
+
+  useEffect(() => {
+    clearHomeScreenCache();
+    setShellData(null);
+    setMetricsByPeriod({});
+    setCashByPeriod({});
+    setRevenueByPeriod({});
+    setInsightByPeriod({});
+    setRecentActivity(null);
+    setVatBalance(null);
+    triggeredSectionsRef.current = {
+      revenue: false,
+      insight: false,
+      recentActivity: false,
+    };
+    hasFocusedRef.current = false;
+    previousPeriodRef.current = activePeriod;
+    setLoading(true);
+    void fetchHomeData(activePeriod, false, true);
+  }, [appLanguage, clearHomeScreenCache, fetchHomeData]);
 
   const onRefresh = () => {
     setRefreshing(true);

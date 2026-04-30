@@ -12,6 +12,7 @@ import { ArrowDownTrayIcon, BellIcon } from "react-native-heroicons/outline";
 import { Feather } from "@expo/vector-icons";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../../api/apiClient";
+import { useAppStore } from "../../../store/useAppStore";
 
 // Components
 import InsightSummaryCard from "../../../components/home/view-insight/InsightSummaryCard";
@@ -23,11 +24,13 @@ import { DetailRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 export default function ViewInsightScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const appLanguage = useAppStore((state) => state.appLanguage);
   const [data, setData] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     const fetchInsight = async () => {
+      setLoading(true);
       try {
         const response = await apiClient.get('/api/v1/restaurant/insights');
         setData(response.data);
@@ -38,7 +41,7 @@ export default function ViewInsightScreen() {
       }
     };
     fetchInsight();
-  }, []);
+  }, [appLanguage]);
 
   useFocusEffect(
     React.useCallback(() => {
