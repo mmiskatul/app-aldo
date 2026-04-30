@@ -44,6 +44,7 @@ const supportsRealtimeChat = (apiUrl: string): boolean => {
 export default function ChatScreen() {
   const { t } = useTranslation();
   const tokens = useAppStore((state) => state.tokens);
+  const appLanguage = useAppStore((state) => state.appLanguage);
   const chatMessagesCache = useAppStore((state) => state.chatMessagesCache);
   const setChatMessagesCache = useAppStore((state) => state.setChatMessagesCache);
   const [messages, setMessages] = useState<any[]>(chatMessagesCache);
@@ -204,6 +205,7 @@ export default function ChatScreen() {
       try {
         const formData = new FormData();
         formData.append("message", text.trim());
+        formData.append("language", appLanguage);
         
         // Append the file properly for React Native FormData
         formData.append("file", {
@@ -242,6 +244,7 @@ export default function ChatScreen() {
       if (socketRef.current?.connected) {
         socketRef.current.emit("chat:message", {
           message: text.trim(),
+          language: appLanguage,
           attachment_source: null,
         });
         return;
@@ -250,6 +253,7 @@ export default function ChatScreen() {
       try {
         const response = await apiClient.post("/api/v1/restaurant/chat/messages", {
           message: text.trim(),
+          language: appLanguage,
         });
         setIsAiTyping(false);
         setMessages(response.data.messages || []);

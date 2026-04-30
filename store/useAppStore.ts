@@ -2,6 +2,23 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+const safeGetLocales = () => {
+  try {
+    const localization = require("expo-localization") as {
+      getLocales?: () => Array<{ languageCode?: string; languageTag?: string }>;
+    };
+    return localization.getLocales?.() ?? [];
+  } catch {
+    return [];
+  }
+};
+
+const getInitialAppLanguage = (): "en" | "it" => {
+  const locale = safeGetLocales()[0];
+  const language = (locale?.languageCode || locale?.languageTag || "en").toLowerCase();
+  return language.startsWith("it") ? "it" : "en";
+};
+
 export interface User {
   id: string;
   email: string;
@@ -483,7 +500,7 @@ export const useAppStore = create<AppState>()(
             fetchedAtBySegment: {},
           },
         }),
-      appLanguage: 'en',
+      appLanguage: getInitialAppLanguage(),
       setAppLanguage: (lang) => set({ appLanguage: lang }),
       logout: () =>
         set({

@@ -1,8 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-import { EyeIcon, ClipboardDocumentListIcon, ShoppingBagIcon, ChartPieIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon } from 'react-native-heroicons/outline';
+import {
+  EyeIcon,
+  ClipboardDocumentListIcon,
+  ShoppingBagIcon,
+  ChartPieIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
+} from 'react-native-heroicons/outline';
 import Skeleton, { SkeletonCard } from '../ui/Skeleton';
+import { useTranslation } from '../../utils/i18n';
 
 interface KPIItemProps {
   title: string;
@@ -14,7 +22,15 @@ interface KPIItemProps {
   iconBgColor: string;
 }
 
-const KPICard = ({ title, value, trend, isPositive, IconComponent, iconColor, iconBgColor }: KPIItemProps) => {
+const KPICard = ({
+  title,
+  value,
+  trend,
+  isPositive,
+  IconComponent,
+  iconColor,
+  iconBgColor,
+}: KPIItemProps) => {
   return (
     <View style={styles.cardContainer}>
       <View style={styles.cardHeader}>
@@ -27,7 +43,14 @@ const KPICard = ({ title, value, trend, isPositive, IconComponent, iconColor, ic
           ) : (
             <ArrowTrendingDownIcon size={moderateScale(10)} color="#EF4444" />
           )}
-          <Text style={[styles.trendText, { color: isPositive ? "#10B981" : "#EF4444" }]}>{trend}</Text>
+          <Text
+            style={[
+              styles.trendText,
+              { color: isPositive ? '#10B981' : '#EF4444' },
+            ]}
+          >
+            {trend}
+          </Text>
         </View>
       </View>
       <Text style={styles.cardTitle}>{title}</Text>
@@ -47,34 +70,108 @@ interface KPIGridProps {
 }
 
 export default function KPIGrid({ metrics, loading = false }: KPIGridProps) {
+  const { t } = useTranslation();
+
   const getIconData = (label: string) => {
     switch (label.toLowerCase()) {
-      case 'revenue': return { IconComponent: EyeIcon, iconColor: '#FA8C4C', iconBgColor: '#FFF0E5' };
-      case 'expenses': return { IconComponent: ClipboardDocumentListIcon, iconColor: '#EF4444', iconBgColor: '#FEE2E2' };
-      case 'food cost': return { IconComponent: ShoppingBagIcon, iconColor: '#D97706', iconBgColor: '#FEF3C7' };
-      case 'profit': return { IconComponent: ChartPieIcon, iconColor: '#10B981', iconBgColor: '#D1FAE5' };
-      default: return { IconComponent: EyeIcon, iconColor: '#9CA3AF', iconBgColor: '#F3F4F6' };
+      case 'revenue':
+        return {
+          IconComponent: EyeIcon,
+          iconColor: '#FA8C4C',
+          iconBgColor: '#FFF0E5',
+        };
+      case 'expenses':
+        return {
+          IconComponent: ClipboardDocumentListIcon,
+          iconColor: '#EF4444',
+          iconBgColor: '#FEE2E2',
+        };
+      case 'food cost':
+        return {
+          IconComponent: ShoppingBagIcon,
+          iconColor: '#D97706',
+          iconBgColor: '#FEF3C7',
+        };
+      case 'profit':
+        return {
+          IconComponent: ChartPieIcon,
+          iconColor: '#10B981',
+          iconBgColor: '#D1FAE5',
+        };
+      default:
+        return {
+          IconComponent: EyeIcon,
+          iconColor: '#9CA3AF',
+          iconBgColor: '#F3F4F6',
+        };
     }
   };
 
-  const parseCurrency = (c: string) => c === "USD" ? "$" : (c === "EUR" ? "€" : "");
+  const getTranslatedMetricTitle = (label: string) => {
+    switch (label.trim().toLowerCase()) {
+      case 'revenue':
+        return t('revenue');
+      case 'expenses':
+        return t('expenses');
+      case 'food cost':
+        return t('food_cost');
+      case 'profit':
+        return t('profit');
+      default:
+        return label;
+    }
+  };
+
+  const parseCurrency = (currency: string) => {
+    if (currency === 'USD') return '$';
+    if (currency === 'EUR') return '€';
+    return '';
+  };
 
   const getFallbackData = (): KPIItemProps[] => [
-    { title: 'Revenue', value: '$0.00', trend: '0.0%', isPositive: true, ...getIconData('Revenue') },
-    { title: 'Expenses', value: '$0.00', trend: '0.0%', isPositive: false, ...getIconData('Expenses') },
-    { title: 'Food Cost', value: '$0.00', trend: '0.0%', isPositive: false, ...getIconData('Food Cost') },
-    { title: 'Profit', value: '$0.00', trend: '0.0%', isPositive: true, ...getIconData('Profit') },
+    {
+      title: t('revenue'),
+      value: '$0.00',
+      trend: '0.0%',
+      isPositive: true,
+      ...getIconData('Revenue'),
+    },
+    {
+      title: t('expenses'),
+      value: '$0.00',
+      trend: '0.0%',
+      isPositive: false,
+      ...getIconData('Expenses'),
+    },
+    {
+      title: t('food_cost'),
+      value: '$0.00',
+      trend: '0.0%',
+      isPositive: false,
+      ...getIconData('Food Cost'),
+    },
+    {
+      title: t('profit'),
+      value: '$0.00',
+      trend: '0.0%',
+      isPositive: true,
+      ...getIconData('Profit'),
+    },
   ];
 
-  const kpiData: KPIItemProps[] = metrics && metrics.length > 0
-    ? metrics.map(m => ({
-        title: m.label,
-        value: `${parseCurrency(m.currency)}${m.value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`,
-        trend: `${Math.abs(m.change_percent)}%`,
-        isPositive: m.change_percent >= 0,
-        ...getIconData(m.label)
-      }))
-    : getFallbackData();
+  const kpiData: KPIItemProps[] =
+    metrics && metrics.length > 0
+      ? metrics.map((metric) => ({
+          title: getTranslatedMetricTitle(metric.label),
+          value: `${parseCurrency(metric.currency)}${metric.value.toLocaleString(
+            undefined,
+            { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+          )}`,
+          trend: `${Math.abs(metric.change_percent)}%`,
+          isPositive: metric.change_percent >= 0,
+          ...getIconData(metric.label),
+        }))
+      : getFallbackData();
 
   if (loading) {
     return (
@@ -82,13 +179,33 @@ export default function KPIGrid({ metrics, loading = false }: KPIGridProps) {
         {[0, 1].map((rowIndex) => (
           <View key={rowIndex} style={styles.row}>
             {[0, 1].map((columnIndex) => (
-              <SkeletonCard key={`${rowIndex}-${columnIndex}`} style={styles.skeletonCard}>
+              <SkeletonCard
+                key={`${rowIndex}-${columnIndex}`}
+                style={styles.skeletonCard}
+              >
                 <View style={styles.cardHeader}>
-                  <Skeleton width={scale(32)} height={scale(32)} borderRadius={8} />
-                  <Skeleton width={scale(44)} height={moderateScale(10)} borderRadius={6} />
+                  <Skeleton
+                    width={scale(32)}
+                    height={scale(32)}
+                    borderRadius={8}
+                  />
+                  <Skeleton
+                    width={scale(44)}
+                    height={moderateScale(10)}
+                    borderRadius={6}
+                  />
                 </View>
-                <Skeleton width="52%" height={moderateScale(12)} borderRadius={6} />
-                <Skeleton width="74%" height={moderateScale(20)} borderRadius={8} style={styles.valueSkeleton} />
+                <Skeleton
+                  width="52%"
+                  height={moderateScale(12)}
+                  borderRadius={6}
+                />
+                <Skeleton
+                  width="74%"
+                  height={moderateScale(20)}
+                  borderRadius={8}
+                  style={styles.valueSkeleton}
+                />
               </SkeletonCard>
             ))}
           </View>
@@ -128,7 +245,6 @@ const styles = StyleSheet.create({
     marginHorizontal: scale(4),
     borderWidth: 1,
     borderColor: '#F3F4F6',
-    // Shadow matching mockup card aesthetics roughly
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,

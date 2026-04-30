@@ -32,7 +32,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
     try {
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
       if (!permissionResult.granted) {
-        showErrorMessage("You need to allow camera access to take a photo!");
+        showErrorMessage(t('camera_permission_required'));
         return;
       }
 
@@ -55,7 +55,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
       }
     } catch (error) {
       console.log("Error selecting camera photo:", error);
-      showErrorMessage("Could not capture the image. Please try again.");
+      showErrorMessage(t('image_capture_failed'));
     }
   };
 
@@ -63,7 +63,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        showErrorMessage("You need to allow gallery access to choose a photo!");
+        showErrorMessage(t('gallery_permission_required'));
         return;
       }
 
@@ -86,7 +86,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
       }
     } catch (error) {
       console.log("Error selecting gallery photo:", error);
-      showErrorMessage("Could not choose the image. Please try again.");
+      showErrorMessage(t('image_pick_failed'));
     }
   };
 

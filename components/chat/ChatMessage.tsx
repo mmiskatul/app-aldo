@@ -428,6 +428,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: verticalScale(24),
     paddingHorizontal: scale(20),
+    alignItems: 'flex-start',
   },
   containerUser: {
     justifyContent: 'flex-end',
@@ -447,6 +448,7 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     maxWidth: '80%',
+    flexShrink: 1,
   },
   senderName: {
     fontSize: moderateScale(10, 0.3),
@@ -466,6 +468,8 @@ const styles = StyleSheet.create({
   bubble: {
     paddingHorizontal: scale(16),
     paddingVertical: verticalScale(14),
+    flexShrink: 1,
+    maxWidth: '100%',
   },
   bubbleAi: {
     backgroundColor: '#F3F4F6',
@@ -484,9 +488,12 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: moderateScale(15, 0.3),
     lineHeight: moderateScale(22),
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   markdownBlock: {
     marginBottom: verticalScale(8),
+    flexShrink: 1,
   },
   textAi: {
     color: '#1F2937',
@@ -496,6 +503,7 @@ const styles = StyleSheet.create({
   },
   attachmentWrapper: {
     marginBottom: verticalScale(6),
+    flexShrink: 1,
   },
   attachmentImage: {
     width: moderateScale(150),
@@ -510,6 +518,8 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(6),
     paddingHorizontal: scale(10),
     borderRadius: scale(6),
+    flexShrink: 1,
+    maxWidth: '100%',
   },
   attachmentFileName: {
     fontSize: moderateScale(12, 0.3),
@@ -541,6 +551,7 @@ const styles = StyleSheet.create({
     borderRadius: scale(10),
     paddingHorizontal: scale(12),
     paddingVertical: verticalScale(10),
+    maxWidth: '100%',
   },
   codeBlockAi: {
     backgroundColor: '#E5E7EB',
@@ -552,6 +563,7 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontSize: moderateScale(13, 0.3),
     lineHeight: moderateScale(19),
+    flexShrink: 1,
   },
   blockquote: {
     borderLeftWidth: 3,
@@ -590,12 +602,14 @@ const styles = StyleSheet.create({
   },
   listContent: {
     flex: 1,
+    flexShrink: 1,
   },
   table: {
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: scale(8),
     overflow: 'hidden',
+    maxWidth: '100%',
   },
   tableHeaderRow: {
     backgroundColor: '#E5E7EB',

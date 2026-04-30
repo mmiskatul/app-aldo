@@ -39,12 +39,12 @@ export default function SettingsScreen() {
     }
 
     if (notice === 'profile-updated') {
-      setBannerMessage('Profile updated successfully.');
+      setBannerMessage(t('profile_updated_successfully'));
     }
 
     const timeoutId = setTimeout(() => setBannerMessage(''), 3000);
     return () => clearTimeout(timeoutId);
-  }, [notice, noticeKey]);
+  }, [notice, noticeKey, t]);
 
   return (
     <View style={styles.safeArea}>
@@ -79,8 +79,8 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>{t('support_legal')}</Text>
           <SettingsList
             items={[
-              { icon: 'file-text', label: 'Terms of Service', iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/terms-of-service') },
-              { icon: 'shield', label: 'Privacy Policy', iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/privacy') },
+              { icon: 'file-text', label: t('terms_of_service'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/terms-of-service') },
+              { icon: 'shield', label: t('privacy_policy'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/privacy') },
               { icon: 'help-circle', label: t('help_center'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/help-center') },
             ]}
           />

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useAppStore } from '../../store/useAppStore';
+import { useTranslation } from '../../utils/i18n';
 
 interface ProfileCardProps {
   onEditProfile: () => void;
@@ -9,6 +10,7 @@ interface ProfileCardProps {
 
 export default function ProfileCard({ onEditProfile }: ProfileCardProps) {
   const profile = useAppStore((state) => state.profile);
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
@@ -29,7 +31,7 @@ export default function ProfileCard({ onEditProfile }: ProfileCardProps) {
         onPress={onEditProfile}
         activeOpacity={0.8}
       >
-        <Text style={styles.editButtonText}>Edit Profile</Text>
+        <Text style={styles.editButtonText}>{t('edit_profile_button')}</Text>
       </TouchableOpacity>
     </View>
   );

@@ -17,8 +17,10 @@ import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
 import { changeRestaurantPassword } from '../../../api/settings';
 import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
+import { useTranslation } from '../../../utils/i18n';
 
 export default function ChangePasswordScreen() {
+  const { t } = useTranslation();
   const profile = useAppStore((state) => state.profile);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -56,14 +58,14 @@ export default function ChangePasswordScreen() {
         new_password: newPassword,
         confirm_password: confirmPassword,
       });
-      showSuccessMessage(response.message, 'Password changed');
+      showSuccessMessage(response.message, t('password_changed'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: any) {
       showErrorMessage(
-        err?.message || 'Something went wrong. Please try again.',
-        'Unable to change password'
+        err?.message || t('something_went_wrong'),
+        t('change_password_failed')
       );
     } finally {
       setIsSaving(false);
@@ -84,7 +86,7 @@ export default function ChangePasswordScreen() {
   return (
     <View style={styles.safeArea}>
       <Header
-        title="Change Password"
+        title={t('change_password')}
         showBack={true}
         rightComponent={<AvatarRight />}
       />
@@ -97,21 +99,20 @@ export default function ChangePasswordScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
-          <Text style={styles.heroTitle}>Secure Your Account</Text>
+          <Text style={styles.heroTitle}>{t('secure_account_title')}</Text>
           <Text style={styles.heroDesc}>
-            Choose a strong, unique password to protect your restaurant data and
-            staff information.
+            {t('secure_account_desc')}
           </Text>
 
           <View style={styles.inputBlock}>
-            <Text style={styles.inputLabel}>Current Password</Text>
+            <Text style={styles.inputLabel}>{t('current_password')}</Text>
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
                 secureTextEntry={!showCurrent}
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
-                placeholder="Enter current password"
+                placeholder={t('enter_current_password')}
                 placeholderTextColor="#9CA3AF"
                 autoCapitalize="none"
               />
@@ -129,14 +130,14 @@ export default function ChangePasswordScreen() {
           </View>
 
           <View style={styles.inputBlock}>
-            <Text style={styles.inputLabel}>New Password</Text>
+            <Text style={styles.inputLabel}>{t('new_password')}</Text>
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
                 secureTextEntry={!showNew}
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="Enter new password"
+                placeholder={t('enter_new_password')}
                 placeholderTextColor="#9CA3AF"
                 autoCapitalize="none"
               />
@@ -162,7 +163,7 @@ export default function ChangePasswordScreen() {
                 <Text
                   style={[styles.valText, hasMinLength && styles.validText]}
                 >
-                  Minimum 8 characters
+                  {t('password_minimum_characters')}
                 </Text>
               </View>
               <View style={styles.valRow}>
@@ -172,7 +173,7 @@ export default function ChangePasswordScreen() {
                   color={hasNumber ? '#10B981' : '#9CA3AF'}
                 />
                 <Text style={[styles.valText, hasNumber && styles.validText]}>
-                  At least one number
+                  {t('password_one_number')}
                 </Text>
               </View>
               <View style={styles.valRow}>
@@ -182,21 +183,21 @@ export default function ChangePasswordScreen() {
                   color={hasLetter ? '#10B981' : '#9CA3AF'}
                 />
                 <Text style={[styles.valText, hasLetter && styles.validText]}>
-                  At least one letter
+                  {t('password_one_letter')}
                 </Text>
               </View>
             </View>
           </View>
 
           <View style={styles.inputBlock}>
-            <Text style={styles.inputLabel}>Confirm Password</Text>
+            <Text style={styles.inputLabel}>{t('confirm_password')}</Text>
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
                 secureTextEntry={!showConfirm}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
-                placeholder="Confirm new password"
+                placeholder={t('confirm_new_password')}
                 placeholderTextColor="#9CA3AF"
                 autoCapitalize="none"
               />
@@ -212,11 +213,11 @@ export default function ChangePasswordScreen() {
               </TouchableOpacity>
             </View>
             {!passwordsMatch && confirmPassword.length > 0 ? (
-              <Text style={styles.errorText}>Passwords do not match.</Text>
+              <Text style={styles.errorText}>{t('passwords_do_not_match')}</Text>
             ) : null}
             {passwordsMatch && !isDifferentFromCurrent && confirmPassword.length > 0 ? (
               <Text style={styles.errorText}>
-                New password must be different from current password.
+                {t('password_must_differ')}
               </Text>
             ) : null}
           </View>
@@ -228,7 +229,7 @@ export default function ChangePasswordScreen() {
             onPress={handleSave}
           >
             <Text style={styles.saveButtonText}>
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving ? t('saving') : t('save_changes')}
             </Text>
           </TouchableOpacity>
         </ScrollView>

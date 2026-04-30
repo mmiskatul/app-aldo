@@ -7,7 +7,7 @@ import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
 import { showErrorMessage, showInfoMessage, showSuccessMessage } from '../../../utils/feedback';
-import { useTranslation } from '../../../utils/i18n';
+import { getLocale, useTranslation } from '../../../utils/i18n';
 
 import { HistoryList } from '../../../components/inventory/view-stock/HistoryList';
 import { StockUpdate } from '../../../components/inventory/view-stock/StockUpdate';
@@ -50,19 +50,20 @@ const hasCompleteDetailCache = (value: unknown): value is InventoryDetailRespons
   );
 };
 
-const formatLongDate = (value?: string | null) => {
+const formatLongDate = (value: string | null | undefined, locale: string, fallback: string) => {
   if (!value) {
-    return 'N/A';
+    return fallback;
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 export default function ItemDetailScreen() {
   const { t } = useTranslation();
+  const locale = getLocale();
   const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const inventoryDetailCache = useAppStore((state) => state.inventoryDetailCache);
@@ -88,11 +89,11 @@ export default function ItemDetailScreen() {
       setItem(response.data);
       setInventoryDetailCacheItem(itemId, response.data);
     } catch (error: any) {
-      showErrorMessage(error.response?.data?.detail || error.message || 'Unable to load item.', 'Load failed');
+      showErrorMessage(error.response?.data?.detail || error.message || t('unable_to_load_item'), t('load_failed'));
     } finally {
       setLoading(false);
     }
-  }, [cachedItem, itemId, setInventoryDetailCacheItem]);
+  }, [cachedItem, itemId, setInventoryDetailCacheItem, t]);
 
   useEffect(() => {
     void fetchItem();
@@ -109,19 +110,19 @@ export default function ItemDetailScreen() {
       currentStock: item.current_stock_value,
       unit: item.unit_type,
       supplier: {
-        supplierName: item.supplier_name || 'Unknown supplier',
-        supplierRole: 'Primary Distributor',
-        lastPurchase: formatLongDate(item.purchase_date),
+        supplierName: item.supplier_name || t('unknown_supplier'),
+        supplierRole: t('primary_distributor'),
+        lastPurchase: formatLongDate(item.purchase_date, locale, t('not_available')),
         pricePerUnitLabel: `$${item.unit_price.toFixed(2)} / ${item.unit_type}`,
       },
       history: (Array.isArray(item.history) ? item.history : []).map((entry) => ({
         type: (entry.kind === 'stock_added' ? 'add' : entry.kind === 'stock_removed' ? 'remove' : 'purchase') as HistoryEntryType,
-        label: entry.kind === 'stock_added' ? 'Stock Added' : entry.kind === 'stock_removed' ? 'Stock Removed' : 'Purchase Record',
-        date: formatLongDate(entry.occurred_at),
+        label: entry.kind === 'stock_added' ? t('stock_added') : entry.kind === 'stock_removed' ? t('stock_removed') : t('purchase_record'),
+        date: formatLongDate(entry.occurred_at, locale, t('not_available')),
         amount: `${entry.quantity_delta > 0 ? '+' : ''}${entry.quantity_delta}`,
       })),
     };
-  }, [item]);
+  }, [item, locale, t]);
 
   const handleDelete = async () => {
     if (!itemId) {
@@ -129,9 +130,9 @@ export default function ItemDetailScreen() {
     }
     setDeleting(true);
     try {
-      showInfoMessage('Deleting inventory item...');
+      showInfoMessage(t('delete_item_in_progress'));
       await apiClient.delete(`/api/v1/restaurant/inventory/${itemId}`);
-      showSuccessMessage('Inventory item deleted.');
+      showSuccessMessage(t('inventory_item_deleted'));
       bumpInventoryRefreshToken();
       clearHomeScreenCache();
       removeInventoryDetailCacheItem(itemId);
@@ -143,7 +144,7 @@ export default function ItemDetailScreen() {
         },
       });
     } catch (error: any) {
-      showErrorMessage(error.response?.data?.detail || error.message || 'Unable to delete item.', 'Delete failed');
+      showErrorMessage(error.response?.data?.detail || error.message || t('unable_to_delete_item'), t('delete_failed'));
     } finally {
       setDeleting(false);
     }
@@ -209,7 +210,7 @@ export default function ItemDetailScreen() {
           >
             <Feather name="trash-2" size={moderateScale(16)} color="#DC2626" />
             <Text style={[styles.secondaryBtnText, { color: '#DC2626' }]}>
-              {deleting ? 'Deleting...' : t('delete')}
+              {deleting ? t('deleting') : t('delete')}
             </Text>
           </TouchableOpacity>
         </View>

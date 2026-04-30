@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { Feather } from '@expo/vector-icons';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useLocale, useTranslation } from '../../utils/i18n';
 
 interface DatePickerProps {
   label: string;
@@ -13,6 +14,8 @@ interface DatePickerProps {
 
 export default function DatePicker({ label, value, onChange, leftIcon }: DatePickerProps) {
   const [showPicker, setShowPicker] = useState(false);
+  const locale = useLocale();
+  const { t } = useTranslation();
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
@@ -35,7 +38,7 @@ export default function DatePicker({ label, value, onChange, leftIcon }: DatePic
         <View style={styles.textContainer}>
           {leftIcon}
           <Text style={[styles.textInput, leftIcon ? { marginLeft: scale(12) } : null]}>
-            {value.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" })}
+            {value.toLocaleDateString(locale, { month: "2-digit", day: "2-digit", year: "numeric" })}
           </Text>
         </View>
         <Feather name="calendar" size={moderateScale(18)} color="#111827" />
@@ -54,7 +57,7 @@ export default function DatePicker({ label, value, onChange, leftIcon }: DatePic
               style={styles.iosPickerDoneButton}
               onPress={() => setShowPicker(false)}
             >
-              <Text style={styles.iosPickerDoneText}>Done</Text>
+              <Text style={styles.iosPickerDoneText}>{t('done')}</Text>
             </TouchableOpacity>
           )}
         </View>

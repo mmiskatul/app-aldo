@@ -28,12 +28,12 @@ export default function AddInventoryItemScreen() {
   const buildErrorMessage = (error: any) => {
     const detail = error?.response?.data?.detail;
     if (Array.isArray(detail)) {
-      return detail.map((item) => item?.msg || 'Invalid field').join('\n');
+      return detail.map((item) => item?.msg || t('invalid_field')).join('\n');
     }
     if (typeof detail === 'string') {
       return detail;
     }
-    return error?.message || 'Unable to save inventory item.';
+    return error?.message || t('unable_to_save_inventory_item');
   };
 
   const handleSave = async () => {
@@ -46,27 +46,27 @@ export default function AddInventoryItemScreen() {
     const parsedAlertThreshold = Number(alertThreshold || 0);
 
     if (trimmedProductName.length < 2) {
-      showErrorMessage('Product name must be at least 2 characters.', 'Validation');
+      showErrorMessage(t('product_name_min_length'), t('validation'));
       return;
     }
     if (trimmedCategory.length < 2) {
-      showErrorMessage('Category must be at least 2 characters.', 'Validation');
+      showErrorMessage(t('category_min_length'), t('validation'));
       return;
     }
     if (trimmedUnitType.length < 1) {
-      showErrorMessage('Unit type is required.', 'Validation');
+      showErrorMessage(t('unit_type_required'), t('validation'));
       return;
     }
     if (!Number.isFinite(parsedStockQuantity) || parsedStockQuantity < 0) {
-      showErrorMessage('Stock quantity must be a valid number.', 'Validation');
+      showErrorMessage(t('stock_quantity_invalid'), t('validation'));
       return;
     }
     if (!Number.isFinite(parsedUnitPrice) || parsedUnitPrice < 0) {
-      showErrorMessage('Unit price must be a valid number.', 'Validation');
+      showErrorMessage(t('unit_price_invalid'), t('validation'));
       return;
     }
     if (!Number.isFinite(parsedAlertThreshold) || parsedAlertThreshold < 0) {
-      showErrorMessage('Alert threshold must be a valid number.', 'Validation');
+      showErrorMessage(t('alert_threshold_invalid'), t('validation'));
       return;
     }
 
@@ -92,7 +92,7 @@ export default function AddInventoryItemScreen() {
         },
       });
     } catch (error: any) {
-      showErrorMessage(buildErrorMessage(error), 'Save failed');
+      showErrorMessage(buildErrorMessage(error), t('save_failed'));
     } finally {
       setSaving(false);
     }

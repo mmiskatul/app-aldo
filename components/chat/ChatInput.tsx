@@ -18,9 +18,6 @@ import { useTranslation } from "../../utils/i18n";
 interface ChatInputProps {
   onSend?: (text: string, file?: any) => void;
 }
-interface ChatInputProps {
-  onSend?: (text: string, file?: any) => void;
-}
 
 export default function ChatInput({ onSend }: ChatInputProps) {
   const { t } = useTranslation();
@@ -75,10 +72,11 @@ export default function ChatInput({ onSend }: ChatInputProps) {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
+        const assetWithMime = asset as ImagePicker.ImagePickerAsset & { mimeType?: string };
         setSelectedFile({
           uri: asset.uri,
           name: asset.fileName || asset.uri.split('/').pop() || 'image.jpg',
-          mimeType: asset.mimeType || 'image/jpeg',
+          mimeType: assetWithMime.mimeType || 'image/jpeg',
           size: asset.fileSize,
         });
       }

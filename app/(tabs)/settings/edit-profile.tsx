@@ -76,7 +76,7 @@ export default function EditProfileScreen() {
       const refreshedUser = await getCurrentUser();
       setUser(refreshedUser, tokens);
 
-      showSuccessMessage('Profile updated successfully.');
+      showSuccessMessage(t('profile_updated_successfully'));
       router.replace({
         pathname: '/(tabs)/settings',
         params: {
@@ -89,7 +89,7 @@ export default function EditProfileScreen() {
         'Error saving profile:',
         JSON.stringify(error.response?.data || error.message, null, 2)
       );
-      showErrorMessage(getApiErrorMessage(error, 'Failed to save profile changes. Please try again.'));
+      showErrorMessage(getApiErrorMessage(error, t('failed_to_save_profile_changes')));
     } finally {
       setLoading(false);
     }

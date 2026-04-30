@@ -34,6 +34,21 @@ interface QuickActionsProps {
 export default function QuickActions({ items: apiItems, loading = false }: QuickActionsProps) {
   const router = useRouter();
   const { t } = useTranslation();
+
+  const getTranslatedActionTitle = (key: string, fallbackLabel?: string) => {
+    switch (key) {
+      case 'upload_invoice':
+        return t('upload_invoice');
+      case 'daily_data':
+        return t('daily_data');
+      case 'expenses':
+        return t('expenses');
+      case 'cash':
+        return t('cash');
+      default:
+        return fallbackLabel || key;
+    }
+  };
   
   const getActionData = (key: string) => {
     switch (key) {
@@ -52,7 +67,7 @@ export default function QuickActions({ items: apiItems, loading = false }: Quick
 
   const fallbackActions = [
     { key: 'upload_invoice', label: t('upload_invoice') },
-    { key: 'daily_data', label: 'Daily Data' },
+    { key: 'daily_data', label: t('daily_data') },
     { key: 'expenses', label: t('expenses') },
     { key: 'cash', label: t('cash') },
   ];
@@ -60,7 +75,7 @@ export default function QuickActions({ items: apiItems, loading = false }: Quick
   const displayActions = (apiItems && apiItems.length > 0 ? apiItems : fallbackActions).map(item => {
     const { IconComponent, route } = getActionData(item.key);
     return {
-      title: item.key === 'daily_data' ? 'Daily Data' : item.label,
+      title: getTranslatedActionTitle(item.key, item.label),
       IconComponent,
       onPress: () => router.push(route as any),
     };
