@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
-import { useTranslation } from '../../utils/i18n';
+import { useLocale, useTranslation } from '../../utils/i18n';
 import Skeleton from '../ui/Skeleton';
 
 interface RevenuePoint {
@@ -23,27 +23,95 @@ const PADDING_RIGHT = scale(12);
 const PADDING_BOTTOM = verticalScale(30);
 const PADDING_LEFT = scale(8);
 const GRID_LINES = 4;
+const CARD_HORIZONTAL_PADDING = scale(32);
+const CHART_ROW_SIDE_SPACE = scale(44);
+const WEEKDAY_LABELS = {
+  en: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'],
+  it: ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'],
+} as const;
 
 const formatCompactCurrency = (value: number) => {
-  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
-  return `$${Math.round(value)}`;
+  if (value >= 1000000) return `\u20AC${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `\u20AC${(value / 1000).toFixed(1)}k`;
+  return `\u20AC${Math.round(value)}`;
 };
 
-const normalizeLabel = (label: string, period: string) => {
-  if (period === 'monthly' && label.startsWith('Week ')) return label.replace('Week ', 'W');
-  return label.length > 4 && period === 'weekly' ? label.slice(0, 3) : label;
+const parseLabelDate = (label: string) => {
+  const trimmedLabel = label.trim();
+  if (!/^\d{4}-\d{2}-\d{2}/.test(trimmedLabel)) {
+    return null;
+  }
+
+  const parsed = new Date(`${trimmedLabel.slice(0, 10)}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getFixedWeekdayLabel = (dayIndex: number, locale: string) => {
+  const language = locale.toLowerCase().startsWith('it') ? 'it' : 'en';
+  return WEEKDAY_LABELS[language][dayIndex] ?? WEEKDAY_LABELS.en[dayIndex] ?? '';
+};
+
+const normalizeLabel = (label: string, period: string, locale: string) => {
+  const trimmedLabel = label.trim();
+  const parsedDate = parseLabelDate(trimmedLabel);
+
+  if (parsedDate) {
+    if (period === 'weekly') {
+      return getFixedWeekdayLabel(parsedDate.getUTCDay(), locale);
+    }
+
+    return parsedDate
+      .toLocaleDateString(locale, { day: '2-digit', month: 'short', timeZone: 'UTC' })
+      .replace('.', '')
+      .toUpperCase();
+  }
+
+  const weekdayMap: Record<string, number> = {
+    sun: 0,
+    sunday: 0,
+    mon: 1,
+    monday: 1,
+    tue: 2,
+    tues: 2,
+    tuesday: 2,
+    wed: 3,
+    wednesday: 3,
+    thu: 4,
+    thur: 4,
+    thurs: 4,
+    thursday: 4,
+    fri: 5,
+    friday: 5,
+    sat: 6,
+    saturday: 6,
+  };
+  const weekdayIndex = weekdayMap[trimmedLabel.toLowerCase()];
+
+  if (weekdayIndex !== undefined) {
+    return getFixedWeekdayLabel(weekdayIndex, locale);
+  }
+
+  if (period === 'monthly' && trimmedLabel.startsWith('Week ')) {
+    return trimmedLabel.replace('Week ', 'W');
+  }
+
+  return trimmedLabel.length > 4 && period === 'weekly'
+    ? trimmedLabel.slice(0, 3).toUpperCase()
+    : trimmedLabel.toUpperCase();
 };
 
 export default function RevenueChart({ revenue = [], period = 'weekly', loading = false }: RevenueChartProps) {
   const { t } = useTranslation();
+  const locale = useLocale();
+  const { width: windowWidth } = useWindowDimensions();
   const safeRevenue = revenue.length > 0 ? revenue : [];
+  const chartWidth = Math.max(scale(220), Math.min(CHART_WIDTH, windowWidth - CARD_HORIZONTAL_PADDING - CHART_ROW_SIDE_SPACE));
   const maxValue = Math.max(...safeRevenue.map((item) => item.value), 0);
   const chartMax = maxValue > 0 ? Math.ceil(maxValue / GRID_LINES) * GRID_LINES : 4;
-  const plotWidth = CHART_WIDTH - PADDING_LEFT - PADDING_RIGHT;
+  const plotWidth = chartWidth - PADDING_LEFT - PADDING_RIGHT;
   const plotHeight = CHART_HEIGHT - PADDING_TOP - PADDING_BOTTOM;
   const barSlotWidth = safeRevenue.length > 0 ? plotWidth / safeRevenue.length : plotWidth;
-  const barWidth = Math.min(scale(22), Math.max(scale(12), barSlotWidth * 0.46));
+  const barWidth = Math.min(scale(20), Math.max(scale(10), barSlotWidth * 0.42));
   const yAxisValues = Array.from({ length: GRID_LINES + 1 }, (_, index) => {
     const step = chartMax / GRID_LINES;
     return Math.max(chartMax - step * index, 0);
@@ -81,7 +149,7 @@ export default function RevenueChart({ revenue = [], period = 'weekly', loading 
             ))}
           </View>
 
-          <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
+          <Svg width={chartWidth} height={CHART_HEIGHT}>
             <Defs>
               <LinearGradient id="homeBarFill" x1="0" y1="0" x2="0" y2="1">
                 <Stop offset="0%" stopColor="#F97316" />
@@ -100,7 +168,7 @@ export default function RevenueChart({ revenue = [], period = 'weekly', loading 
                   key={`grid-${index}`}
                   x1={PADDING_LEFT}
                   y1={y}
-                  x2={CHART_WIDTH - PADDING_RIGHT}
+                  x2={chartWidth - PADDING_RIGHT}
                   y2={y}
                   stroke="#F3F4F6"
                   strokeDasharray="4 4"
@@ -135,13 +203,13 @@ export default function RevenueChart({ revenue = [], period = 'weekly', loading 
                   />
                   <SvgText
                     x={x + barWidth / 2}
-                    y={CHART_HEIGHT - scale(6)}
-                    fontSize={moderateScale(9, 0.3)}
+                    y={CHART_HEIGHT - scale(7)}
+                    fontSize={moderateScale(8, 0.3)}
                     fontWeight="700"
                     fill={isPeak ? '#C2410C' : '#6B7280'}
                     textAnchor="middle"
                   >
-                    {normalizeLabel(item.label, period)}
+                    {normalizeLabel(item.label, period, locale)}
                   </SvgText>
                   {item.value > 0 ? (
                     <SvgText

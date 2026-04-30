@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { useTranslation } from "../../../utils/i18n";
 
 interface CashMetricsProps {
   summary: {
@@ -32,16 +33,18 @@ const formatCurrency = (value: number | string | null | undefined) => {
 };
 
 export default function CashMetrics({ summary, status }: CashMetricsProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.row}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Total Collection</Text>
+          <Text style={styles.cardTitle}>{t("total_collected")}</Text>
           <Text style={styles.cardValue}>{formatCurrency(summary.total_collected)}</Text>
           <Text style={styles.tagGreen}>{status.total_collected}</Text>
         </View>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Cash Available</Text>
+          <Text style={styles.cardTitle}>{t("cash_available")}</Text>
           <Text style={styles.cardValue}>{formatCurrency(summary.cash_available)}</Text>
           <Text style={styles.tagOrange}>{status.cash_available}</Text>
         </View>
@@ -49,12 +52,12 @@ export default function CashMetrics({ summary, status }: CashMetricsProps) {
 
       <View style={styles.row}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Withdrawals</Text>
+          <Text style={styles.cardTitle}>{t("withdrawals")}</Text>
           <Text style={styles.cardValue}>{formatCurrency(summary.withdrawals_total)}</Text>
           <Text style={styles.tagGrey}>{status.withdrawals}</Text>
         </View>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Cash Deposit</Text>
+          <Text style={styles.cardTitle}>{t("cash_deposit")}</Text>
           <Text style={styles.cardValue}>{formatCurrency(summary.bank_deposits)}</Text>
           <Text style={styles.tagGrey}>{status.bank_deposits}</Text>
         </View>

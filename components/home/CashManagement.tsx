@@ -42,6 +42,22 @@ interface CashManagementProps {
 export default function CashManagement({ cashData, loading = false, onItemPress }: CashManagementProps) {
   const { t } = useTranslation();
 
+  const getTranslatedCashLabel = (label: string) => {
+    switch (label.trim().toLowerCase()) {
+      case 'total collection':
+      case 'total collected':
+      case 'total cash collected':
+        return t('total_collected');
+      case 'cash available':
+        return t('cash_available');
+      case 'cash deposit':
+      case 'cash deposited':
+        return t('cash_deposit');
+      default:
+        return label;
+    }
+  };
+
   const getIconData = (label: string) => {
     switch (label.toLowerCase()) {
       case 'total collection':
@@ -60,7 +76,7 @@ export default function CashManagement({ cashData, loading = false, onItemPress 
   const parsedCashData: CashItemProps[] =
     cashData && cashData.length > 0
       ? cashData.map((cashItem) => ({
-          title: cashItem.label,
+          title: getTranslatedCashLabel(cashItem.label),
           value: `\u20AC${cashItem.amount.toLocaleString(undefined, {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
@@ -68,9 +84,9 @@ export default function CashManagement({ cashData, loading = false, onItemPress 
           IconComponent: getIconData(cashItem.label),
         }))
       : [
-          { title: 'Total Collection', value: '\u20AC0.00', IconComponent: CreditCardIcon },
-          { title: 'Cash Available', value: '\u20AC0.00', IconComponent: BanknotesIcon },
-          { title: 'Cash Deposit', value: '\u20AC0.00', IconComponent: BuildingLibraryIcon },
+          { title: t('total_collected'), value: '\u20AC0.00', IconComponent: CreditCardIcon },
+          { title: t('cash_available'), value: '\u20AC0.00', IconComponent: BanknotesIcon },
+          { title: t('cash_deposit'), value: '\u20AC0.00', IconComponent: BuildingLibraryIcon },
         ];
 
   const skeletonRows = [0, 1, 2];
