@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -6,26 +6,104 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import {
+  ArchiveBoxIcon,
+  BoltIcon,
+  BuildingLibraryIcon,
+  ClipboardDocumentListIcon,
+  DocumentArrowUpIcon,
+} from "react-native-heroicons/outline";
 
-import Header from '../../../components/ui/Header';
-import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
-import { getUserTickets, TicketListItem } from '../../../api/support';
+import apiClient from "../../../api/apiClient";
+import Header from "../../../components/ui/Header";
+import { ListRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 
 type NotificationItem = {
-  id: string;
-  ticketId: string;
+  kind: string;
   title: string;
-  message: string;
-  status: string;
-  date: string;
-  icon: keyof typeof Feather.glyphMap;
-  accent: string;
-  background: string;
+  subtitle: string;
+  timestamp: string;
+  entity_id?: string | null;
+  reference_date?: string | null;
+  source_kind?: string | null;
+  source_entity_id?: string | null;
+  route?: string | null;
+};
+
+type NotificationFeedResponse = {
+  items: NotificationItem[];
+};
+
+const resolveNotificationRoute = (item: NotificationItem) => {
+  const sourceKind = item.source_kind || item.kind;
+  const sourceEntityId = item.source_entity_id || item.entity_id;
+
+  switch (sourceKind) {
+    case "daily_record":
+      return sourceEntityId
+        ? `/(tabs)/home/daily-record-details?dataId=${sourceEntityId}`
+        : item.route;
+    case "inventory":
+      return sourceEntityId ? `/(tabs)/inventory/${sourceEntityId}` : item.route;
+    case "invoice":
+      return sourceEntityId ? `/(tabs)/documents/${sourceEntityId}` : item.route;
+    case "cash":
+      return sourceEntityId
+        ? `/(tabs)/home/cash-transaction-details?id=${sourceEntityId}`
+        : item.route;
+    case "expense":
+      return sourceEntityId
+        ? `/(tabs)/home/expense-details?id=${sourceEntityId}`
+        : item.route;
+    default:
+      return item.route;
+  }
+};
+
+const getIconForType = (type?: string) => {
+  switch (type?.toLowerCase()) {
+    case "invoice":
+      return {
+        IconComponent: DocumentArrowUpIcon,
+        iconBgColor: "#FFF0E5",
+        iconColor: "#FA8C4C",
+      };
+    case "expense":
+      return {
+        IconComponent: ClipboardDocumentListIcon,
+        iconBgColor: "#FEE2E2",
+        iconColor: "#EF4444",
+      };
+    case "inventory":
+      return {
+        IconComponent: ArchiveBoxIcon,
+        iconBgColor: "#E0F2FE",
+        iconColor: "#0284C7",
+      };
+    case "cash":
+      return {
+        IconComponent: BuildingLibraryIcon,
+        iconBgColor: "#DCFCE7",
+        iconColor: "#16A34A",
+      };
+    case "daily_record":
+      return {
+        IconComponent: BoltIcon,
+        iconBgColor: "#FEF3C7",
+        iconColor: "#D97706",
+      };
+    default:
+      return {
+        IconComponent: BoltIcon,
+        iconBgColor: "#FEF3C7",
+        iconColor: "#D97706",
+      };
+  }
 };
 
 const formatDate = (iso: string) => {
@@ -34,55 +112,13 @@ const formatDate = (iso: string) => {
     return iso;
   }
 
-  return parsed.toLocaleString('en-US', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return parsed.toLocaleString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
-};
-
-const toNotificationItem = (ticket: TicketListItem): NotificationItem => {
-  if (ticket.status === 'resolved') {
-    return {
-      id: ticket.id,
-      ticketId: ticket.id,
-      title: 'Support issue resolved',
-      message: `${ticket.ticket_number} has been marked as resolved by the admin team.`,
-      status: ticket.status,
-      date: ticket.date,
-      icon: 'check-circle',
-      accent: '#059669',
-      background: '#ECFDF5',
-    };
-  }
-
-  if (ticket.status === 'pending') {
-    return {
-      id: ticket.id,
-      ticketId: ticket.id,
-      title: 'Support ticket updated',
-      message: `${ticket.ticket_number} is pending review. Tap to view the latest conversation.`,
-      status: ticket.status,
-      date: ticket.date,
-      icon: 'clock',
-      accent: '#4F46E5',
-      background: '#EEF2FF',
-    };
-  }
-
-  return {
-    id: ticket.id,
-    ticketId: ticket.id,
-    title: 'Support ticket submitted',
-    message: `${ticket.ticket_number} is open. Tap to view details and status.`,
-    status: ticket.status,
-    date: ticket.date,
-    icon: 'info',
-    accent: '#F97316',
-    background: '#FFF7ED',
-  };
 };
 
 function NotificationCard({
@@ -92,16 +128,18 @@ function NotificationCard({
   item: NotificationItem;
   onPress: () => void;
 }) {
+  const { IconComponent, iconBgColor, iconColor } = getIconForType(item.kind);
+
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.8} onPress={onPress}>
-      <View style={[styles.iconWrap, { backgroundColor: item.background }]}>
-        <Feather name={item.icon} size={moderateScale(18)} color={item.accent} />
+      <View style={[styles.iconWrap, { backgroundColor: iconBgColor }]}>
+        <IconComponent size={moderateScale(18)} color={iconColor} />
       </View>
 
       <View style={styles.content}>
         <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.message}>{item.message}</Text>
-        <Text style={styles.date}>{formatDate(item.date)}</Text>
+        <Text style={styles.message}>{item.subtitle}</Text>
+        <Text style={styles.date}>{formatDate(item.timestamp)}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -110,7 +148,7 @@ function NotificationCard({
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [tickets, setTickets] = useState<TicketListItem[]>([]);
+  const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,10 +161,16 @@ export default function NotificationsScreen() {
     setError(null);
 
     try {
-      const response = await getUserTickets(1, 50);
-      setTickets(response.items);
+      const response = await apiClient.get<NotificationFeedResponse>(
+        "/api/v1/restaurant/notifications/feed"
+      );
+      setItems(response.data.items || []);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? 'Failed to load notifications.');
+      setError(
+        err?.response?.data?.message ??
+          err?.message ??
+          "Failed to load notifications."
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -134,17 +178,14 @@ export default function NotificationsScreen() {
   }, []);
 
   useEffect(() => {
-    fetchNotifications();
+    void fetchNotifications();
   }, [fetchNotifications]);
 
-  const notifications = useMemo(
-    () => tickets.map(toNotificationItem),
-    [tickets]
-  );
+  const notifications = useMemo(() => items, [items]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchNotifications(true);
+    void fetchNotifications(true);
   };
 
   const renderEmpty = () => (
@@ -152,7 +193,7 @@ export default function NotificationsScreen() {
       <Feather name="bell-off" size={moderateScale(46)} color="#D1D5DB" />
       <Text style={styles.emptyTitle}>No notifications yet</Text>
       <Text style={styles.emptySubtitle}>
-        Support updates and ticket resolution alerts will appear here.
+        Cash, expenses, daily data, invoice, and inventory updates will appear here.
       </Text>
     </View>
   );
@@ -165,21 +206,36 @@ export default function NotificationsScreen() {
         <ListRouteSkeleton withAction={false} itemCount={4} />
       ) : error ? (
         <View style={styles.emptyContainer}>
-          <Feather name="alert-circle" size={moderateScale(46)} color="#FCA5A5" />
+          <Feather
+            name="alert-circle"
+            size={moderateScale(46)}
+            color="#FCA5A5"
+          />
           <Text style={styles.emptyTitle}>Something went wrong</Text>
           <Text style={styles.emptySubtitle}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => fetchNotifications()} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => void fetchNotifications()}
+            activeOpacity={0.8}
+          >
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={notifications}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) =>
+            `${item.kind}-${item.entity_id || item.source_entity_id || index}`
+          }
           renderItem={({ item }) => (
             <NotificationCard
               item={item}
-              onPress={() => router.push(`/(tabs)/settings/ticket-detail?id=${item.ticketId}` as any)}
+              onPress={() => {
+                const route = resolveNotificationRoute(item);
+                if (route) {
+                  router.push(route as any);
+                }
+              }}
             />
           )}
           ListEmptyComponent={renderEmpty}
@@ -194,7 +250,7 @@ export default function NotificationsScreen() {
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor="#FA8B4F"
-              colors={['#FA8B4F']}
+              colors={["#FA8B4F"]}
             />
           }
         />
@@ -206,7 +262,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: "#F9FAFB",
   },
   listContent: {
     padding: scale(16),
@@ -216,14 +272,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: scale(12),
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: scale(16),
     padding: scale(16),
     borderWidth: 1,
-    borderColor: '#F3F4F6',
-    shadowColor: '#000',
+    borderColor: "#F3F4F6",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -233,57 +289,57 @@ const styles = StyleSheet.create({
     width: moderateScale(40),
     height: moderateScale(40),
     borderRadius: moderateScale(20),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   content: {
     flex: 1,
   },
   title: {
     fontSize: moderateScale(15, 0.3),
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: verticalScale(4),
   },
   message: {
     fontSize: moderateScale(13, 0.3),
-    color: '#4B5563',
+    color: "#4B5563",
     lineHeight: moderateScale(20),
   },
   date: {
     marginTop: verticalScale(8),
     fontSize: moderateScale(12, 0.3),
-    color: '#9CA3AF',
+    color: "#9CA3AF",
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: scale(32),
   },
   emptyTitle: {
     fontSize: moderateScale(18, 0.3),
-    fontWeight: '700',
-    color: '#374151',
+    fontWeight: "700",
+    color: "#374151",
     marginTop: verticalScale(16),
     marginBottom: verticalScale(8),
   },
   emptySubtitle: {
     fontSize: moderateScale(14, 0.3),
-    color: '#9CA3AF',
-    textAlign: 'center',
+    color: "#9CA3AF",
+    textAlign: "center",
     lineHeight: 22,
   },
   retryButton: {
     marginTop: verticalScale(20),
-    backgroundColor: '#FA8B4F',
+    backgroundColor: "#FA8B4F",
     paddingHorizontal: scale(32),
     paddingVertical: verticalScale(12),
     borderRadius: scale(12),
   },
   retryText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: "#FFFFFF",
+    fontWeight: "700",
     fontSize: moderateScale(14, 0.3),
   },
 });
