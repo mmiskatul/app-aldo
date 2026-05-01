@@ -12,9 +12,10 @@ interface AIInsightProps {
     summary: string;
   };
   loading?: boolean;
+  onNavigate?: (route: string) => void;
 }
 
-export default function AIInsightBox({ insight, loading = false }: AIInsightProps) {
+export default function AIInsightBox({ insight, loading = false, onNavigate }: AIInsightProps) {
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -44,7 +45,13 @@ export default function AIInsightBox({ insight, loading = false }: AIInsightProp
           
           <TouchableOpacity 
             style={styles.actionButton}
-            onPress={() => router.push("/(tabs)/home/view-insight")}
+            onPress={() => {
+              if (onNavigate) {
+                onNavigate("/(tabs)/home/view-insight");
+                return;
+              }
+              router.push("/(tabs)/home/view-insight");
+            }}
           >
             <Text style={styles.actionText}>{t('view_insight')}</Text>
             <ArrowRightIcon size={moderateScale(14)} color="#FFFFFF" style={styles.arrow} />

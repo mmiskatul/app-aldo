@@ -29,9 +29,10 @@ interface QuickActionsProps {
     label: string;
   }[];
   loading?: boolean;
+  onNavigate?: (route: string) => void;
 }
 
-export default function QuickActions({ items: apiItems, loading = false }: QuickActionsProps) {
+export default function QuickActions({ items: apiItems, loading = false, onNavigate }: QuickActionsProps) {
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -77,7 +78,13 @@ export default function QuickActions({ items: apiItems, loading = false }: Quick
     return {
       title: getTranslatedActionTitle(item.key, item.label),
       IconComponent,
-      onPress: () => router.push(route as any),
+      onPress: () => {
+        if (onNavigate) {
+          onNavigate(route);
+          return;
+        }
+        router.push(route as any);
+      },
     };
   });
 

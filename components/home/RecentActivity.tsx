@@ -14,9 +14,10 @@ interface ActivityItemProps {
   iconBgColor: string;
   iconColor: string;
   route?: string | null;
+  onNavigate?: (route: string) => void;
 }
 
-const ActivityItem = ({ title, subtitle, timeText, IconComponent, iconBgColor, iconColor, route }: ActivityItemProps) => {
+const ActivityItem = ({ title, subtitle, timeText, IconComponent, iconBgColor, iconColor, route, onNavigate }: ActivityItemProps) => {
   const router = useRouter();
   const content = (
     <>
@@ -38,7 +39,13 @@ const ActivityItem = ({ title, subtitle, timeText, IconComponent, iconBgColor, i
       <TouchableOpacity
         style={styles.itemContainer}
         activeOpacity={0.8}
-        onPress={() => router.push(route as any)}
+        onPress={() => {
+          if (onNavigate) {
+            onNavigate(route);
+            return;
+          }
+          router.push(route as any);
+        }}
       >
         {content}
       </TouchableOpacity>
@@ -55,6 +62,7 @@ const ActivityItem = ({ title, subtitle, timeText, IconComponent, iconBgColor, i
 interface RecentActivityProps {
   activities?: any[];
   loading?: boolean;
+  onNavigate?: (route: string) => void;
 }
 
 const resolveActivityRoute = (activity: any) => {
@@ -87,7 +95,7 @@ const resolveActivityRoute = (activity: any) => {
   }
 };
 
-export default function RecentActivity({ activities: apiActivities, loading = false }: RecentActivityProps) {
+export default function RecentActivity({ activities: apiActivities, loading = false, onNavigate }: RecentActivityProps) {
   const { t } = useTranslation();
 
   const getIconForType = (type?: string) => {
@@ -126,6 +134,7 @@ export default function RecentActivity({ activities: apiActivities, loading = fa
           subtitle: activity.subtitle || '',
           timeText: formatTimestamp(activity.timestamp),
           route: resolveActivityRoute(activity),
+          onNavigate,
           ...getIconForType(activity.kind),
         }))
       : [];

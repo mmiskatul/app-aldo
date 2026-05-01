@@ -244,6 +244,15 @@ export default function AuthSignupScreen() {
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
+
+      {isLoading ? (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          <View style={styles.loadingContent}>
+            <ActivityIndicator size="large" color="#FA8C4C" />
+            <Text style={styles.loadingText}>Creating account...</Text>
+          </View>
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -339,5 +348,25 @@ const styles = StyleSheet.create({
   footerHighlight: {
     fontWeight: "700",
     color: "#FA8C4C",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.58)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+    elevation: 1000,
+  },
+  loadingContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: scale(200),
+    paddingHorizontal: scale(20),
+  },
+  loadingText: {
+    marginTop: verticalScale(14),
+    fontSize: moderateScale(20, 0.3),
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

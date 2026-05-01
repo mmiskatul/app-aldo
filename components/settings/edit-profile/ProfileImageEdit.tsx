@@ -23,6 +23,7 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
   const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(profileImageUrl || null);
+  const hasProfileImage = !!localImageUri;
 
   React.useEffect(() => {
     setLocalImageUri(profileImageUrl || null);
@@ -93,10 +94,16 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
   return (
     <View style={styles.container}>
       <View style={styles.imageWrapper}>
-        <Image 
-          source={{ uri: localImageUri || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200' }} 
-          style={styles.avatar}  
-        />
+        {hasProfileImage ? (
+          <Image
+            source={{ uri: localImageUri || undefined }}
+            style={styles.avatar}
+          />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Feather name="image" size={moderateScale(22)} color="#D1D5DB" />
+          </View>
+        )}
         <TouchableOpacity style={styles.cameraButton} onPress={() => setModalVisible(true)}>
           <Feather name="camera" size={moderateScale(14)} color="#FFFFFF" />
         </TouchableOpacity>
@@ -130,6 +137,17 @@ const styles = StyleSheet.create({
     borderRadius: scale(50),
     borderWidth: 4,
     borderColor: '#FFE4D1',
+  },
+  avatarPlaceholder: {
+    width: scale(100),
+    height: scale(100),
+    borderRadius: scale(50),
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#E5E7EB',
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cameraButton: {
     position: 'absolute',

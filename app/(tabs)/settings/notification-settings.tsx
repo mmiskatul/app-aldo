@@ -126,14 +126,14 @@ export default function NotificationSettingsScreen() {
   };
 
   const AvatarRight = () => (
-    <Image
-      source={{
-        uri:
-          profile?.profile_image_url ||
-          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200',
-      }}
-      style={styles.avatar}
-    />
+    profile?.profile_image_url ? (
+      <Image
+        source={{ uri: profile.profile_image_url }}
+        style={styles.avatar}
+      />
+    ) : (
+      <View style={styles.avatarPlaceholder} />
+    )
   );
 
   return (
@@ -214,6 +214,12 @@ const styles = StyleSheet.create({
     width: moderateScale(36),
     height: moderateScale(36),
     borderRadius: moderateScale(18),
+  },
+  avatarPlaceholder: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    backgroundColor: '#E5E7EB',
   },
   content: {
     padding: scale(20),

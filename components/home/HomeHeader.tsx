@@ -22,20 +22,21 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
     greetingName ||
     profile?.full_name?.trim() ||
     t("restaurant_name_fallback");
-  const avatarName = encodeURIComponent(displayName);
-  const avatarUri =
-    profile?.profile_image_url ||
-    `https://ui-avatars.com/api/?name=${avatarName}&background=0D8ABC&color=fff&rounded=true`;
+  const hasProfileImage = !!profile?.profile_image_url;
 
   return (
     <View style={styles.container}>
       <View style={styles.leftSection}>
-        <Image
-          style={styles.avatar}
-          source={{
-            uri: avatarUri,
-          }}
-        />
+        {hasProfileImage ? (
+          <Image
+            style={styles.avatar}
+            source={{
+              uri: profile?.profile_image_url || undefined,
+            }}
+          />
+        ) : (
+          <View style={styles.avatarPlaceholder} />
+        )}
         <View style={styles.textContainer}>
           <Text style={styles.restaurantName} numberOfLines={1}>
             {(restaurantName || profile?.restaurant_name)
@@ -97,6 +98,13 @@ const styles = StyleSheet.create({
     height: scale(40),
     borderRadius: scale(20),
     marginRight: scale(12),
+  },
+  avatarPlaceholder: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    marginRight: scale(12),
+    backgroundColor: "#E5E7EB",
   },
   textContainer: {
     justifyContent: "center",

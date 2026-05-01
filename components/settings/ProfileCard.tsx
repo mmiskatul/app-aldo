@@ -11,14 +11,19 @@ interface ProfileCardProps {
 export default function ProfileCard({ onEditProfile }: ProfileCardProps) {
   const profile = useAppStore((state) => state.profile);
   const { t } = useTranslation();
+  const hasProfileImage = !!profile?.profile_image_url;
 
   return (
     <View style={styles.container}>
       <View style={styles.infoRow}>
-        <Image 
-          source={{ uri: profile?.profile_image_url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200' }} 
-          style={styles.avatar} 
-        />
+        {hasProfileImage ? (
+          <Image
+            source={{ uri: profile?.profile_image_url || undefined }}
+            style={styles.avatar}
+          />
+        ) : (
+          <View style={styles.avatarPlaceholder} />
+        )}
         <View style={styles.textContainer}>
           <Text style={styles.name}>{profile?.full_name || 'Loading...'}</Text>
           <Text style={styles.email}>{profile?.email || '-----'}</Text>
@@ -56,6 +61,14 @@ const styles = StyleSheet.create({
     borderRadius: scale(35),
     borderWidth: 3,
     borderColor: '#FFFFFF',
+  },
+  avatarPlaceholder: {
+    width: scale(70),
+    height: scale(70),
+    borderRadius: scale(35),
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    backgroundColor: '#E5E7EB',
   },
   textContainer: {
     marginLeft: scale(16),

@@ -501,12 +501,7 @@ export const setI18nLanguage = async (language: AppLanguage) => {
 };
 
 export const useTranslation = () => {
-  const language = useAppStore((state) => state.appLanguage) || 'en';
   const translation = useI18NextTranslation();
-
-  if (i18n.language !== language) {
-    void i18n.changeLanguage(language);
-  }
 
   const tHook = (key: TranslationKey): string => {
     return translation.t(key);

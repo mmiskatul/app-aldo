@@ -421,27 +421,18 @@ export default function AnalyticsScreen() {
     }
   }, [businessInsight, fetchAnalyticsOverview, fetchBusinessInsight, fetchNonAiSectionsStaggered]);
 
+  const hasCachedPeriodData =
+    !!metricTilesByPeriod[activePeriod] &&
+    !!revenueTrendByPeriod[activePeriod] &&
+    !!summaryStatsByPeriod[activePeriod] &&
+    !!revenueComparisonByPeriod[activePeriod] &&
+    !!coversActivityByPeriod[activePeriod] &&
+    !!costBreakdownByPeriod[activePeriod] &&
+    !!supplierAlertsByPeriod[activePeriod];
+
   React.useEffect(() => {
-    const hasCachedPeriodData =
-      !!metricTilesByPeriod[activePeriod] &&
-      !!revenueTrendByPeriod[activePeriod] &&
-      !!summaryStatsByPeriod[activePeriod] &&
-      !!revenueComparisonByPeriod[activePeriod] &&
-      !!coversActivityByPeriod[activePeriod] &&
-      !!costBreakdownByPeriod[activePeriod] &&
-      !!supplierAlertsByPeriod[activePeriod];
     void fetchAnalyticsData(activePeriod, !hasCachedPeriodData);
-  }, [
-    activePeriod,
-    costBreakdownByPeriod,
-    coversActivityByPeriod,
-    fetchAnalyticsData,
-    metricTilesByPeriod,
-    revenueComparisonByPeriod,
-    revenueTrendByPeriod,
-    supplierAlertsByPeriod,
-      summaryStatsByPeriod,
-  ]);
+  }, [activePeriod]);
 
   React.useEffect(() => {
     clearAnalyticsScreenCache();
@@ -454,7 +445,7 @@ export default function AnalyticsScreen() {
     setCostBreakdownByPeriod({});
     setSupplierAlertsByPeriod({});
     void fetchAnalyticsData(activePeriod, true);
-  }, [appLanguage, clearAnalyticsScreenCache, fetchAnalyticsData]);
+  }, [appLanguage]);
 
   const handlePeriodChange = (period: string) => {
     setActivePeriod(period as PeriodKey);

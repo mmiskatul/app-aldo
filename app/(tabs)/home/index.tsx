@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet, View, RefreshControl, NativeSyntheticEvent, NativeScrollEvent } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View, RefreshControl, NativeSyntheticEvent, NativeScrollEvent } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale, verticalScale } from "react-native-size-matters";
@@ -116,7 +116,7 @@ const REVENUE_TRIGGER_Y = 260;
 const INSIGHT_TRIGGER_Y = 520;
 const RECENT_ACTIVITY_TRIGGER_Y = 760;
 const HOME_SECTION_LOAD_DELAY_MS = 160;
-
+const HOME_ROUTE_TRANSITION_DELAY_MS = 100;
 export default function TabsIndex() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -133,6 +133,7 @@ export default function TabsIndex() {
   const [activePeriod, setActivePeriod] = useState<PeriodKey>("weekly");
   const [loading, setLoading] = useState(!homeScreenCache.shellData);
   const [refreshing, setRefreshing] = useState(false);
+  const [routeTransitionLoading, setRouteTransitionLoading] = useState(false);
 
   const [metricsByPeriod, setMetricsByPeriod] = useState<Partial<Record<PeriodKey, MetricCard[]>>>(homeScreenCache.metricsByPeriod);
   const [cashByPeriod, setCashByPeriod] = useState<Partial<Record<PeriodKey, CashItem[]>>>(homeScreenCache.cashByPeriod);
@@ -561,6 +562,13 @@ export default function TabsIndex() {
     }
   };
 
+  const navigateFromHome = useCallback((route: string) => {
+    setRouteTransitionLoading(true);
+    setTimeout(() => {
+      router.push(route as any);
+    }, HOME_ROUTE_TRANSITION_DELAY_MS);
+  }, [router]);
+
   return (
     <View style={styles.container}>
       <View
@@ -600,22 +608,36 @@ export default function TabsIndex() {
         <CashManagement
           cashData={currentCashManagement}
           loading={cashSectionLoading}
-          onItemPress={() => router.push("/(tabs)/home/cash-management")}
+          onItemPress={() => navigateFromHome("/(tabs)/home/cash-management")}
         />
-        <QuickActions items={shellData?.quick_actions} loading={quickActionsLoading} />
+        <QuickActions items={shellData?.quick_actions} loading={quickActionsLoading} onNavigate={navigateFromHome} />
         <VatBalance
           balance={vatBalance ?? undefined}
           loading={vatSectionLoading}
-          onPress={() => router.push("/(tabs)/home/vat")}
+          onPress={() => navigateFromHome("/(tabs)/home/vat")}
         />
         <RevenueChart
           revenue={currentRevenue}
           period={activePeriod}
           loading={(shellLoading || revenueLoading) && !currentRevenue}
         />
-        <AIInsightBox insight={currentInsight ?? undefined} loading={(shellLoading || insightLoading) && !(activePeriod in insightByPeriod)} />
-        <RecentActivity activities={recentActivity ?? undefined} loading={(shellLoading || recentActivityLoading) && recentActivity === null} />
+        <AIInsightBox
+          insight={currentInsight ?? undefined}
+          loading={(shellLoading || insightLoading) && !(activePeriod in insightByPeriod)}
+          onNavigate={navigateFromHome}
+        />
+        <RecentActivity
+          activities={recentActivity ?? undefined}
+          loading={(shellLoading || recentActivityLoading) && recentActivity === null}
+          onNavigate={navigateFromHome}
+        />
       </ScrollView>
+
+      {routeTransitionLoading ? (
+        <View style={styles.routeTransitionOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color="#FA8C4C" />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -628,5 +650,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: scale(20),
+  },
+  routeTransitionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(249, 250, 251, 0.18)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 20,
+    elevation: 20,
   },
 });

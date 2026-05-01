@@ -1,7 +1,10 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Feather } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 import { useAppStore } from '../../../store/useAppStore';
 import apiClient from '../../../api/apiClient';
 import { getCurrentUser } from '../../../api/auth';
@@ -15,6 +18,8 @@ import ProfileImageEdit, { ProfileImageFile } from '../../../components/settings
 import FormInput from '../../../components/settings/edit-profile/FormInput';
 import RestaurantDetailsForm from '../../../components/settings/edit-profile/RestaurantDetailsForm';
 
+const SAVE_SUCCESS_SOUND = require('../../../assets/sounds/save-success.wav');
+
 export default function EditProfileScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -24,6 +29,8 @@ export default function EditProfileScreen() {
   const setUser = useAppStore((state) => state.setUser);
   const tokens = useAppStore((state) => state.tokens);
   const [loading, setLoading] = useState(false);
+  const [savePhase, setSavePhase] = useState<'idle' | 'saving' | 'success'>('idle');
+  const [loadingDots, setLoadingDots] = useState(1);
 
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
@@ -40,8 +47,50 @@ export default function EditProfileScreen() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  useEffect(() => {
+    if (savePhase !== 'saving') {
+      setLoadingDots(1);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setLoadingDots((current) => (current % 3) + 1);
+    }, 420);
+
+    return () => clearInterval(intervalId);
+  }, [savePhase]);
+
+  const playSuccessCue = async () => {
+    try {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.log('Haptic feedback failed:', error);
+    }
+
+    try {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+      const { sound } = await Audio.Sound.createAsync(SAVE_SUCCESS_SOUND, {
+        shouldPlay: true,
+        volume: 0.55,
+      });
+
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (!status.isLoaded || !status.didJustFinish) {
+          return;
+        }
+        void sound.unloadAsync();
+      });
+    } catch (error) {
+      console.log('Success audio failed:', error);
+    }
+  };
+
   const handleSave = async () => {
     setLoading(true);
+    setSavePhase('saving');
     try {
       const data = new FormData();
       data.append('full_name', formData.full_name);
@@ -60,8 +109,6 @@ export default function EditProfileScreen() {
         } as any);
       }
 
-      console.log('Submitting FormData payload:', data);
-
       const response = await apiClient.put('/api/v1/restaurant/settings/profile', data, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -76,7 +123,9 @@ export default function EditProfileScreen() {
       const refreshedUser = await getCurrentUser();
       setUser(refreshedUser, tokens);
 
-      showSuccessMessage(t('profile_updated_successfully'));
+      setSavePhase('success');
+      await playSuccessCue();
+      await new Promise((resolve) => setTimeout(resolve, 850));
       router.replace({
         pathname: '/(tabs)/settings',
         params: {
@@ -89,6 +138,7 @@ export default function EditProfileScreen() {
         'Error saving profile:',
         JSON.stringify(error.response?.data || error.message, null, 2)
       );
+      setSavePhase('idle');
       showErrorMessage(getApiErrorMessage(error, t('failed_to_save_profile_changes')));
     } finally {
       setLoading(false);
@@ -156,6 +206,24 @@ export default function EditProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {loading ? (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          {savePhase === 'success' ? (
+            <View style={styles.statusBlock}>
+              <View style={styles.successIconWrap}>
+                <Feather name="check" size={moderateScale(34)} color="#FFFFFF" />
+              </View>
+              <Text style={styles.loadingTitle}>Updated</Text>
+            </View>
+          ) : (
+            <View style={styles.statusBlock}>
+              <ActivityIndicator color="#FA8C4C" size="large" />
+              <Text style={styles.loadingTitle}>{`Updating${'.'.repeat(loadingDots)}`}</Text>
+            </View>
+          )}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -233,5 +301,38 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(16, 0.3),
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.58)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    elevation: 1000,
+  },
+  statusBlock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: scale(180),
+    paddingHorizontal: scale(20),
+  },
+  loadingTitle: {
+    marginTop: verticalScale(14),
+    fontSize: moderateScale(20, 0.3),
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  successIconWrap: {
+    width: scale(76),
+    height: scale(76),
+    borderRadius: scale(38),
+    backgroundColor: '#16A34A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 20,
+    elevation: 14,
   },
 });
