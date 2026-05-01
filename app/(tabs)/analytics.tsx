@@ -430,6 +430,121 @@ export default function AnalyticsScreen() {
     !!costBreakdownByPeriod[activePeriod] &&
     !!supplierAlertsByPeriod[activePeriod];
 
+  const localizeAnalyticsLabel = React.useCallback((label: string) => {
+    const normalizedLabel = label.trim().toLowerCase();
+
+    switch (normalizedLabel) {
+      case 'estimated profit':
+        return t('estimated_profit');
+      case 'peak hour':
+        return t('peak_hour');
+      case 'revenue':
+        return t('revenue');
+      case 'food cost':
+        return t('food_cost');
+      case 'profit':
+        return t('profit');
+      case 'this week revenue':
+        return t('this_week_revenue');
+      case 'last week revenue':
+        return `${t('last_week')} ${t('revenue')}`;
+      case 'this month revenue':
+        return t('this_month_revenue');
+      case 'last month revenue':
+        return t('last_month_revenue');
+      case 'lunch':
+        return t('lunch');
+      case 'dinner':
+        return t('dinner');
+      case 'mon':
+        return t('mon');
+      case 'tue':
+        return t('tue');
+      case 'wed':
+        return t('wed');
+      case 'thu':
+        return t('thu');
+      case 'fri':
+        return t('fri');
+      case 'sat':
+        return t('sat');
+      case 'sun':
+        return t('sun');
+      default:
+        return label;
+    }
+  }, [t]);
+
+  const localizedMetricTiles = React.useMemo(
+    () =>
+      (metricTilesByPeriod[activePeriod] ?? []).map((item) => ({
+        ...item,
+        label: localizeAnalyticsLabel(item.label),
+      })),
+    [activePeriod, localizeAnalyticsLabel, metricTilesByPeriod],
+  );
+
+  const localizedBusinessInsight = React.useMemo(() => {
+    if (!businessInsight) {
+      return null;
+    }
+
+    return {
+      ...businessInsight,
+      title:
+        businessInsight.title === 'Food Cost Increased'
+          ? t('food_cost_increased')
+          : businessInsight.title === 'Food Cost Improved'
+            ? t('food_cost_improved')
+            : businessInsight.title,
+    };
+  }, [businessInsight, t]);
+
+  const localizedRevenueTrendPoints = React.useMemo(
+    () =>
+      (revenueTrendByPeriod[activePeriod]?.points ?? []).map((item) => ({
+        ...item,
+        label: localizeAnalyticsLabel(item.label),
+      })),
+    [activePeriod, localizeAnalyticsLabel, revenueTrendByPeriod],
+  );
+
+  const localizedSummaryStats = React.useMemo(
+    () =>
+      (summaryStatsByPeriod[activePeriod] ?? []).map((item) => ({
+        ...item,
+        label: localizeAnalyticsLabel(item.label),
+      })),
+    [activePeriod, localizeAnalyticsLabel, summaryStatsByPeriod],
+  );
+
+  const localizedRevenueComparison = React.useMemo(
+    () =>
+      (revenueComparisonByPeriod[activePeriod] ?? []).map((item) => ({
+        ...item,
+        label: localizeAnalyticsLabel(item.label),
+      })),
+    [activePeriod, localizeAnalyticsLabel, revenueComparisonByPeriod],
+  );
+
+  const localizedCoversActivity = React.useMemo(
+    () =>
+      (coversActivityByPeriod[activePeriod] ?? []).map((item) => ({
+        ...item,
+        label: localizeAnalyticsLabel(item.label),
+      })),
+    [activePeriod, localizeAnalyticsLabel, coversActivityByPeriod],
+  );
+
+  const localizedCostBreakdown = React.useMemo(
+    () =>
+      (costBreakdownByPeriod[activePeriod] ?? []).map((item) => ({
+        ...item,
+        label: localizeAnalyticsLabel(item.label),
+      })),
+    [activePeriod, localizeAnalyticsLabel, costBreakdownByPeriod],
+  );
+
   React.useEffect(() => {
     void fetchAnalyticsData(activePeriod, !hasCachedPeriodData);
   }, [activePeriod]);
@@ -503,8 +618,8 @@ export default function AnalyticsScreen() {
             <Skeleton width="86%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
             <Skeleton width="76%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
           </SkeletonCard>
-        ) : businessInsight ? (
-          <AnalyticsAIInsightCard insight={businessInsight} />
+        ) : localizedBusinessInsight ? (
+          <AnalyticsAIInsightCard insight={localizedBusinessInsight} />
         ) : null}
 
         {metricTilesLoading && !metricTilesByPeriod[activePeriod] ? (
@@ -518,7 +633,7 @@ export default function AnalyticsScreen() {
             ))}
           </View>
         ) : metricTilesByPeriod[activePeriod] ? (
-          <SummaryCards metrics={metricTilesByPeriod[activePeriod] ?? []} />
+          <SummaryCards metrics={localizedMetricTiles} />
         ) : null}
 
         {revenueTrendLoading && !revenueTrendByPeriod[activePeriod] ? (
@@ -529,7 +644,7 @@ export default function AnalyticsScreen() {
           </SkeletonCard>
         ) : revenueTrendByPeriod[activePeriod] ? (
           <RevenueTrendChart
-            weeklyRevenue={revenueTrendByPeriod[activePeriod]?.points ?? []}
+            weeklyRevenue={localizedRevenueTrendPoints}
             totalRevenue={revenueTrendByPeriod[activePeriod]?.revenue_total ?? 0}
             changePercent={revenueTrendByPeriod[activePeriod]?.change_percent ?? 0}
           />
@@ -545,7 +660,7 @@ export default function AnalyticsScreen() {
             ))}
           </View>
         ) : summaryStatsByPeriod[activePeriod] ? (
-          <StatsSelector stats={summaryStatsByPeriod[activePeriod] ?? []} />
+          <StatsSelector stats={localizedSummaryStats} />
         ) : null}
 
         {revenueComparisonLoading && !revenueComparisonByPeriod[activePeriod] ? (
@@ -559,13 +674,13 @@ export default function AnalyticsScreen() {
             ))}
           </SkeletonCard>
         ) : revenueComparisonByPeriod[activePeriod] ? (
-          <RevenueComparisonChart comparison={revenueComparisonByPeriod[activePeriod] ?? []} />
+          <RevenueComparisonChart comparison={localizedRevenueComparison} />
         ) : null}
 
         {coversActivityLoading || costBreakdownLoading || coversActivityByPeriod[activePeriod] || costBreakdownByPeriod[activePeriod] ? (
           <ActivityCostSection
-            coversActivity={coversActivityByPeriod[activePeriod] ?? []}
-            costBreakdown={costBreakdownByPeriod[activePeriod] ?? []}
+            coversActivity={localizedCoversActivity}
+            costBreakdown={localizedCostBreakdown}
             coversLoading={coversActivityLoading && !coversActivityByPeriod[activePeriod]}
             costLoading={costBreakdownLoading && !costBreakdownByPeriod[activePeriod]}
           />
