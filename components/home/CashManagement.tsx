@@ -6,17 +6,18 @@ import { useTranslation } from '../../utils/i18n';
 import Skeleton from '../ui/Skeleton';
 
 interface CashItemProps {
+  keyName: 'total_collected' | 'cash_available' | 'cash_deposit';
   title: string;
   value: string;
   IconComponent: any;
-  onPress?: () => void;
+  onPress?: (keyName: 'total_collected' | 'cash_available' | 'cash_deposit') => void;
 }
 
-const CashItem = ({ title, value, IconComponent, onPress }: CashItemProps) => {
+const CashItem = ({ keyName, title, value, IconComponent, onPress }: CashItemProps) => {
   return (
     <Pressable
       style={({ pressed }) => [styles.itemContainer, pressed && styles.itemContainerPressed]}
-      onPress={onPress}
+      onPress={() => onPress?.(keyName)}
     >
       <View style={styles.itemLeft}>
         <View style={styles.iconContainer}>
@@ -39,7 +40,7 @@ interface CashManagementProps {
     subtitle: string;
   }[];
   loading?: boolean;
-  onItemPress?: () => void;
+  onItemPress?: (keyName: 'total_collected' | 'cash_available' | 'cash_deposit') => void;
 }
 
 export default function CashManagement({ cashData, loading = false, onItemPress }: CashManagementProps) {
@@ -61,6 +62,22 @@ export default function CashManagement({ cashData, loading = false, onItemPress 
     }
   };
 
+  const getCashKey = (label: string): 'total_collected' | 'cash_available' | 'cash_deposit' => {
+    switch (label.trim().toLowerCase()) {
+      case 'total collection':
+      case 'total collected':
+      case 'total cash collected':
+        return 'total_collected';
+      case 'cash available':
+        return 'cash_available';
+      case 'cash deposit':
+      case 'cash deposited':
+        return 'cash_deposit';
+      default:
+        return 'cash_available';
+    }
+  };
+
   const getIconData = (label: string) => {
     switch (label.toLowerCase()) {
       case 'total collection':
@@ -79,6 +96,7 @@ export default function CashManagement({ cashData, loading = false, onItemPress 
   const parsedCashData: CashItemProps[] =
     cashData && cashData.length > 0
       ? cashData.map((cashItem) => ({
+          keyName: getCashKey(cashItem.label),
           title: getTranslatedCashLabel(cashItem.label),
           value: `\u20AC${cashItem.amount.toLocaleString(undefined, {
             minimumFractionDigits: 2,
@@ -87,9 +105,9 @@ export default function CashManagement({ cashData, loading = false, onItemPress 
           IconComponent: getIconData(cashItem.label),
         }))
       : [
-          { title: t('total_collected'), value: '\u20AC0.00', IconComponent: CreditCardIcon },
-          { title: t('cash_available'), value: '\u20AC0.00', IconComponent: BanknotesIcon },
-          { title: t('cash_deposit'), value: '\u20AC0.00', IconComponent: BuildingLibraryIcon },
+          { keyName: 'total_collected' as const, title: t('total_collected'), value: '\u20AC0.00', IconComponent: CreditCardIcon },
+          { keyName: 'cash_available' as const, title: t('cash_available'), value: '\u20AC0.00', IconComponent: BanknotesIcon },
+          { keyName: 'cash_deposit' as const, title: t('cash_deposit'), value: '\u20AC0.00', IconComponent: BuildingLibraryIcon },
         ];
 
   const skeletonRows = [0, 1, 2];

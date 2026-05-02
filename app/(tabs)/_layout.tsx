@@ -154,10 +154,19 @@ export default function TabLayout() {
               })
             );
           },
+          blur: () => {
+            navigation.dispatch(
+              CommonActions.navigate({
+                name: "inventory",
+                params: {
+                  screen: "index",
+                },
+              })
+            );
+          },
         })}
         options={{
           tabBarLabel: "Inventory",
-          popToTopOnBlur: true,
           unmountOnBlur: true,
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
@@ -207,10 +216,19 @@ export default function TabLayout() {
               })
             );
           },
+          blur: () => {
+            navigation.dispatch(
+              CommonActions.navigate({
+                name: "settings",
+                params: {
+                  screen: "index",
+                },
+              })
+            );
+          },
         })}
         options={{
           tabBarLabel: "Settings",
-          popToTopOnBlur: true,
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={Settings01Icon}

@@ -11,7 +11,7 @@ interface HeaderProps {
   showBack?: boolean;
   showBell?: boolean;
   onBackPress?: () => void;
-  fallbackHref?: Href;
+  fallbackHref?: Href<string>;
   rightComponent?: React.ReactNode;
   subtitle?: string;
   titleAlign?: 'left' | 'center';
@@ -40,7 +40,7 @@ export default function Header({
       router.back();
       return;
     }
-    router.replace(fallbackHref ?? '/(tabs)/home');
+    router.replace((fallbackHref ?? '/(tabs)/home') as Href<string>);
   };
 
   return (

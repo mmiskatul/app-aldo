@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useRouter } from 'expo-router';
 import { DocumentArrowUpIcon, PresentationChartBarIcon, ClipboardDocumentListIcon, CurrencyDollarIcon } from 'react-native-heroicons/outline';
@@ -14,12 +14,15 @@ interface ActionItemProps {
 
 const ActionItem = ({ title, IconComponent, onPress }: ActionItemProps) => {
   return (
-    <TouchableOpacity style={styles.itemContainer} onPress={onPress}>
-      <View style={styles.iconContainer}>
+    <Pressable
+      style={({ pressed }) => [styles.itemContainer, pressed && styles.itemContainerPressed]}
+      onPress={onPress}
+    >
+      <View style={[styles.iconContainer, styles.iconContainerBase]}>
         <IconComponent size={moderateScale(20)} color="#FA8C4C" />
       </View>
       <Text style={styles.itemTitle}>{title}</Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -135,15 +138,22 @@ const styles = StyleSheet.create({
   itemContainer: {
     alignItems: 'center',
     width: '24%', // roughly quarter width to fit 4 evenly
+    borderRadius: scale(14),
+    paddingVertical: verticalScale(6),
+  },
+  itemContainerPressed: {
+    backgroundColor: '#F8EEE6',
   },
   iconContainer: {
     width: scale(48),
     height: scale(48),
     borderRadius: scale(24),
-    backgroundColor: '#FFF0E5', // Matches faint orange
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: verticalScale(8),
+  },
+  iconContainerBase: {
+    backgroundColor: '#FFF0E5', // Matches faint orange
     borderWidth: 1,
     borderColor: '#F9D8C4', // Slight darker border on these ones
   },

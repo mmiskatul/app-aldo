@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, View, RefreshControl, NativeSyntheticEvent, NativeScrollEvent } from "react-native";
+import { ScrollView, StyleSheet, View, RefreshControl, NativeSyntheticEvent, NativeScrollEvent } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale, verticalScale } from "react-native-size-matters";
@@ -125,7 +125,6 @@ const REVENUE_TRIGGER_Y = 260;
 const INSIGHT_TRIGGER_Y = 520;
 const RECENT_ACTIVITY_TRIGGER_Y = 760;
 const HOME_SECTION_LOAD_DELAY_MS = 160;
-const HOME_ROUTE_TRANSITION_DELAY_MS = 100;
 export default function TabsIndex() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -141,7 +140,6 @@ export default function TabsIndex() {
   const [activePeriod, setActivePeriod] = useState<PeriodKey>("weekly");
   const [loading, setLoading] = useState(!homeScreenCache.shellData);
   const [refreshing, setRefreshing] = useState(false);
-  const [routeTransitionLoading, setRouteTransitionLoading] = useState(false);
 
   const [metricsByPeriod, setMetricsByPeriod] = useState<Partial<Record<PeriodKey, MetricCard[]>>>(homeScreenCache.metricsByPeriod);
   const [cashByPeriod, setCashByPeriod] = useState<Partial<Record<PeriodKey, CashItem[]>>>(homeScreenCache.cashByPeriod);
@@ -165,7 +163,6 @@ export default function TabsIndex() {
   const hasInitializedLanguageRef = useRef(false);
   const hasFocusedRef = useRef(false);
   const previousPeriodRef = useRef<PeriodKey>("weekly");
-  const routeTransitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hydrateSupportingData = useCallback(async () => {
     const [analyticsRes, cashOverviewRes, profileRes] = await Promise.allSettled([
@@ -471,21 +468,11 @@ export default function TabsIndex() {
 
   useFocusEffect(
     useCallback(() => {
-      setRouteTransitionLoading(false);
-      if (routeTransitionTimeoutRef.current) {
-        clearTimeout(routeTransitionTimeoutRef.current);
-        routeTransitionTimeoutRef.current = null;
-      }
       hasFocusedRef.current = true;
       previousPeriodRef.current = activePeriod;
       const hasCachedShell = !!homeScreenCache.shellData;
       void fetchHomeData(activePeriod, hasCachedShell, !hasCachedShell);
       return () => {
-        setRouteTransitionLoading(false);
-        if (routeTransitionTimeoutRef.current) {
-          clearTimeout(routeTransitionTimeoutRef.current);
-          routeTransitionTimeoutRef.current = null;
-        }
       };
     }, [activePeriod, fetchHomeData, homeScreenCache.shellData])
   );
@@ -584,15 +571,21 @@ export default function TabsIndex() {
   };
 
   const navigateFromHome = useCallback((route: string) => {
-    setRouteTransitionLoading(true);
-    if (routeTransitionTimeoutRef.current) {
-      clearTimeout(routeTransitionTimeoutRef.current);
-    }
-    routeTransitionTimeoutRef.current = setTimeout(() => {
-      router.push(route as any);
-      routeTransitionTimeoutRef.current = null;
-    }, HOME_ROUTE_TRANSITION_DELAY_MS);
+    router.push(route as any);
   }, [router]);
+
+  const handleCashCardPress = useCallback((keyName: "total_collected" | "cash_available" | "cash_deposit") => {
+    switch (keyName) {
+      case "cash_deposit":
+        navigateFromHome("/(tabs)/home/add-bank-deposit");
+        return;
+      case "total_collected":
+      case "cash_available":
+      default:
+        navigateFromHome("/(tabs)/home/cash-management");
+        return;
+    }
+  }, [navigateFromHome]);
 
   return (
     <View style={styles.container}>
@@ -633,7 +626,7 @@ export default function TabsIndex() {
         <CashManagement
           cashData={currentCashManagement}
           loading={cashSectionLoading}
-          onItemPress={() => navigateFromHome("/(tabs)/home/cash-management")}
+          onItemPress={handleCashCardPress}
         />
         <QuickActions items={shellData?.quick_actions} loading={quickActionsLoading} onNavigate={navigateFromHome} />
         <VatBalance
@@ -657,12 +650,6 @@ export default function TabsIndex() {
           onNavigate={navigateFromHome}
         />
       </ScrollView>
-
-      {routeTransitionLoading ? (
-        <View style={styles.routeTransitionOverlay} pointerEvents="auto">
-          <ActivityIndicator size="large" color="#FA8C4C" />
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -675,13 +662,5 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: scale(20),
-  },
-  routeTransitionOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(249, 250, 251, 0.18)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 20,
-    elevation: 20,
   },
 });
