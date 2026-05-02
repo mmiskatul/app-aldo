@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { CreditCardIcon, BanknotesIcon, BuildingLibraryIcon, ChevronRightIcon } from 'react-native-heroicons/outline';
 import { useTranslation } from '../../utils/i18n';
@@ -14,7 +14,10 @@ interface CashItemProps {
 
 const CashItem = ({ title, value, IconComponent, onPress }: CashItemProps) => {
   return (
-    <TouchableOpacity style={styles.itemContainer} onPress={onPress} activeOpacity={0.8}>
+    <Pressable
+      style={({ pressed }) => [styles.itemContainer, pressed && styles.itemContainerPressed]}
+      onPress={onPress}
+    >
       <View style={styles.itemLeft}>
         <View style={styles.iconContainer}>
           <IconComponent size={moderateScale(16)} color="#FA8C4C" />
@@ -25,7 +28,7 @@ const CashItem = ({ title, value, IconComponent, onPress }: CashItemProps) => {
         </View>
       </View>
       <ChevronRightIcon size={moderateScale(16)} color="#9CA3AF" />
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
@@ -149,11 +152,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: verticalScale(8),
+    width: '100%',
+    borderRadius: scale(12),
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(10),
+  },
+  itemContainerPressed: {
+    backgroundColor: '#F3E6DB',
   },
   itemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   iconContainer: {
     width: scale(40),
