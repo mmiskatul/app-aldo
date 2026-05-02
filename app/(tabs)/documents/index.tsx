@@ -3,12 +3,10 @@ import { useRouter } from "expo-router";
 import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { StyleSheet, Text, TouchableOpacity, View, RefreshControl } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
-import { useFocusEffect } from "@react-navigation/native";
 
 import Header from "../../../components/ui/Header";
 import AIExtractionBanner from "../../../components/documents/AIExtractionBanner";
 import RecentDocumentsList from "../../../components/documents/RecentDocumentsList";
-import { useCachedFocusRefresh } from "../../../hooks/useCachedFocusRefresh";
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore";
 import { getApiDisplayMessage, logApiError } from "../../../utils/apiErrors";
@@ -22,40 +20,32 @@ export default function DocumentsScreen() {
   const router = useRouter();
   const documentsScreenCache = useAppStore((state) => state.documentsScreenCache);
   const setDocumentsScreenCache = useAppStore((state) => state.setDocumentsScreenCache);
+  const hasFetchedDocuments = documentsScreenCache.fetchedAt !== null;
   const hasCachedContent = useMemo(
     () =>
       documentsScreenCache.documents.length > 0 ||
       Boolean(documentsScreenCache.bannerData.title || documentsScreenCache.bannerData.subtitle),
     [documentsScreenCache.bannerData.subtitle, documentsScreenCache.bannerData.title, documentsScreenCache.documents.length],
   );
-  const [loading, setLoading] = useState(!hasCachedContent);
+  const [loading, setLoading] = useState(!hasFetchedDocuments);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const focusStartedAtRef = useRef<number | null>(null);
+  const requestInFlightRef = useRef(false);
   const fetchStartedAtRef = useRef<number | null>(null);
   const contentPaintLoggedRef = useRef(false);
 
   const now = useCallback(() => Date.now(), []);
 
-  const resetPerfCycle = useCallback((reason: string) => {
-    focusStartedAtRef.current = now();
-    fetchStartedAtRef.current = null;
-    contentPaintLoggedRef.current = false;
-    console.log(`${DOCUMENTS_PERF_TAG} cycle_start`, {
-      reason,
-      hasCachedContent,
-      cachedDocuments: documentsScreenCache.documents.length,
-    });
-  }, [documentsScreenCache.documents.length, hasCachedContent, now]);
-
-  useFocusEffect(
-    useCallback(() => {
-      resetPerfCycle("focus");
-      return undefined;
-    }, [resetPerfCycle]),
-  );
-
   const fetchDocuments = useCallback(async (silent = false) => {
+    if (requestInFlightRef.current) {
+      console.log(`${DOCUMENTS_PERF_TAG} fetch_skip`, {
+        reason: "request_in_flight",
+        silent,
+      });
+      return;
+    }
+
+    requestInFlightRef.current = true;
     const fetchStartedAt = now();
     fetchStartedAtRef.current = fetchStartedAt;
 
@@ -66,8 +56,6 @@ export default function DocumentsScreen() {
     console.log(`${DOCUMENTS_PERF_TAG} fetch_start`, {
       silent,
       hasCachedContent,
-      focusToFetchMs:
-        focusStartedAtRef.current == null ? null : fetchStartedAt - focusStartedAtRef.current,
     });
     try {
       const response = await apiClient.get("/api/v1/restaurant/documents", {
@@ -102,32 +90,23 @@ export default function DocumentsScreen() {
         apiMs: now() - fetchStartedAt,
       });
     } finally {
+      requestInFlightRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }
   }, [hasCachedContent, now, setDocumentsScreenCache]);
 
-  const loadDocumentsOnEmpty = useCallback(() => {
-    void fetchDocuments(false);
-  }, [fetchDocuments]);
-
-  const refreshStaleDocuments = useCallback(() => {
-    void fetchDocuments(true);
-  }, [fetchDocuments]);
-
-  useCachedFocusRefresh({
-    hasCache: hasCachedContent,
-    fetchedAt: documentsScreenCache.fetchedAt,
-    ttlMs: DOCUMENTS_CACHE_TTL_MS,
-    loadOnEmpty: loadDocumentsOnEmpty,
-    refreshStale: refreshStaleDocuments,
-  });
-
   const onRefresh = useCallback(() => {
-    resetPerfCycle("pull_to_refresh");
+    fetchStartedAtRef.current = null;
+    contentPaintLoggedRef.current = false;
+    console.log(`${DOCUMENTS_PERF_TAG} cycle_start`, {
+      reason: "pull_to_refresh",
+      hasCachedContent,
+      cachedDocuments: documentsScreenCache.documents.length,
+    });
     setRefreshing(true);
     void fetchDocuments(false);
-  }, [fetchDocuments, resetPerfCycle]);
+  }, [documentsScreenCache.documents.length, fetchDocuments, hasCachedContent]);
 
   const openUploadInvoice = useCallback(() => {
     router.push("/(tabs)/documents/upload-invoice");
@@ -198,12 +177,27 @@ export default function DocumentsScreen() {
   );
 
   useEffect(() => {
+    if (hasFetchedDocuments) {
+      setLoading(false);
+      return;
+    }
+
+    fetchStartedAtRef.current = null;
+    contentPaintLoggedRef.current = false;
+    console.log(`${DOCUMENTS_PERF_TAG} cycle_start`, {
+      reason: "initial_load",
+      hasCachedContent,
+      cachedDocuments: documentsScreenCache.documents.length,
+    });
+    void fetchDocuments(false);
+  }, [documentsScreenCache.documents.length, fetchDocuments, hasCachedContent, hasFetchedDocuments]);
+
+  useEffect(() => {
     if (loading || contentPaintLoggedRef.current) {
       return;
     }
 
-    const hasVisibleState =
-      documentsScreenCache.documents.length > 0 || Boolean(error) || hasCachedContent;
+    const hasVisibleState = hasFetchedDocuments || documentsScreenCache.documents.length > 0 || Boolean(error);
 
     if (!hasVisibleState) {
       return;
@@ -211,18 +205,16 @@ export default function DocumentsScreen() {
 
     contentPaintLoggedRef.current = true;
     console.log(`${DOCUMENTS_PERF_TAG} content_ready`, {
-      focusToContentMs:
-        focusStartedAtRef.current == null ? null : now() - focusStartedAtRef.current,
       fetchToContentMs:
         fetchStartedAtRef.current == null ? null : now() - fetchStartedAtRef.current,
       itemCount: documentsScreenCache.documents.length,
-      usedCache: hasCachedContent && fetchStartedAtRef.current == null,
+      usedCache: hasFetchedDocuments && fetchStartedAtRef.current == null,
       hasError: Boolean(error),
     });
   }, [
     documentsScreenCache.documents.length,
     error,
-    hasCachedContent,
+    hasFetchedDocuments,
     loading,
     now,
   ]);
