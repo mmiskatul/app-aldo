@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { FlatList, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+
 import Skeleton, { SkeletonCard } from '../ui/Skeleton';
 import { useTranslation } from '../../utils/i18n';
 
@@ -17,40 +18,21 @@ interface DocumentProp {
   tag: string;
 }
 
-const MOCK_DOCS: DocumentProp[] = [
-  {
-    id: '1',
-    supplier: 'Fresh Farms Ltd',
-    invoiceNumber: '#88291',
-    date: 'Feb 24, 2026',
-    amount: '$1,240.50',
-    itemCount: 12,
-    status: 'Processed',
-    tag: 'AUTO-CATEGORIZED',
-  },
-  {
-    id: '2',
-    supplier: 'Bakery Goods Co',
-    invoiceNumber: '#BK-442',
-    date: 'Feb 23, 2026',
-    amount: '$425.00',
-    itemCount: 4,
-    status: 'Pending Review',
-    tag: 'FLAGGED PRICE CHANGE',
-  },
-  {
-    id: '3',
-    supplier: 'Ocean Catch Seafood',
-    invoiceNumber: '#OC-901',
-    date: 'Jan 21, 2026',
-    amount: '$2,110.25',
-    itemCount: 8,
-    status: 'Processed',
-    tag: 'VERIFIED',
-  },
-];
+interface RecentDocumentsListProps {
+  documents?: any[];
+  loading?: boolean;
+  headerContent?: React.ReactNode;
+  emptyContent?: React.ReactNode;
+  refreshControl?: React.ReactElement | undefined;
+}
 
-const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
+const DocumentCard = React.memo(function DocumentCard({
+  doc,
+  onOpen,
+}: {
+  doc: DocumentProp;
+  onOpen: (id: string) => void;
+}) {
   const { t } = useTranslation();
   const isPending = doc.status === 'Pending Review';
 
@@ -59,7 +41,7 @@ const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
       <View style={styles.cardHeader}>
         <View>
           <Text style={styles.supplierName}>{doc.supplier}</Text>
-          <Text style={styles.invoiceDetails}>{doc.invoiceNumber} • {doc.date}</Text>
+          <Text style={styles.invoiceDetails}>{doc.invoiceNumber} - {doc.date}</Text>
         </View>
         <View style={[styles.statusBadge, isPending ? styles.statusWarning : styles.statusSuccess]}>
           <Text style={[styles.statusText, isPending ? styles.statusWarningText : styles.statusSuccessText]}>
@@ -79,8 +61,8 @@ const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
 
       {isPending ? (
         <View style={styles.actionRowWarning}>
-          <TouchableOpacity style={styles.reviewButton} onPress={() => router.push(`/(tabs)/documents/${doc.id}`)}>
-            <Feather name="file-text" size={moderateScale(14)} color="#FA8C4C" style={{ marginRight: scale(6)}} />
+          <TouchableOpacity style={styles.reviewButton} onPress={() => onOpen(doc.id)}>
+            <Feather name="file-text" size={moderateScale(14)} color="#FA8C4C" style={{ marginRight: scale(6) }} />
             <Text style={styles.reviewButtonText}>{t('review')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.moreButton}>
@@ -89,88 +71,131 @@ const DocumentCard = ({ doc, router }: { doc: DocumentProp, router: any }) => {
         </View>
       ) : (
         <View style={styles.actionRowPrimary}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push(`/(tabs)/documents/${doc.id}`)}>
-            <Feather name="eye" size={moderateScale(14)} color="#4B5563" style={{ marginRight: scale(6)}} />
+          <TouchableOpacity style={styles.actionButton} onPress={() => onOpen(doc.id)}>
+            <Feather name="eye" size={moderateScale(14)} color="#4B5563" style={{ marginRight: scale(6) }} />
             <Text style={styles.actionButtonText}>{t('view')}</Text>
           </TouchableOpacity>
         </View>
       )}
     </View>
   );
-};
+});
 
-interface RecentDocumentsListProps {
-  documents?: any[];
-  loading?: boolean;
-}
+const LoadingSkeletons = React.memo(function LoadingSkeletons() {
+  return (
+    <View>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <SkeletonCard key={index} style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View>
+              <Skeleton width={scale(120)} height={moderateScale(14)} borderRadius={7} />
+              <Skeleton
+                width={scale(84)}
+                height={moderateScale(10)}
+                borderRadius={5}
+                style={{ marginTop: verticalScale(6) }}
+              />
+            </View>
+            <Skeleton width={scale(76)} height={moderateScale(22)} borderRadius={11} />
+          </View>
+          <View style={styles.amountRow}>
+            <Skeleton width={scale(78)} height={moderateScale(22)} borderRadius={8} />
+            <Skeleton width={scale(120)} height={moderateScale(12)} borderRadius={6} />
+          </View>
+          <Skeleton width="100%" height={moderateScale(40)} borderRadius={12} />
+        </SkeletonCard>
+      ))}
+    </View>
+  );
+});
 
-export default function RecentDocumentsList({ documents, loading }: RecentDocumentsListProps) {
+export default function RecentDocumentsList({
+  documents,
+  loading = false,
+  headerContent,
+  emptyContent,
+  refreshControl,
+}: RecentDocumentsListProps) {
   const router = useRouter();
   const { t } = useTranslation();
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
+  const displayDocs: DocumentProp[] = React.useMemo(
+    () =>
+      (documents || []).map((item) => ({
+        id: item.id,
+        supplier: item.counterparty_name || item.supplier_name || 'Unknown Supplier',
+        invoiceNumber: item.document_number || item.invoice_number || 'N/A',
+        date: item.document_date || item.invoice_date_formatted || item.invoice_date || 'N/A',
+        amount: `EUR ${(item.total_amount || 0).toFixed(2)}`,
+        itemCount: item.line_item_count || 0,
+        status: item.status === 'processed' ? 'Processed' : 'Pending Review',
+        tag: item.status === 'processed' ? 'AUTO-EXTRACTED' : 'PENDING',
+      })),
+    [documents],
+  );
+
+  const handleOpenDocument = React.useCallback(
+    (documentId: string) => {
+      router.push(`/(tabs)/documents/${documentId}` as any);
+    },
+    [router],
+  );
+
+  const renderItem = React.useCallback(
+    ({ item }: { item: DocumentProp }) => <DocumentCard doc={item} onOpen={handleOpenDocument} />,
+    [handleOpenDocument],
+  );
+
+  const listHeader = React.useMemo(
+    () => (
+      <View>
+        {headerContent}
         <Text style={styles.sectionTitle}>{t('recent_documents')}</Text>
-        {Array.from({ length: 3 }).map((_, index) => (
-          <SkeletonCard key={index} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View>
-                <Skeleton width={scale(120)} height={moderateScale(14)} borderRadius={7} />
-                <Skeleton width={scale(84)} height={moderateScale(10)} borderRadius={5} style={{ marginTop: verticalScale(6) }} />
-              </View>
-              <Skeleton width={scale(76)} height={moderateScale(22)} borderRadius={11} />
-            </View>
-            <View style={styles.amountRow}>
-              <Skeleton width={scale(78)} height={moderateScale(22)} borderRadius={8} />
-              <Skeleton width={scale(120)} height={moderateScale(12)} borderRadius={6} />
-            </View>
-            <Skeleton width="100%" height={moderateScale(40)} borderRadius={12} />
-          </SkeletonCard>
-        ))}
+      </View>
+    ),
+    [headerContent, t],
+  );
+
+  const listEmpty = React.useMemo(() => {
+    if (loading) {
+      return <LoadingSkeletons />;
+    }
+
+    if (emptyContent) {
+      return <>{emptyContent}</>;
+    }
+
+    return (
+      <View style={styles.emptyStateContainer}>
+        <Feather name="file-text" size={moderateScale(48)} color="#E5E7EB" />
+        <Text style={styles.emptyStateText}>{t('no_documents')}</Text>
+        <Text style={styles.emptyStateSubtext}>{t('no_documents_subtext')}</Text>
       </View>
     );
-  }
-
-  const getStatus = (status: string): 'Processed' | 'Pending Review' => {
-    return status === 'processed' ? 'Processed' : 'Pending Review';
-  };
-
-  const displayDocs: DocumentProp[] = (documents || []).map(item => ({
-    id: item.id,
-    supplier: item.counterparty_name || item.supplier_name || 'Unknown Supplier',
-    invoiceNumber: item.document_number || item.invoice_number || 'N/A',
-    date: item.document_date || item.invoice_date_formatted || item.invoice_date || 'N/A',
-    amount: `€${(item.total_amount || 0).toFixed(2)}`,
-    itemCount: item.line_item_count || 0,
-    status: getStatus(item.status),
-    tag: item.status === 'processed' ? 'AUTO-EXTRACTED' : 'PENDING',
-  }));
-
-  const docsToRender = displayDocs;
+  }, [emptyContent, loading, t]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.sectionTitle}>{t('recent_documents')}</Text>
-      {docsToRender.length > 0 ? (
-        docsToRender.map(doc => (
-          <DocumentCard key={doc.id} doc={doc} router={router} />
-        ))
-      ) : (
-        <View style={styles.emptyStateContainer}>
-          <Feather name="file-text" size={moderateScale(48)} color="#E5E7EB" />
-          <Text style={styles.emptyStateText}>{t('no_documents')}</Text>
-          <Text style={styles.emptyStateSubtext}>{t('no_documents_subtext')}</Text>
-        </View>
-      )}
-    </View>
+    <FlatList
+      data={loading ? [] : displayDocs}
+      keyExtractor={(item) => item.id}
+      renderItem={renderItem}
+      refreshControl={refreshControl}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.container}
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={listEmpty}
+      removeClippedSubviews
+      initialNumToRender={4}
+      maxToRenderPerBatch={6}
+      windowSize={5}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: scale(20),
-    paddingBottom: verticalScale(100), // Lots of bottom padding for tab bar
+    paddingBottom: verticalScale(100),
   },
   sectionTitle: {
     fontSize: moderateScale(14, 0.3),

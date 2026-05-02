@@ -179,8 +179,31 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="documents"
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.dispatch(
+              CommonActions.navigate({
+                name: "documents",
+                params: {
+                  screen: "index",
+                },
+              })
+            );
+          },
+          blur: () => {
+            navigation.dispatch(
+              CommonActions.navigate({
+                name: "documents",
+                params: {
+                  screen: "index",
+                },
+              })
+            );
+          },
+        })}
         options={{
           tabBarLabel: "Documents",
+          unmountOnBlur: true,
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={DocumentAttachmentIcon}
