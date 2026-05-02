@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Aldo",
-    "slug": "Aldo",
+    "name": "RistoAI",
+    "slug": "ristoai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
