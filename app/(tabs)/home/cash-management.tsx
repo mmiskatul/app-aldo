@@ -104,7 +104,7 @@ export default function CashManagementScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Cash Management" showBack={true} />
+      <Header title="Cash Management" showBack={true} fallbackHref="/(tabs)/home" />
 
       {loading && !hasScreenData ? (
         <ListRouteSkeleton itemCount={3} />

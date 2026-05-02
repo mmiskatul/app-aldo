@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { Href, useNavigation, useRouter } from 'expo-router';
 import { BellIcon } from "react-native-heroicons/outline";
 
 interface HeaderProps {
@@ -11,6 +11,7 @@ interface HeaderProps {
   showBack?: boolean;
   showBell?: boolean;
   onBackPress?: () => void;
+  fallbackHref?: Href;
   rightComponent?: React.ReactNode;
   subtitle?: string;
   titleAlign?: 'left' | 'center';
@@ -21,19 +22,25 @@ export default function Header({
   showBack = false,
   showBell = false,
   onBackPress,
+  fallbackHref,
   rightComponent,
   subtitle,
   titleAlign = 'center',
 }: HeaderProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const navigation = useNavigation();
 
   const handleBack = () => {
     if (onBackPress) {
       onBackPress();
-    } else {
-      router.back();
+      return;
     }
+    if (navigation.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace(fallbackHref ?? '/(tabs)/home');
   };
 
   return (

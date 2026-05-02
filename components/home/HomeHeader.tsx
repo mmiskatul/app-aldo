@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { BellIcon, ChevronDownIcon } from "react-native-heroicons/outline";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import LanguageModal from "./LanguageModal";
@@ -23,6 +24,15 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
     profile?.full_name?.trim() ||
     t("restaurant_name_fallback");
   const hasProfileImage = !!profile?.profile_image_url;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setIsLangMenuOpen(false);
+      return () => {
+        setIsLangMenuOpen(false);
+      };
+    }, [])
+  );
 
   return (
     <View style={styles.container}>

@@ -119,6 +119,8 @@ export default function TabLayout() {
         name="home"
         options={{
           tabBarLabel: "Home",
+          popToTopOnBlur: true,
+          unmountOnBlur: true,
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={Home07Icon}

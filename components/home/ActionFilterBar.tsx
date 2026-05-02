@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   ArrowDownTrayIcon,
   ChevronDownIcon,
@@ -27,6 +28,17 @@ export default function ActionFilterBar({
   const [isPeriodMenuOpen, setIsPeriodMenuOpen] = useState(false);
 
   const formatPeriod = (p: string) => t(p as any);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setIsExportMenuOpen(false);
+      setIsPeriodMenuOpen(false);
+      return () => {
+        setIsExportMenuOpen(false);
+        setIsPeriodMenuOpen(false);
+      };
+    }, [])
+  );
 
   return (
     <View style={styles.container}>

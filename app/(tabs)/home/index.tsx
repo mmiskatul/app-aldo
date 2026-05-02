@@ -156,6 +156,7 @@ export default function TabsIndex() {
   });
   const hasFocusedRef = useRef(false);
   const previousPeriodRef = useRef<PeriodKey>("weekly");
+  const routeTransitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hydrateSupportingData = useCallback(async () => {
     const [analyticsRes, cashOverviewRes, profileRes] = await Promise.allSettled([
@@ -461,10 +462,22 @@ export default function TabsIndex() {
 
   useFocusEffect(
     useCallback(() => {
+      setRouteTransitionLoading(false);
+      if (routeTransitionTimeoutRef.current) {
+        clearTimeout(routeTransitionTimeoutRef.current);
+        routeTransitionTimeoutRef.current = null;
+      }
       hasFocusedRef.current = true;
       previousPeriodRef.current = activePeriod;
       const hasCachedShell = !!homeScreenCache.shellData;
       void fetchHomeData(activePeriod, hasCachedShell, !hasCachedShell);
+      return () => {
+        setRouteTransitionLoading(false);
+        if (routeTransitionTimeoutRef.current) {
+          clearTimeout(routeTransitionTimeoutRef.current);
+          routeTransitionTimeoutRef.current = null;
+        }
+      };
     }, [activePeriod, fetchHomeData, homeScreenCache.shellData])
   );
 
@@ -564,8 +577,12 @@ export default function TabsIndex() {
 
   const navigateFromHome = useCallback((route: string) => {
     setRouteTransitionLoading(true);
-    setTimeout(() => {
+    if (routeTransitionTimeoutRef.current) {
+      clearTimeout(routeTransitionTimeoutRef.current);
+    }
+    routeTransitionTimeoutRef.current = setTimeout(() => {
       router.push(route as any);
+      routeTransitionTimeoutRef.current = null;
     }, HOME_ROUTE_TRANSITION_DELAY_MS);
   }, [router]);
 
