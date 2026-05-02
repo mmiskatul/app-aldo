@@ -13,6 +13,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
 import { useFocusEffect } from "@react-navigation/native";
 import apiClient from "../../../api/apiClient";
+import { useAppStore } from "../../../store/useAppStore";
 
 import ExpenseDistribution from "../../../components/home/expenses/ExpenseDistribution";
 import QuickSummary from "../../../components/home/expenses/QuickSummary";
@@ -21,18 +22,26 @@ import { ListRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 
 export default function ExpensesScreen() {
   const router = useRouter();
+  const expensesScreenCache = useAppStore((state) => state.expensesScreenCache);
+  const setExpensesScreenCache = useAppStore((state) => state.setExpensesScreenCache);
   const [activeFilter, setActiveFilter] = useState("Today");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!expensesScreenCache.data);
   const [refreshing, setRefreshing] = useState(false);
-  const [expenseData, setExpenseData] = useState<any>(null);
+  const [expenseData, setExpenseData] = useState<any>(expensesScreenCache.data);
 
   const filters = ["Today", "This Week", "This Month", "This Year"];
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const response = await apiClient.get("/api/v1/restaurant/expenses");
       setExpenseData(response.data);
+      setExpensesScreenCache({
+        data: response.data,
+        fetchedAt: Date.now(),
+      });
     } catch (error) {
       console.error("Error fetching expenses:", error);
     } finally {
@@ -43,13 +52,17 @@ export default function ExpensesScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchExpenses();
-    }, [])
+      if (!expensesScreenCache.data) {
+        void fetchExpenses(false);
+        return;
+      }
+      void fetchExpenses(true);
+    }, [expensesScreenCache.data])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchExpenses();
+    void fetchExpenses(false);
   };
 
   const getActiveData = () => {
@@ -110,7 +123,7 @@ export default function ExpensesScreen() {
           })}
         </ScrollView>
 
-        {loading && !refreshing ? (
+        {loading ? (
           <ListRouteSkeleton withAction={false} itemCount={3} />
         ) : expenseData ? (
           <>

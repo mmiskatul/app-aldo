@@ -22,6 +22,7 @@ import {
 import apiClient from "../../../api/apiClient";
 import Header from "../../../components/ui/Header";
 import { ListRouteSkeleton } from "../../../components/ui/RouteSkeletons";
+import { useAppStore } from "../../../store/useAppStore";
 
 type NotificationItem = {
   kind: string;
@@ -148,8 +149,10 @@ function NotificationCard({
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [items, setItems] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const notificationsScreenCache = useAppStore((state) => state.notificationsScreenCache);
+  const setNotificationsScreenCache = useAppStore((state) => state.setNotificationsScreenCache);
+  const [items, setItems] = useState<NotificationItem[]>(notificationsScreenCache.items as NotificationItem[]);
+  const [loading, setLoading] = useState(notificationsScreenCache.items.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -164,7 +167,12 @@ export default function NotificationsScreen() {
       const response = await apiClient.get<NotificationFeedResponse>(
         "/api/v1/restaurant/notifications/feed"
       );
-      setItems(response.data.items || []);
+      const nextItems = response.data.items || [];
+      setItems(nextItems);
+      setNotificationsScreenCache({
+        items: nextItems,
+        fetchedAt: Date.now(),
+      });
     } catch (err: any) {
       setError(
         err?.response?.data?.message ??
@@ -178,14 +186,18 @@ export default function NotificationsScreen() {
   }, []);
 
   useEffect(() => {
-    void fetchNotifications();
-  }, [fetchNotifications]);
+    if (notificationsScreenCache.items.length === 0) {
+      void fetchNotifications(false);
+      return;
+    }
+    void fetchNotifications(true);
+  }, [fetchNotifications, notificationsScreenCache.items.length]);
 
   const notifications = useMemo(() => items, [items]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    void fetchNotifications(true);
+    void fetchNotifications(false);
   };
 
   const renderEmpty = () => (

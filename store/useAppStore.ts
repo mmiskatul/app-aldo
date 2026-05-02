@@ -164,6 +164,10 @@ export interface ChatCacheMessage {
   id: string;
   role: string;
   message: string;
+  message_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
   created_at?: string | null;
   updated_at?: string | null;
   edited_at?: string | null;
@@ -171,6 +175,10 @@ export interface ChatCacheMessage {
   attachment_name?: string | null;
   attachment_source?: string | null;
   attachment_summary?: string | null;
+  attachment_summary_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
 }
 
 export interface LegalDocumentCacheItem {
@@ -202,6 +210,14 @@ export interface HomeRevenueCacheItem {
 export interface HomeInsightCacheItem {
   title: string;
   summary: string;
+  title_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  summary_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
 }
 
 export interface HomeActivityCacheItem {
@@ -232,6 +248,14 @@ export interface HomeScreenCache {
 export interface AnalyticsInsightCacheItem {
   title: string;
   subtitle: string;
+  title_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  subtitle_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
 }
 
 export interface AnalyticsMetricTileCacheItem {
@@ -255,6 +279,14 @@ export interface AnalyticsSupplierAlertCacheItem {
   title: string;
   subtitle?: string;
   impact?: string;
+  title_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  subtitle_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
 }
 
 export interface AnalyticsRevenueTrendCacheItem {
@@ -281,6 +313,16 @@ export interface DocumentsScreenCache {
     title: string;
     subtitle: string;
   };
+  fetchedAt: number | null;
+}
+
+export interface ExpensesScreenCache {
+  data: any | null;
+  fetchedAt: number | null;
+}
+
+export interface NotificationsScreenCache {
+  items: any[];
   fetchedAt: number | null;
 }
 
@@ -319,6 +361,8 @@ interface AppState {
   homeScreenCache: HomeScreenCache;
   analyticsScreenCache: AnalyticsScreenCache;
   documentsScreenCache: DocumentsScreenCache;
+  expensesScreenCache: ExpensesScreenCache;
+  notificationsScreenCache: NotificationsScreenCache;
   dailyDataScreenCache: DailyDataScreenCache;
   setUser: (user: User | null, tokens?: Tokens | null) => void;
   setTokens: (tokens: Tokens | null) => void;
@@ -343,6 +387,10 @@ interface AppState {
   clearAnalyticsScreenCache: () => void;
   setDocumentsScreenCache: (payload: DocumentsScreenCache) => void;
   clearDocumentsScreenCache: () => void;
+  setExpensesScreenCache: (payload: ExpensesScreenCache) => void;
+  clearExpensesScreenCache: () => void;
+  setNotificationsScreenCache: (payload: NotificationsScreenCache) => void;
+  clearNotificationsScreenCache: () => void;
   setDailyDataScreenCache: (payload: Partial<DailyDataScreenCache>) => void;
   clearDailyDataScreenCache: () => void;
   appLanguage: 'en' | 'it';
@@ -395,6 +443,14 @@ export const useAppStore = create<AppState>()(
           title: '',
           subtitle: '',
         },
+        fetchedAt: null,
+      },
+      expensesScreenCache: {
+        data: null,
+        fetchedAt: null,
+      },
+      notificationsScreenCache: {
+        items: [],
         fetchedAt: null,
       },
       dailyDataScreenCache: {
@@ -486,6 +542,22 @@ export const useAppStore = create<AppState>()(
             fetchedAt: null,
           },
         }),
+      setExpensesScreenCache: (payload) => set({ expensesScreenCache: payload }),
+      clearExpensesScreenCache: () =>
+        set({
+          expensesScreenCache: {
+            data: null,
+            fetchedAt: null,
+          },
+        }),
+      setNotificationsScreenCache: (payload) => set({ notificationsScreenCache: payload }),
+      clearNotificationsScreenCache: () =>
+        set({
+          notificationsScreenCache: {
+            items: [],
+            fetchedAt: null,
+          },
+        }),
       setDailyDataScreenCache: (payload) =>
         set((state) => ({
           dailyDataScreenCache: {
@@ -541,6 +613,14 @@ export const useAppStore = create<AppState>()(
               title: '',
               subtitle: '',
             },
+            fetchedAt: null,
+          },
+          expensesScreenCache: {
+            data: null,
+            fetchedAt: null,
+          },
+          notificationsScreenCache: {
+            items: [],
             fetchedAt: null,
           },
           dailyDataScreenCache: {

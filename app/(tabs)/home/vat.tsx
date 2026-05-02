@@ -39,6 +39,7 @@ export default function VatScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    setLoading(true);
     fetchVatOverview();
   }, [fetchVatOverview]);
 
@@ -158,7 +159,7 @@ export default function VatScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FA8C4C"]} />}
       >
-      {loading && !vatOverviewData ? (
+      {loading ? (
         <ListRouteSkeleton itemCount={3} />
       ) : (
         <>

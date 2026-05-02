@@ -18,6 +18,7 @@ import { ChatRouteSkeleton } from "../../components/ui/RouteSkeletons";
 import { useAppStore } from "../../store/useAppStore";
 import { getApiBaseUrl } from "../../utils/api";
 import { useTranslation } from "../../utils/i18n";
+import { resolveLocalizedText } from "../../utils/localizedContent";
 
 const CHAT_REALTIME_ENV = process.env.EXPO_PUBLIC_CHAT_REALTIME?.trim().toLowerCase();
 const CHAT_REALTIME_DISABLED_VALUES = new Set(["0", "false", "no", "off", "disabled"]);
@@ -187,9 +188,11 @@ export default function ChatScreen() {
       id: Date.now().toString(),
       role: "user",
       message: text.trim(),
+      message_translations: null,
       created_at: new Date().toISOString(),
       attachment_name: file?.name || null,
       attachment_source: file?.uri || null, // Best-effort local preview
+      attachment_summary_translations: null,
     };
     let nextOptimisticMessages: any[] = [];
     setMessages((prev) => {
@@ -306,7 +309,7 @@ export default function ChatScreen() {
                 <ChatMessage
                   key={msg.id || index}
                   sender={currentSender}
-                  message={msg.message}
+                  message={resolveLocalizedText(appLanguage, msg.message_translations, msg.message)}
                   attachment_name={msg.attachment_name}
                   attachment_source={msg.attachment_source}
                   hideAvatar={hideAvatar}

@@ -83,7 +83,7 @@ export default function DocumentsScreen() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    void fetchDocuments(true);
+    void fetchDocuments(false);
   };
 
   return (
@@ -115,11 +115,17 @@ export default function DocumentsScreen() {
           </TouchableOpacity>
         </View>
 
-        <AIExtractionBanner
-          title={bannerData.title}
-          subtitle={bannerData.subtitle}
-        />
-        <RecentDocumentsList documents={documents} loading={loading} />
+        {loading ? (
+          <RecentDocumentsList documents={[]} loading={true} />
+        ) : (
+          <>
+            <AIExtractionBanner
+              title={bannerData.title}
+              subtitle={bannerData.subtitle}
+            />
+            <RecentDocumentsList documents={documents} loading={false} />
+          </>
+        )}
       </ScrollView>
     </View>
   );

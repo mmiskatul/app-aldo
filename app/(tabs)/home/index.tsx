@@ -17,6 +17,7 @@ import RecentActivity from "../../../components/home/RecentActivity";
 import RevenueChart from "../../../components/home/RevenueChart";
 import VatBalance from "../../../components/home/VatBalance";
 import { generatePdfExport, generateExcelExport } from "../../../utils/exportData";
+import { resolveLocalizedText } from "../../../utils/localizedContent";
 
 interface MetricCard {
   label: string;
@@ -39,6 +40,14 @@ interface RevenuePoint {
 interface FeaturedInsight {
   title: string;
   summary: string;
+  title_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  summary_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
 }
 
 interface ActivityItem {
@@ -127,7 +136,6 @@ export default function TabsIndex() {
   const setProfile = useAppStore((state) => state.setProfile);
   const homeScreenCache = useAppStore((state) => state.homeScreenCache);
   const setHomeScreenCache = useAppStore((state) => state.setHomeScreenCache);
-  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
 
   const [shellData, setShellData] = useState<HomeShellData | null>(homeScreenCache.shellData);
   const [activePeriod, setActivePeriod] = useState<PeriodKey>("weekly");
@@ -154,6 +162,7 @@ export default function TabsIndex() {
     insight: false,
     recentActivity: false,
   });
+  const hasInitializedLanguageRef = useRef(false);
   const hasFocusedRef = useRef(false);
   const previousPeriodRef = useRef<PeriodKey>("weekly");
   const routeTransitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -502,27 +511,19 @@ export default function TabsIndex() {
   }, [activePeriod, fetchInsightSection, fetchRevenueSection, fetchTopPrioritySections, insightByPeriod, loading, revenueByPeriod]);
 
   useEffect(() => {
-    clearHomeScreenCache();
-    setShellData(null);
-    setMetricsByPeriod({});
-    setCashByPeriod({});
-    setRevenueByPeriod({});
-    setInsightByPeriod({});
-    setRecentActivity(null);
-    setVatBalance(null);
-    triggeredSectionsRef.current = {
-      revenue: false,
-      insight: false,
-      recentActivity: false,
-    };
-    hasFocusedRef.current = false;
-    previousPeriodRef.current = activePeriod;
-    setLoading(true);
-    void fetchHomeData(activePeriod, false, true);
-  }, [appLanguage, clearHomeScreenCache, fetchHomeData]);
+    if (!hasInitializedLanguageRef.current) {
+      hasInitializedLanguageRef.current = true;
+      return;
+    }
+    void fetchHomeShell();
+    if (recentActivity !== null) {
+      void fetchRecentActivitySection();
+    }
+  }, [appLanguage, fetchHomeShell, fetchRecentActivitySection, recentActivity]);
 
   const onRefresh = () => {
     setRefreshing(true);
+    setLoading(true);
     void fetchHomeData(activePeriod, false, true);
   };
 
@@ -555,6 +556,13 @@ export default function TabsIndex() {
   const currentCashManagement = cashByPeriod[activePeriod];
   const currentRevenue = revenueByPeriod[activePeriod];
   const currentInsight = insightByPeriod[activePeriod];
+  const localizedCurrentInsight = currentInsight
+    ? {
+        ...currentInsight,
+        title: resolveLocalizedText(appLanguage, currentInsight.title_translations, currentInsight.title),
+        summary: resolveLocalizedText(appLanguage, currentInsight.summary_translations, currentInsight.summary),
+      }
+    : null;
   const shellLoading = loading && !shellData;
   const metricsSectionLoading = (loading || metricsLoading) && !currentMetrics;
   const cashSectionLoading = (loading || cashLoading) && !currentCashManagement;
@@ -639,7 +647,7 @@ export default function TabsIndex() {
           loading={(shellLoading || revenueLoading) && !currentRevenue}
         />
         <AIInsightBox
-          insight={currentInsight ?? undefined}
+          insight={localizedCurrentInsight ?? undefined}
           loading={(shellLoading || insightLoading) && !(activePeriod in insightByPeriod)}
           onNavigate={navigateFromHome}
         />

@@ -83,6 +83,7 @@ export default function CashManagementScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    setLoading(true);
     fetchCashOverview();
   }, [fetchCashOverview]);
 
@@ -106,7 +107,7 @@ export default function CashManagementScreen() {
     <View style={styles.safeArea}>
       <Header title="Cash Management" showBack={true} fallbackHref="/(tabs)/home" />
 
-      {loading && !hasScreenData ? (
+      {loading ? (
         <ListRouteSkeleton itemCount={3} />
       ) : (
         <ScrollView

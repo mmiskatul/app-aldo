@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import { BellIcon, ChevronDownIcon } from "react-native-heroicons/outline";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import LanguageModal from "./LanguageModal";
@@ -16,6 +17,7 @@ interface HomeHeaderProps {
 
 export default function HomeHeader({ greetingName, restaurantName, preferredLanguage }: HomeHeaderProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const appLanguage = useAppStore((state) => state.appLanguage);
   const profile = useAppStore((state) => state.profile);
@@ -64,7 +66,11 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
       </View>
 
       <View style={styles.rightSection}>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => router.push('/(tabs)/settings/notifications' as any)}
+          activeOpacity={0.7}
+        >
           <BellIcon size={moderateScale(20)} color="#111827" />
           <View style={styles.badge} />
         </TouchableOpacity>

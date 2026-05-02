@@ -13,6 +13,11 @@ import { Feather } from "@expo/vector-icons";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore";
+import {
+  resolveLocalizedActions,
+  resolveLocalizedList,
+  resolveLocalizedText,
+} from "../../../utils/localizedContent";
 
 // Components
 import InsightSummaryCard from "../../../components/home/view-insight/InsightSummaryCard";
@@ -41,7 +46,33 @@ export default function ViewInsightScreen() {
       }
     };
     fetchInsight();
-  }, [appLanguage]);
+  }, []);
+
+  const localizedInsightData = React.useMemo(() => {
+    if (!data) {
+      return null;
+    }
+
+    return {
+      ...data,
+      title: resolveLocalizedText(appLanguage, data.title_translations, data.title),
+      metric_caption: resolveLocalizedText(
+        appLanguage,
+        data.metric_caption_translations,
+        data.metric_caption,
+      ),
+      root_causes: resolveLocalizedList(
+        appLanguage,
+        data.root_causes_translations,
+        data.root_causes,
+      ),
+      recommended_actions: resolveLocalizedActions(
+        appLanguage,
+        data.recommended_actions_translations,
+        data.recommended_actions,
+      ),
+    };
+  }, [appLanguage, data]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -119,18 +150,18 @@ export default function ViewInsightScreen() {
       >
         {loading ? (
           <DetailRouteSkeleton />
-        ) : data ? (
+        ) : localizedInsightData ? (
           <>
             <InsightSummaryCard 
-              title={data.title}
-              priority={data.priority}
-              metricValue={data.metric_value}
-              metricCaption={data.metric_caption}
-              trend={data.trend}
+              title={localizedInsightData.title}
+              priority={localizedInsightData.priority}
+              metricValue={localizedInsightData.metric_value}
+              metricCaption={localizedInsightData.metric_caption}
+              trend={localizedInsightData.trend}
             />
-            <RootCauses causes={data.root_causes} />
-            <RecommendedActions actions={data.recommended_actions} />
-            <OtherInsights insights={data.other_related_insights} />
+            <RootCauses causes={localizedInsightData.root_causes} />
+            <RecommendedActions actions={localizedInsightData.recommended_actions} />
+            <OtherInsights insights={localizedInsightData.other_related_insights} />
           </>
         ) : (
           <Text style={{ textAlign: "center", marginTop: verticalScale(40) }}>No insight available</Text>

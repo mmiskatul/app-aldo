@@ -119,8 +119,6 @@ export default function TabLayout() {
         name="home"
         options={{
           tabBarLabel: "Home",
-          popToTopOnBlur: true,
-          unmountOnBlur: true,
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={Home07Icon}
@@ -198,8 +196,21 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="settings"
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            navigation.dispatch(
+              CommonActions.navigate({
+                name: "settings",
+                params: {
+                  screen: "index",
+                },
+              })
+            );
+          },
+        })}
         options={{
           tabBarLabel: "Settings",
+          popToTopOnBlur: true,
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={Settings01Icon}

@@ -15,6 +15,7 @@ import Skeleton, { SkeletonCard } from '../../components/ui/Skeleton';
 import apiClient from '../../api/apiClient';
 import { useAppStore } from '../../store/useAppStore';
 import { useTranslation } from '../../utils/i18n';
+import { resolveLocalizedText } from '../../utils/localizedContent';
 import { generateAnalyticsPdfExport, generateAnalyticsExcelExport } from '../../utils/exportData';
 
 type PeriodKey = 'weekly' | 'monthly';
@@ -22,6 +23,14 @@ type PeriodKey = 'weekly' | 'monthly';
 type InsightBanner = {
   title: string;
   subtitle: string;
+  title_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  subtitle_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
 };
 
 type MetricTile = {
@@ -50,6 +59,14 @@ type SupplierAlert = {
   title: string;
   subtitle?: string;
   impact?: string;
+  title_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  subtitle_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
 };
 
 interface AnalyticsMetricTilesResponse {
@@ -109,7 +126,6 @@ export default function AnalyticsScreen() {
   const appLanguage = useAppStore((state) => state.appLanguage);
   const analyticsScreenCache = useAppStore((state) => state.analyticsScreenCache);
   const setAnalyticsScreenCache = useAppStore((state) => state.setAnalyticsScreenCache);
-  const clearAnalyticsScreenCache = useAppStore((state) => state.clearAnalyticsScreenCache);
 
   const [activePeriod, setActivePeriod] = React.useState<PeriodKey>('weekly');
   const [refreshing, setRefreshing] = React.useState(false);
@@ -491,14 +507,20 @@ export default function AnalyticsScreen() {
 
     return {
       ...businessInsight,
-      title:
-        businessInsight.title === 'Food Cost Increased'
-          ? t('food_cost_increased')
-          : businessInsight.title === 'Food Cost Improved'
-            ? t('food_cost_improved')
-            : businessInsight.title,
+      title: resolveLocalizedText(appLanguage, businessInsight.title_translations, businessInsight.title),
+      subtitle: resolveLocalizedText(appLanguage, businessInsight.subtitle_translations, businessInsight.subtitle),
     };
-  }, [businessInsight, t]);
+  }, [appLanguage, businessInsight]);
+
+  const localizedSupplierAlerts = React.useMemo(
+    () =>
+      (supplierAlertsByPeriod[activePeriod] ?? []).map((item) => ({
+        ...item,
+        title: resolveLocalizedText(appLanguage, item.title_translations, item.title),
+        subtitle: resolveLocalizedText(appLanguage, item.subtitle_translations, item.subtitle),
+      })),
+    [activePeriod, appLanguage, supplierAlertsByPeriod],
+  );
 
   const localizedRevenueTrendPoints = React.useMemo(
     () =>
@@ -550,17 +572,10 @@ export default function AnalyticsScreen() {
   }, [activePeriod]);
 
   React.useEffect(() => {
-    clearAnalyticsScreenCache();
-    setBusinessInsight(null);
-    setMetricTilesByPeriod({});
-    setRevenueTrendByPeriod({});
-    setSummaryStatsByPeriod({});
-    setRevenueComparisonByPeriod({});
-    setCoversActivityByPeriod({});
-    setCostBreakdownByPeriod({});
-    setSupplierAlertsByPeriod({});
-    void fetchAnalyticsData(activePeriod, true);
-  }, [appLanguage]);
+    if (!businessInsight && !hasCachedPeriodData) {
+      void fetchAnalyticsData(activePeriod, true);
+    }
+  }, [activePeriod, appLanguage, businessInsight, fetchAnalyticsData, hasCachedPeriodData]);
 
   const handlePeriodChange = (period: string) => {
     setActivePeriod(period as PeriodKey);
@@ -573,7 +588,7 @@ export default function AnalyticsScreen() {
 
   const handleExport = async (format: 'pdf' | 'excel') => {
     const analyticsData = {
-      insight_banner: businessInsight,
+      insight_banner: localizedBusinessInsight,
       revenue_total: revenueTrendByPeriod[activePeriod]?.revenue_total ?? 0,
       revenue_change_percent: revenueTrendByPeriod[activePeriod]?.change_percent ?? 0,
       weekly_revenue: revenueTrendByPeriod[activePeriod]?.points ?? [],
@@ -582,7 +597,7 @@ export default function AnalyticsScreen() {
       revenue_comparison: revenueComparisonByPeriod[activePeriod] ?? [],
       covers_activity: coversActivityByPeriod[activePeriod] ?? [],
       cost_breakdown: costBreakdownByPeriod[activePeriod] ?? [],
-      supplier_price_alerts: supplierAlertsByPeriod[activePeriod] ?? [],
+      supplier_price_alerts: localizedSupplierAlerts,
     };
 
     if (format === 'pdf') {
@@ -692,7 +707,7 @@ export default function AnalyticsScreen() {
             <Skeleton width="100%" height={verticalScale(72)} borderRadius={12} style={styles.gap12} />
           </SkeletonCard>
         ) : supplierAlertsByPeriod[activePeriod] ? (
-          <SupplierPriceAlerts alerts={supplierAlertsByPeriod[activePeriod] ?? []} />
+          <SupplierPriceAlerts alerts={localizedSupplierAlerts} />
         ) : null}
       </ScrollView>
     </View>
