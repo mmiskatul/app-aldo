@@ -8,7 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppStore } from '../../../store/useAppStore';
 import apiClient from '../../../api/apiClient';
 import { getCurrentUser } from '../../../api/auth';
-import { getApiErrorMessage } from '../../../utils/api';
+import { getApiDisplayMessage, logApiError } from '../../../utils/apiErrors';
 import { useTranslation } from '../../../utils/i18n';
 import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 
@@ -169,12 +169,9 @@ export default function EditProfileScreen() {
         },
       } as any);
     } catch (error: any) {
-      console.error(
-        'Error saving profile:',
-        JSON.stringify(error.response?.data || error.message, null, 2)
-      );
+      logApiError('settings.edit_profile.save', error);
       setSavePhase('idle');
-      showErrorMessage(getApiErrorMessage(error, t('failed_to_save_profile_changes')));
+      showErrorMessage(getApiDisplayMessage(error, t('failed_to_save_profile_changes')));
     } finally {
       setLoading(false);
     }

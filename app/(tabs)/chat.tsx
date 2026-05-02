@@ -18,6 +18,7 @@ import { ChatRouteSkeleton } from "../../components/ui/RouteSkeletons";
 import { useCachedFocusRefresh } from "../../hooks/useCachedFocusRefresh";
 import { useAppStore } from "../../store/useAppStore";
 import { getApiBaseUrl } from "../../utils/api";
+import { getApiDisplayMessage, logApiError, showApiError } from "../../utils/apiErrors";
 import { isCacheFresh } from "../../utils/cache";
 import { useTranslation } from "../../utils/i18n";
 import { resolveLocalizedText } from "../../utils/localizedContent";
@@ -59,6 +60,7 @@ export default function ChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const hasLoggedRealtimeFallbackRef = useRef(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
@@ -89,17 +91,21 @@ export default function ChatScreen() {
     }
 
     try {
+      setErrorMessage(null);
       const response = await apiClient.get("/api/v1/restaurant/chat/messages");
       const nextMessages = response.data.messages || [];
       setMessages(nextMessages);
       setChatMessagesCache(nextMessages);
       scrollToBottom();
     } catch (error) {
-      console.error("Error fetching chat messages via REST:", error);
+      logApiError("chat.fetch", error);
+      if (!silent || chatMessagesCache.length === 0) {
+        setErrorMessage(getApiDisplayMessage(error, "Unable to load chat messages."));
+      }
     } finally {
       setLoading(false);
     }
-  }, [scrollToBottom, setChatMessagesCache]);
+  }, [chatMessagesCache.length, scrollToBottom, setChatMessagesCache]);
 
   useCachedFocusRefresh({
     enabled: Boolean(tokens?.access_token),
@@ -227,6 +233,7 @@ export default function ChatScreen() {
       return nextOptimisticMessages;
     });
     setChatMessagesCache(nextOptimisticMessages);
+    setErrorMessage(null);
     scrollToBottom();
 
     if (file) {
@@ -263,7 +270,10 @@ export default function ChatScreen() {
         }
       } catch (error) {
         setIsAiTyping(false);
-        console.error("Error uploading attachment:", error);
+        const revertedMessages = nextOptimisticMessages.filter((item) => item.id !== optimisticMessage.id);
+        setMessages(revertedMessages);
+        setChatMessagesCache(revertedMessages);
+        showApiError("chat.upload_attachment", error, "Unable to upload attachment.", "Upload failed");
       }
     } else {
       // Prefer realtime when connected, but fall back to REST if the socket
@@ -291,7 +301,10 @@ export default function ChatScreen() {
         scrollToBottom();
       } catch (error) {
         setIsAiTyping(false);
-        console.error("Error sending chat message:", error);
+        const revertedMessages = nextOptimisticMessages.filter((item) => item.id !== optimisticMessage.id);
+        setMessages(revertedMessages);
+        setChatMessagesCache(revertedMessages);
+        showApiError("chat.send_message", error, "Unable to send message.", "Send failed");
       }
     }
   };
@@ -309,6 +322,10 @@ export default function ChatScreen() {
         {loading ? (
           <View style={styles.scrollView}>
             <ChatRouteSkeleton />
+          </View>
+        ) : errorMessage && messages.length === 0 ? (
+          <View style={styles.errorContainer}>
+            <ChatMessage sender="ai" message={errorMessage} />
           </View>
         ) : (
           <ScrollView
@@ -367,5 +384,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 20,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
   },
 });

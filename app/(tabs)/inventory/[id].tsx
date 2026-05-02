@@ -6,6 +6,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
+import { getApiDisplayMessage, showApiError } from '../../../utils/apiErrors';
 import { showErrorMessage, showInfoMessage, showSuccessMessage } from '../../../utils/feedback';
 import { getLocale, useTranslation } from '../../../utils/i18n';
 
@@ -76,6 +77,7 @@ export default function ItemDetailScreen() {
   const [item, setItem] = useState<InventoryDetailResponse | null>(initialItem);
   const [loading, setLoading] = useState(!initialItem);
   const [deleting, setDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fetchItem = useCallback(async () => {
     if (!itemId) {
@@ -85,11 +87,13 @@ export default function ItemDetailScreen() {
       setLoading(true);
     }
     try {
+      setErrorMessage(null);
       const response = await apiClient.get<InventoryDetailResponse>(`/api/v1/restaurant/inventory/${itemId}`);
       setItem(response.data);
       setInventoryDetailCacheItem(itemId, response.data);
     } catch (error: any) {
-      showErrorMessage(error.response?.data?.detail || error.message || t('unable_to_load_item'), t('load_failed'));
+      setErrorMessage(getApiDisplayMessage(error, t('unable_to_load_item')));
+      showErrorMessage(getApiDisplayMessage(error, t('unable_to_load_item')), t('load_failed'));
     } finally {
       setLoading(false);
     }
@@ -144,18 +148,33 @@ export default function ItemDetailScreen() {
         },
       });
     } catch (error: any) {
-      showErrorMessage(error.response?.data?.detail || error.message || t('unable_to_delete_item'), t('delete_failed'));
+      showApiError('inventory.delete', error, t('unable_to_delete_item'), t('delete_failed'));
     } finally {
       setDeleting(false);
     }
   };
 
-  if (loading || !viewModel || !itemId) {
+  if (loading || !itemId) {
     return (
       <View style={styles.safe}>
         <Header title={t('inventory_title')} showBack={true} />
         <View style={styles.loadingState}>
           <ActivityIndicator size="small" color="#FA8C4C" />
+        </View>
+      </View>
+    );
+  }
+
+  if (!viewModel) {
+    return (
+      <View style={styles.safe}>
+        <Header title={t('inventory_title')} showBack={true} />
+        <View style={styles.errorState}>
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorSubtitle}>{errorMessage || t('unable_to_load_item')}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => void fetchItem()}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -272,5 +291,34 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  errorState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: scale(24),
+  },
+  errorTitle: {
+    fontSize: moderateScale(18, 0.3),
+    fontWeight: '700',
+    color: '#991B1B',
+  },
+  errorSubtitle: {
+    marginTop: verticalScale(8),
+    fontSize: moderateScale(13, 0.3),
+    color: '#7F1D1D',
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: verticalScale(16),
+    backgroundColor: '#FA8C4C',
+    borderRadius: scale(12),
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(10),
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: '700',
   },
 });

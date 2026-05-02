@@ -24,6 +24,7 @@ import Header from "../../../components/ui/Header";
 import { ListRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 import { useCachedFocusRefresh } from "../../../hooks/useCachedFocusRefresh";
 import { useAppStore } from "../../../store/useAppStore";
+import { getApiDisplayMessage, logApiError } from "../../../utils/apiErrors";
 
 type NotificationItem = {
   kind: string;
@@ -175,16 +176,15 @@ export default function NotificationsScreen() {
         fetchedAt: Date.now(),
       });
     } catch (err: any) {
-      setError(
-        err?.response?.data?.message ??
-          err?.message ??
-          "Failed to load notifications."
-      );
+      logApiError("notifications.fetch", err);
+      if (!silent || notificationsScreenCache.items.length === 0) {
+        setError(getApiDisplayMessage(err, "Failed to load notifications."));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [setNotificationsScreenCache]);
+  }, [notificationsScreenCache.items.length, setNotificationsScreenCache]);
 
   useCachedFocusRefresh({
     hasCache: notificationsScreenCache.items.length > 0,

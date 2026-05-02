@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import { View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
 import { useCachedFocusRefresh } from '../../hooks/useCachedFocusRefresh';
@@ -15,6 +15,7 @@ import ActionFilterBar from '../../components/home/ActionFilterBar';
 import Skeleton, { SkeletonCard } from '../../components/ui/Skeleton';
 import apiClient from '../../api/apiClient';
 import { useAppStore } from '../../store/useAppStore';
+import { getApiDisplayMessage, logApiError } from '../../utils/apiErrors';
 import { useTranslation } from '../../utils/i18n';
 import { resolveLocalizedText } from '../../utils/localizedContent';
 import { generateAnalyticsPdfExport, generateAnalyticsExcelExport } from '../../utils/exportData';
@@ -127,6 +128,7 @@ export default function AnalyticsScreen() {
   const [loading, setLoading] = React.useState(
     !hasPeriodAnalyticsData('weekly', analyticsScreenCache as any),
   );
+  const [error, setError] = React.useState<string | null>(null);
 
   const [businessInsight, setBusinessInsight] = React.useState<InsightBanner | null>(analyticsScreenCache.businessInsight);
   const [metricTilesByPeriod, setMetricTilesByPeriod] = React.useState<Partial<Record<PeriodKey, MetricTile[]>>>(analyticsScreenCache.metricTilesByPeriod);
@@ -218,6 +220,7 @@ export default function AnalyticsScreen() {
       if (!silent) {
         setLoading(true);
       }
+      setError(null);
 
       try {
         const response = await apiClient.get<AnalyticsOverviewResponse>('/api/v1/restaurant/analytics/overview', {
@@ -225,13 +228,16 @@ export default function AnalyticsScreen() {
         });
         applyAnalyticsOverview(period, response.data);
       } catch (error) {
-        console.error('Error fetching analytics overview:', error);
+        logApiError('analytics.overview', error);
+        if (!silent || !hasCachedPeriodData) {
+          setError(getApiDisplayMessage(error, 'Unable to load analytics.'));
+        }
       } finally {
         setLoading(false);
         setRefreshing(false);
       }
     },
-    [applyAnalyticsOverview],
+    [applyAnalyticsOverview, hasCachedPeriodData],
   );
 
   useCachedFocusRefresh({
@@ -452,6 +458,14 @@ export default function AnalyticsScreen() {
               <Skeleton width="100%" height={verticalScale(150)} borderRadius={12} style={styles.gap12} />
             </SkeletonCard>
           </>
+        ) : error && !hasCachedPeriodData ? (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorTitle}>Something went wrong</Text>
+            <Text style={styles.errorSubtitle}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => void fetchAnalyticsData(activePeriod, false)}>
+              <Text style={styles.retryText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <>
             {localizedBusinessInsight ? <AnalyticsAIInsightCard insight={localizedBusinessInsight} /> : null}
@@ -505,6 +519,38 @@ const styles = StyleSheet.create({
   metricCardSkeleton: {
     flex: 1,
     marginHorizontal: scale(4),
+  },
+  errorCard: {
+    marginBottom: verticalScale(24),
+    borderRadius: scale(16),
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+    padding: scale(18),
+    alignItems: 'center',
+  },
+  errorTitle: {
+    fontSize: moderateScale(16, 0.3),
+    fontWeight: '700',
+    color: '#991B1B',
+  },
+  errorSubtitle: {
+    marginTop: verticalScale(8),
+    fontSize: moderateScale(13, 0.3),
+    color: '#7F1D1D',
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: verticalScale(16),
+    borderRadius: scale(12),
+    backgroundColor: '#FA8C4C',
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(10),
+  },
+  retryText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: '700',
   },
   gap8: {
     marginTop: verticalScale(8),

@@ -18,6 +18,7 @@ import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
 import { useCachedFocusRefresh } from '../../../hooks/useCachedFocusRefresh';
+import { getApiDisplayMessage, logApiError } from '../../../utils/apiErrors';
 import { isCacheFresh } from '../../../utils/cache';
 import { useTranslation } from '../../../utils/i18n';
 
@@ -146,6 +147,7 @@ export default function InventoryScreen() {
   const [loading, setLoading] = useState(!hasCachedInventory);
   const [refreshing, setRefreshing] = useState(false);
   const [bannerMessage, setBannerMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const lastHandledRefreshTokenRef = useRef(inventoryRefreshToken);
 
   const fetchInventory = useCallback(async (query: string, options?: { withRefresh?: boolean; silent?: boolean }) => {
@@ -160,6 +162,9 @@ export default function InventoryScreen() {
     }
 
     try {
+      if (!silent) {
+        setErrorMessage('');
+      }
       const response = await apiClient.get<InventoryListResponse>('/api/v1/restaurant/inventory', {
         params: {
           page: 1,
@@ -204,13 +209,16 @@ export default function InventoryScreen() {
       }
 
     } catch (error: any) {
-      console.log('Inventory list error:', error.response?.data || error.message);
+      logApiError('inventory.list', error);
+      if (!silent || !hasCachedInventory || query.trim().length > 0) {
+        setErrorMessage(getApiDisplayMessage(error, 'Unable to load inventory items.'));
+      }
     } finally {
       setLoading(false);
       setValueLoading(false);
       setRefreshing(false);
     }
-  }, [setInventoryDetailCacheItem, setInventoryListCache]);
+  }, [hasCachedInventory, setInventoryDetailCacheItem, setInventoryListCache]);
 
   const isDefaultQuery = search.trim().length === 0;
 
@@ -306,6 +314,13 @@ export default function InventoryScreen() {
         <View style={styles.banner}>
           <Feather name="check-circle" size={moderateScale(16)} color="#166534" />
           <Text style={styles.bannerText}>{bannerMessage}</Text>
+        </View>
+      ) : null}
+
+      {errorMessage ? (
+        <View style={styles.errorBanner}>
+          <Feather name="alert-circle" size={moderateScale(16)} color="#991B1B" />
+          <Text style={styles.errorBannerText}>{errorMessage}</Text>
         </View>
       ) : null}
 
@@ -428,6 +443,25 @@ const styles = StyleSheet.create({
   bannerText: {
     flex: 1,
     color: '#166534',
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+  },
+  errorBanner: {
+    marginHorizontal: scale(20),
+    marginBottom: verticalScale(12),
+    borderRadius: scale(12),
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
+  },
+  errorBannerText: {
+    flex: 1,
+    color: '#991B1B',
     fontSize: moderateScale(13),
     fontWeight: '600',
   },

@@ -11,6 +11,7 @@ import SettingsList from '../../../components/settings/SettingsList';
 import Header from '../../../components/ui/Header';
 import { useCachedFocusRefresh } from '../../../hooks/useCachedFocusRefresh';
 import { useAppStore } from '../../../store/useAppStore';
+import { getApiDisplayMessage, logApiError } from '../../../utils/apiErrors';
 import { useTranslation } from '../../../utils/i18n';
 import apiClient from '../../../api/apiClient';
 
@@ -25,17 +26,20 @@ export default function SettingsScreen() {
   const profileFetchedAt = useAppStore((state) => state.profileFetchedAt);
   const setProfile = useAppStore((state) => state.setProfile);
   const [bannerMessage, setBannerMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const fetchProfile = React.useCallback(async (silent = false) => {
     try {
+      setErrorMessage('');
       const response = await apiClient.get('/api/v1/restaurant/settings/profile');
       setProfile(response.data);
     } catch (error) {
-      if (!silent) {
-        console.error('Error fetching profile:', error);
+      logApiError('settings.profile', error);
+      if (!silent || !profile) {
+        setErrorMessage(getApiDisplayMessage(error, 'Unable to load profile.'));
       }
     }
-  }, [setProfile]);
+  }, [profile, setProfile]);
 
   useCachedFocusRefresh({
     hasCache: Boolean(profile),
@@ -71,6 +75,13 @@ export default function SettingsScreen() {
           <View style={styles.banner}>
             <Feather name="check-circle" size={moderateScale(16)} color="#166534" />
             <Text style={styles.bannerText}>{bannerMessage}</Text>
+          </View>
+        ) : null}
+
+        {errorMessage ? (
+          <View style={styles.errorBanner}>
+            <Feather name="alert-circle" size={moderateScale(16)} color="#991B1B" />
+            <Text style={styles.errorBannerText}>{errorMessage}</Text>
           </View>
         ) : null}
 
@@ -153,6 +164,24 @@ const styles = StyleSheet.create({
   bannerText: {
     flex: 1,
     color: '#166534',
+    fontSize: moderateScale(13),
+    fontWeight: '600',
+  },
+  errorBanner: {
+    marginBottom: verticalScale(16),
+    borderRadius: scale(12),
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(8),
+  },
+  errorBannerText: {
+    flex: 1,
+    color: '#991B1B',
     fontSize: moderateScale(13),
     fontWeight: '600',
   },

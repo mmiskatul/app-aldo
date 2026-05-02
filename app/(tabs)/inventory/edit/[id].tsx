@@ -7,6 +7,7 @@ import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import DatePicker from '../../../../components/ui/DatePicker';
 import Header from '../../../../components/ui/Header';
 import { useAppStore } from '../../../../store/useAppStore';
+import { getApiDisplayMessage, showApiError } from '../../../../utils/apiErrors';
 import { showErrorMessage } from '../../../../utils/feedback';
 import { useTranslation } from '../../../../utils/i18n';
 
@@ -73,7 +74,7 @@ export default function EditInventoryItemScreen() {
     if (typeof detail === 'string') {
       return detail;
     }
-    return error?.message || t('unable_to_save_inventory_item');
+    return getApiDisplayMessage(error, t('unable_to_save_inventory_item'));
   };
 
   useEffect(() => {
@@ -96,7 +97,7 @@ export default function EditInventoryItemScreen() {
         setAlertThreshold(String(item.alert_threshold));
         setPurchaseDate(parseDateValue(item.purchase_date));
       } catch (error: any) {
-        showErrorMessage(buildErrorMessage(error), t('load_failed'));
+        showApiError('inventory.edit.load', error, buildErrorMessage(error), t('load_failed'));
       } finally {
         setLoading(false);
       }
@@ -166,7 +167,7 @@ export default function EditInventoryItemScreen() {
         },
       });
     } catch (error: any) {
-      showErrorMessage(buildErrorMessage(error), t('save_failed'));
+      showApiError('inventory.edit.save', error, buildErrorMessage(error), t('save_failed'));
     } finally {
       setSaving(false);
     }

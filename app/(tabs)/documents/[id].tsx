@@ -5,6 +5,8 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
@@ -20,6 +22,7 @@ import DocumentPreview from "../../../components/documents/document-details/Docu
 import ExtractedData from "../../../components/documents/document-details/ExtractedData";
 import { DetailRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 import { getApiBaseUrl } from "../../../utils/api";
+import { getApiDisplayMessage, logApiError, showApiError } from "../../../utils/apiErrors";
 import { useTranslation } from "../../../utils/i18n";
 import { showDialog, showErrorMessage, showInfoMessage, showSuccessMessage } from "../../../utils/feedback";
 const { StorageAccessFramework } = FileSystem;
@@ -36,17 +39,20 @@ export default function DocumentDetailsScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const apiUrl = getApiBaseUrl();
 
   const fetchDetails = async () => {
     try {
+      setErrorMessage(null);
       const response = await apiClient.get(
         `/api/v1/restaurant/documents/${id}`,
       );
       setData(response.data);
     } catch (error) {
-      console.error("Error fetching document details:", error);
+      logApiError("documents.detail", error);
+      setErrorMessage(getApiDisplayMessage(error, t('unable_to_load_item')));
     } finally {
       setLoading(false);
     }
@@ -159,8 +165,7 @@ export default function DocumentDetailsScreen() {
       setIsEditing(false);
       showSuccessMessage(t('document_updated'), t('success'));
     } catch (error) {
-      console.error("Error updating document:", error);
-      showErrorMessage(t('document_update_failed'), t('error'));
+      showApiError("documents.update", error, t('document_update_failed'), t('error'));
     } finally {
       setLoading(false);
     }
@@ -183,8 +188,7 @@ export default function DocumentDetailsScreen() {
               showSuccessMessage('Document deleted.');
               router.back();
             } catch (error) {
-              console.error("Error deleting document:", error);
-              showErrorMessage(t('document_delete_failed'), t('error'));
+              showApiError("documents.delete", error, t('document_delete_failed'), t('error'));
               setLoading(false);
             }
           },
@@ -242,8 +246,7 @@ export default function DocumentDetailsScreen() {
         });
       }
     } catch (error) {
-      console.error("Download Error:", error);
-      showErrorMessage(t('download_failed'));
+      showApiError("documents.download", error, t('download_failed'));
     } finally {
       setDownloading(false);
     }
@@ -291,7 +294,20 @@ export default function DocumentDetailsScreen() {
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <View style={styles.safeArea}>
+        <Header title={t('document_details_title')} showBack={true} />
+        <View style={styles.errorState}>
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorSubtitle}>{errorMessage || t('unable_to_load_item')}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => void fetchDetails()}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.safeArea}>
@@ -421,5 +437,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(20),
     paddingTop: verticalScale(8),
     paddingBottom: verticalScale(40),
+  },
+  errorState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: scale(24),
+  },
+  errorTitle: {
+    fontSize: moderateScale(18, 0.3),
+    fontWeight: "700",
+    color: "#991B1B",
+  },
+  errorSubtitle: {
+    marginTop: verticalScale(8),
+    fontSize: moderateScale(13, 0.3),
+    color: "#7F1D1D",
+    textAlign: "center",
+  },
+  retryButton: {
+    marginTop: verticalScale(16),
+    backgroundColor: "#FA8C4C",
+    borderRadius: scale(12),
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(10),
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: "700",
   },
 });
