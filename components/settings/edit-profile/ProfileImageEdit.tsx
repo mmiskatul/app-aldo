@@ -4,6 +4,7 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import PhotoPickerModal from '../../ui/PhotoPickerModal';
+import ProfilePlaceholderAvatar from '../../ui/ProfilePlaceholderAvatar';
 import { showErrorMessage } from '../../../utils/feedback';
 import { buildFileName, inferMimeType } from '../../../utils/fileMetadata';
 import { useTranslation } from '../../../utils/i18n';
@@ -16,10 +17,17 @@ export type ProfileImageFile = {
 
 interface ProfileImageEditProps {
   profileImageUrl?: string | null;
-  onImageChange?: (file: ProfileImageFile) => void;
+  onImageChange?: (file: ProfileImageFile | null) => void;
+  onRemoveImage?: () => void;
+  removeDisabled?: boolean;
 }
 
-export default function ProfileImageEdit({ profileImageUrl, onImageChange }: ProfileImageEditProps) {
+export default function ProfileImageEdit({
+  profileImageUrl,
+  onImageChange,
+  onRemoveImage,
+  removeDisabled = false,
+}: ProfileImageEditProps) {
   const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(profileImageUrl || null);
@@ -100,17 +108,32 @@ export default function ProfileImageEdit({ profileImageUrl, onImageChange }: Pro
             style={styles.avatar}
           />
         ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Feather name="image" size={moderateScale(22)} color="#D1D5DB" />
-          </View>
+          <ProfilePlaceholderAvatar size={scale(100)} style={styles.avatar} />
         )}
-        <TouchableOpacity style={styles.cameraButton} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity
+          style={styles.cameraButton}
+          onPress={() => setModalVisible(true)}
+          accessibilityLabel={t('change_photo')}
+        >
           <Feather name="camera" size={moderateScale(14)} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
-      <TouchableOpacity onPress={() => setModalVisible(true)}>
-        <Text style={styles.changeText}>{t('change_photo')}</Text>
-      </TouchableOpacity>
+      <View style={styles.actionsRow}>
+        {hasProfileImage ? (
+          <TouchableOpacity
+            onPress={onRemoveImage}
+            style={styles.iconActionButton}
+            disabled={removeDisabled}
+            accessibilityLabel={t('remove_photo')}
+          >
+            <Feather
+              name="trash-2"
+              size={moderateScale(16)}
+              color={removeDisabled ? "#FCA5A5" : "#EF4444"}
+            />
+          </TouchableOpacity>
+        ) : null}
+      </View>
 
       <PhotoPickerModal
         visible={modalVisible}
@@ -138,17 +161,6 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: '#FFE4D1',
   },
-  avatarPlaceholder: {
-    width: scale(100),
-    height: scale(100),
-    borderRadius: scale(50),
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#E5E7EB',
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   cameraButton: {
     position: 'absolute',
     bottom: 0,
@@ -167,5 +179,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6B7280',
     textDecorationLine: 'underline',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(16),
+  },
+  iconActionButton: {
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(17),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

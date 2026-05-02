@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
 import Input from "../../ui/Input";
 import TypeModal from "../../ui/TypeModal";
+import { useTranslation } from "../../../utils/i18n";
 
 const RESTAURANT_TYPES = [
   "Pizzeria",
@@ -29,25 +30,31 @@ export default function Step1RestaurantInfo({
   setRestaurantType,
   onNext,
 }: Step1Props) {
+  const { t } = useTranslation();
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const restaurantTypeOptions = RESTAURANT_TYPES.map((value) => ({
+    value,
+    label: t(`restaurant_type_${value.toLowerCase().replace(/\s+/g, "_")}` as any),
+  }));
+  const selectedRestaurantTypeLabel =
+    restaurantTypeOptions.find((option) => option.value === restaurantType)?.label || restaurantType;
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.title}>Tell us about your restaurant</Text>
+      <Text style={styles.title}>{t('onboarding_restaurant_title')}</Text>
       <Text style={styles.subtitle}>
-        Help Risto AI understand your business to provide personalized insights
-        and recommendations.
+        {t('onboarding_restaurant_subtitle')}
       </Text>
 
       <Input
-        label="Restaurant Name"
-        placeholder="e.g. The Italian Bistro"
+        label={t('restaurant_name')}
+        placeholder={t('onboarding_restaurant_name_placeholder')}
         value={restaurantName}
         onChangeText={setRestaurantName}
       />
 
       <View style={styles.dropdownWrapper}>
-        <Text style={styles.dropdownLabel}>Type of Restaurant</Text>
+        <Text style={styles.dropdownLabel}>{t('restaurant_type')}</Text>
         <TouchableOpacity
           style={styles.dropdownButton}
           onPress={() => setShowTypeDropdown(!showTypeDropdown)}
@@ -59,7 +66,7 @@ export default function Step1RestaurantInfo({
               !restaurantType ? styles.dropdownPlaceholder : null,
             ]}
           >
-            {restaurantType || "Select an option"}
+            {selectedRestaurantTypeLabel || t('select_option')}
           </Text>
           <Feather
             name={showTypeDropdown ? "chevron-up" : "chevron-down"}
@@ -71,8 +78,8 @@ export default function Step1RestaurantInfo({
         <TypeModal
           visible={showTypeDropdown}
           onClose={() => setShowTypeDropdown(false)}
-          title="Select Restaurant Type"
-          options={RESTAURANT_TYPES}
+          title={t('select_restaurant_type')}
+          options={restaurantTypeOptions}
           selectedValue={restaurantType}
           onSelect={(val) => setRestaurantType(val)}
         />
@@ -81,7 +88,7 @@ export default function Step1RestaurantInfo({
       <View style={styles.spacer} />
 
       <TouchableOpacity style={styles.continueButton} onPress={onNext}>
-        <Text style={styles.continueButtonText}>Continue</Text>
+        <Text style={styles.continueButtonText}>{t('continue')}</Text>
         <Feather
           name="arrow-right"
           size={moderateScale(18)}
@@ -90,7 +97,7 @@ export default function Step1RestaurantInfo({
         />
       </TouchableOpacity>
       <Text style={styles.bottomFooterText}>
-        You can change these details later in settings.
+        {t('onboarding_change_later')}
       </Text>
     </View>
   );

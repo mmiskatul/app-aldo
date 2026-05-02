@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -40,11 +40,20 @@ export default function EditProfileScreen() {
     restaurant_type: profile?.restaurant_type || '',
     city_location: profile?.city_location || '',
     number_of_seats: profile?.number_of_seats?.toString() || '',
-    profile_image: null as ProfileImageFile | null
+    profile_image: null as ProfileImageFile | null,
+    remove_profile_image: false,
   });
 
-  const updateField = (field: string, value: string | ProfileImageFile | null) => {
+  const updateField = (field: string, value: string | boolean | ProfileImageFile | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleImageChange = (file: ProfileImageFile | null) => {
+    setFormData((prev) => ({
+      ...prev,
+      profile_image: file,
+      remove_profile_image: false,
+    }));
   };
 
   useEffect(() => {
@@ -88,6 +97,30 @@ export default function EditProfileScreen() {
     }
   };
 
+  const handleRemovePhoto = () => {
+    Alert.alert(
+      t('remove_photo_title'),
+      t('remove_photo_message'),
+      [
+        {
+          text: t('cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('remove_photo'),
+          style: 'destructive',
+          onPress: () => {
+            setFormData((prev) => ({
+              ...prev,
+              profile_image: null,
+              remove_profile_image: true,
+            }));
+          },
+        },
+      ]
+    );
+  };
+
   const handleSave = async () => {
     setLoading(true);
     setSavePhase('saving');
@@ -107,6 +140,8 @@ export default function EditProfileScreen() {
           name: formData.profile_image.name,
           type: formData.profile_image.mimeType,
         } as any);
+      } else if (formData.remove_profile_image) {
+        data.append('profile_image_url', '');
       }
 
       const response = await apiClient.put('/api/v1/restaurant/settings/profile', data, {
@@ -155,8 +190,14 @@ export default function EditProfileScreen() {
       >
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           <ProfileImageEdit 
-            profileImageUrl={profile?.profile_image_url || null} 
-            onImageChange={(file) => updateField('profile_image', file)}
+            profileImageUrl={
+              formData.remove_profile_image
+                ? null
+                : formData.profile_image?.uri || profile?.profile_image_url || null
+            }
+            onImageChange={handleImageChange}
+            onRemoveImage={handleRemovePhoto}
+            removeDisabled={loading}
           />
 
           <View style={styles.formSection}>

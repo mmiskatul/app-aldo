@@ -13,7 +13,7 @@ import { scale, moderateScale, verticalScale } from "react-native-size-matters";
 interface TypeModalProps {
   visible: boolean;
   onClose: () => void;
-  options: string[];
+  options: Array<string | { label: string; value: string }>;
   selectedValue: string;
   onSelect: (value: string) => void;
   title?: string;
@@ -51,21 +51,25 @@ export default function TypeModal({
             style={styles.modalScrollList}
             showsVerticalScrollIndicator={false}
           >
-            {options.map((option, idx) => (
+            {options.map((option, idx) => {
+              const normalized = typeof option === "string"
+                ? { label: option, value: option }
+                : option;
+              return (
               <TouchableOpacity
-                key={idx}
+                key={`${normalized.value}-${idx}`}
                 style={styles.modalDropdownItem}
                 onPress={() => {
-                  onSelect(option);
+                  onSelect(normalized.value);
                   onClose();
                 }}
               >
-                <Text style={styles.modalDropdownItemText}>{option}</Text>
-                {selectedValue === option && (
+                <Text style={styles.modalDropdownItemText}>{normalized.label}</Text>
+                {selectedValue === normalized.value && (
                   <Feather name="check" size={moderateScale(20)} color="#FA8C4C" />
                 )}
               </TouchableOpacity>
-            ))}
+            )})}
           </ScrollView>
         </View>
       </View>

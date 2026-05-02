@@ -18,6 +18,7 @@ import { useAppStore } from '../../../store/useAppStore';
 import { changeRestaurantPassword } from '../../../api/settings';
 import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 import { useTranslation } from '../../../utils/i18n';
+import ProfilePlaceholderAvatar from '../../../components/ui/ProfilePlaceholderAvatar';
 
 export default function ChangePasswordScreen() {
   const { t } = useTranslation();
@@ -79,7 +80,7 @@ export default function ChangePasswordScreen() {
         style={styles.avatar}
       />
     ) : (
-      <View style={styles.avatarPlaceholder} />
+      <ProfilePlaceholderAvatar size={scale(36)} style={styles.avatarPlaceholder} />
     )
   );
 
@@ -252,10 +253,6 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(18),
   },
   avatarPlaceholder: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(18),
-    backgroundColor: '#E5E7EB',
   },
   content: {
     padding: scale(20),

@@ -6,6 +6,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import LanguageModal from "./LanguageModal";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../utils/i18n";
+import ProfilePlaceholderAvatar from "../ui/ProfilePlaceholderAvatar";
 
 interface HomeHeaderProps {
   greetingName?: string;
@@ -45,7 +46,7 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
             }}
           />
         ) : (
-          <View style={styles.avatarPlaceholder} />
+          <ProfilePlaceholderAvatar size={scale(40)} style={styles.avatarPlaceholder} />
         )}
         <View style={styles.textContainer}>
           <Text style={styles.restaurantName} numberOfLines={1}>
@@ -110,11 +111,7 @@ const styles = StyleSheet.create({
     marginRight: scale(12),
   },
   avatarPlaceholder: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(20),
     marginRight: scale(12),
-    backgroundColor: "#E5E7EB",
   },
   textContainer: {
     justifyContent: "center",

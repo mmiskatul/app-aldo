@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useAppStore } from '../../store/useAppStore';
 import { useTranslation } from '../../utils/i18n';
+import ProfilePlaceholderAvatar from '../ui/ProfilePlaceholderAvatar';
 
 interface ProfileCardProps {
   onEditProfile: () => void;
@@ -22,7 +23,7 @@ export default function ProfileCard({ onEditProfile }: ProfileCardProps) {
             style={styles.avatar}
           />
         ) : (
-          <View style={styles.avatarPlaceholder} />
+          <ProfilePlaceholderAvatar size={scale(70)} style={styles.avatar} />
         )}
         <View style={styles.textContainer}>
           <Text style={styles.name}>{profile?.full_name || 'Loading...'}</Text>
@@ -61,14 +62,6 @@ const styles = StyleSheet.create({
     borderRadius: scale(35),
     borderWidth: 3,
     borderColor: '#FFFFFF',
-  },
-  avatarPlaceholder: {
-    width: scale(70),
-    height: scale(70),
-    borderRadius: scale(35),
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    backgroundColor: '#E5E7EB',
   },
   textContainer: {
     marginLeft: scale(16),

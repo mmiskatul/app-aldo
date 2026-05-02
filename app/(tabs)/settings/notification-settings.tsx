@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Header from '../../../components/ui/Header';
 import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
+import ProfilePlaceholderAvatar from '../../../components/ui/ProfilePlaceholderAvatar';
 import { useAppStore } from '../../../store/useAppStore';
 import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 import {
@@ -132,7 +133,7 @@ export default function NotificationSettingsScreen() {
         style={styles.avatar}
       />
     ) : (
-      <View style={styles.avatarPlaceholder} />
+      <ProfilePlaceholderAvatar size={scale(36)} style={styles.avatarPlaceholder} />
     )
   );
 
@@ -216,10 +217,6 @@ const styles = StyleSheet.create({
     borderRadius: moderateScale(18),
   },
   avatarPlaceholder: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(18),
-    backgroundColor: '#E5E7EB',
   },
   content: {
     padding: scale(20),
