@@ -125,6 +125,8 @@ const REVENUE_TRIGGER_Y = 260;
 const INSIGHT_TRIGGER_Y = 520;
 const RECENT_ACTIVITY_TRIGGER_Y = 760;
 const HOME_SECTION_LOAD_DELAY_MS = 160;
+const HOME_CACHE_TTL_MS = 60_000;
+const SUPPORTING_DATA_TTL_MS = 120_000;
 export default function TabsIndex() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -163,8 +165,13 @@ export default function TabsIndex() {
   const hasInitializedLanguageRef = useRef(false);
   const hasFocusedRef = useRef(false);
   const previousPeriodRef = useRef<PeriodKey>("weekly");
+  const lastSupportingDataRefreshRef = useRef(0);
 
-  const hydrateSupportingData = useCallback(async () => {
+  const hydrateSupportingData = useCallback(async (force = false) => {
+    const now = Date.now();
+    if (!force && now - lastSupportingDataRefreshRef.current < SUPPORTING_DATA_TTL_MS) {
+      return;
+    }
     const [analyticsRes, cashOverviewRes, profileRes] = await Promise.allSettled([
       apiClient.get("/api/v1/restaurant/analytics/overview"),
       apiClient.get("/api/v1/restaurant/cash/overview"),
@@ -188,6 +195,7 @@ export default function TabsIndex() {
     } else {
       console.log("Profile preload error:", profileRes.reason?.response?.data || profileRes.reason?.message);
     }
+    lastSupportingDataRefreshRef.current = now;
   }, [setAnalyticsData, setCashOverviewData, setProfile]);
 
   const fetchHomeShell = useCallback(async () => {
@@ -268,6 +276,7 @@ export default function TabsIndex() {
       cashByPeriod: nextCashByPeriod,
       revenueByPeriod: nextRevenueByPeriod,
       vatBalance: data[period].vat_balance,
+      fetchedAt: Date.now(),
       ...(data.recent_activity?.length ? { recentActivity: data.recent_activity } : {}),
       ...(Object.keys(nextInsightByPeriod).length > 0 ? { insightByPeriod: nextInsightByPeriod } : {}),
     });
@@ -281,7 +290,7 @@ export default function TabsIndex() {
     }
   }, [setHomeScreenCache]);
 
-  const fetchHomeOverview = useCallback(async (period: PeriodKey, includeSupportingSections = false) => {
+  const fetchHomeOverview = useCallback(async (period: PeriodKey) => {
     const includeFeaturedInsight = false;
     const response = await apiClient.get<HomeOverviewResponse>("/api/v1/restaurant/home", {
       params: {
@@ -290,7 +299,7 @@ export default function TabsIndex() {
         include_cash_management: true,
         include_revenue: true,
         include_featured_insight: includeFeaturedInsight,
-        include_recent_activity: includeSupportingSections,
+        include_recent_activity: false,
       },
     });
     applyHomeOverview(response.data, period, includeFeaturedInsight);
@@ -451,30 +460,41 @@ export default function TabsIndex() {
         insight: false,
         recentActivity: false,
       };
-      await fetchHomeOverview(period, force);
-      void fetchRecentActivitySection();
-      if (force) {
-        await hydrateSupportingData();
-      } else {
-        void hydrateSupportingData();
+      await fetchHomeOverview(period);
+      if (force || recentActivity === null) {
+        void fetchRecentActivitySection();
       }
+      void hydrateSupportingData(force);
     } catch (error: any) {
       console.log("Home shell error:", error.response?.data || error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fetchHomeOverview, fetchRecentActivitySection, hydrateSupportingData]);
+  }, [fetchHomeOverview, fetchRecentActivitySection, hydrateSupportingData, recentActivity]);
 
   useFocusEffect(
     useCallback(() => {
       hasFocusedRef.current = true;
       previousPeriodRef.current = activePeriod;
       const hasCachedShell = !!homeScreenCache.shellData;
-      void fetchHomeData(activePeriod, hasCachedShell, !hasCachedShell);
+      const isCacheFresh =
+        typeof homeScreenCache.fetchedAt === "number" &&
+        Date.now() - homeScreenCache.fetchedAt < HOME_CACHE_TTL_MS;
+
+      if (!hasCachedShell) {
+        void fetchHomeData(activePeriod, false, true);
+        return () => {};
+      }
+
+      if (!isCacheFresh) {
+        void fetchHomeData(activePeriod, true, false);
+      } else {
+        void hydrateSupportingData(false);
+      }
       return () => {
       };
-    }, [activePeriod, fetchHomeData, homeScreenCache.shellData])
+    }, [activePeriod, fetchHomeData, homeScreenCache.fetchedAt, homeScreenCache.shellData, hydrateSupportingData])
   );
 
   useEffect(() => {
@@ -503,10 +523,7 @@ export default function TabsIndex() {
       return;
     }
     void fetchHomeShell();
-    if (recentActivity !== null) {
-      void fetchRecentActivitySection();
-    }
-  }, [appLanguage, fetchHomeShell, fetchRecentActivitySection, recentActivity]);
+  }, [appLanguage, fetchHomeShell]);
 
   const onRefresh = () => {
     setRefreshing(true);

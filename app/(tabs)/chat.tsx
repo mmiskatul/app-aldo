@@ -15,14 +15,17 @@ import ChatMessage from "../../components/chat/ChatMessage";
 import QuickPrompts from "../../components/chat/QuickPrompts";
 import Header from "../../components/ui/Header";
 import { ChatRouteSkeleton } from "../../components/ui/RouteSkeletons";
+import { useCachedFocusRefresh } from "../../hooks/useCachedFocusRefresh";
 import { useAppStore } from "../../store/useAppStore";
 import { getApiBaseUrl } from "../../utils/api";
+import { isCacheFresh } from "../../utils/cache";
 import { useTranslation } from "../../utils/i18n";
 import { resolveLocalizedText } from "../../utils/localizedContent";
 
 const CHAT_REALTIME_ENV = process.env.EXPO_PUBLIC_CHAT_REALTIME?.trim().toLowerCase();
 const CHAT_REALTIME_DISABLED_VALUES = new Set(["0", "false", "no", "off", "disabled"]);
 const CHAT_REALTIME_ENABLED_VALUES = new Set(["1", "true", "yes", "on", "enabled"]);
+const CHAT_CACHE_TTL_MS = 60 * 1000;
 
 const getHostname = (url: string): string => {
   const match = url.trim().match(/^[a-z][a-z0-9+\-.]*:\/\/([^/:?#]+)/i);
@@ -47,13 +50,13 @@ export default function ChatScreen() {
   const tokens = useAppStore((state) => state.tokens);
   const appLanguage = useAppStore((state) => state.appLanguage);
   const chatMessagesCache = useAppStore((state) => state.chatMessagesCache);
+  const chatMessagesFetchedAt = useAppStore((state) => state.chatMessagesFetchedAt);
   const setChatMessagesCache = useAppStore((state) => state.setChatMessagesCache);
   const [messages, setMessages] = useState<any[]>(chatMessagesCache);
   const [loading, setLoading] = useState(chatMessagesCache.length === 0);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
-  const hasFetchedRef = useRef(false);
   const hasLoggedRealtimeFallbackRef = useRef(false);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -73,47 +76,72 @@ export default function ChatScreen() {
     };
   }, []);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = React.useCallback(() => {
     setTimeout(
       () => scrollViewRef.current?.scrollToEnd({ animated: true }),
       200,
     );
-  };
+  }, []);
+
+  const fetchChatMessages = React.useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
+
+    try {
+      const response = await apiClient.get("/api/v1/restaurant/chat/messages");
+      const nextMessages = response.data.messages || [];
+      setMessages(nextMessages);
+      setChatMessagesCache(nextMessages);
+      scrollToBottom();
+    } catch (error) {
+      console.error("Error fetching chat messages via REST:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [scrollToBottom, setChatMessagesCache]);
+
+  useCachedFocusRefresh({
+    enabled: Boolean(tokens?.access_token),
+    hasCache: chatMessagesCache.length > 0,
+    fetchedAt: chatMessagesFetchedAt,
+    ttlMs: CHAT_CACHE_TTL_MS,
+    loadOnEmpty: () => {
+      void fetchChatMessages(false);
+    },
+    refreshStale: () => {
+      setMessages(chatMessagesCache);
+      setLoading(false);
+      void fetchChatMessages(true);
+    },
+  });
+
+  useEffect(() => {
+    if (!tokens?.access_token) {
+      setLoading(false);
+      return;
+    }
+
+    if (chatMessagesCache.length > 0) {
+      setMessages(chatMessagesCache);
+      setLoading(false);
+      return;
+    }
+
+    if (!isCacheFresh(chatMessagesFetchedAt, CHAT_CACHE_TTL_MS)) {
+      setLoading(true);
+    }
+  }, [chatMessagesCache, chatMessagesFetchedAt, tokens?.access_token]);
 
   useEffect(() => {
     if (!tokens?.access_token) {
       socketRef.current?.disconnect();
       socketRef.current = null;
-      hasFetchedRef.current = false;
       return;
     }
 
-    const apiUrl =
-      apiClient.defaults.baseURL ||
-      getApiBaseUrl();
+    const apiUrl = apiClient.defaults.baseURL || getApiBaseUrl();
     const realtimeEnabled = supportsRealtimeChat(apiUrl);
-    let isMounted = true;
-
-    if (!hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      apiClient
-        .get("/api/v1/restaurant/chat/messages")
-        .then((response) => {
-          if (!isMounted) return;
-          const nextMessages = response.data.messages || [];
-          setMessages(nextMessages);
-          setChatMessagesCache(nextMessages);
-          setLoading(false);
-          scrollToBottom();
-        })
-        .catch((error) => {
-          console.error("Error fetching chat messages via REST:", error);
-          if (!isMounted) return;
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
 
     if (!realtimeEnabled) {
       if (!hasLoggedRealtimeFallbackRef.current) {
@@ -174,11 +202,10 @@ export default function ChatScreen() {
     }
 
     return () => {
-      isMounted = false;
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [setChatMessagesCache, tokens?.access_token]);
+  }, [scrollToBottom, setChatMessagesCache, tokens?.access_token]);
 
   const handleSendMessage = async (text: string, file?: any) => {
     if (!text.trim() && !file) return;

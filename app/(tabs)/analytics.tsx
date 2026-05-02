@@ -2,6 +2,7 @@ import React from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
+import { useCachedFocusRefresh } from '../../hooks/useCachedFocusRefresh';
 import Header from '../../components/ui/Header';
 import AnalyticsAIInsightCard from '../../components/analytics/AnalyticsAIInsightCard';
 import SummaryCards from '../../components/analytics/SummaryCards';
@@ -69,41 +70,11 @@ type SupplierAlert = {
   } | null;
 };
 
-interface AnalyticsMetricTilesResponse {
-  period: PeriodKey;
-  items: MetricTile[];
-}
-
 interface AnalyticsRevenueTrendResponse {
   period: PeriodKey;
   revenue_total: number;
   change_percent: number;
   points: RevenuePoint[];
-}
-
-interface AnalyticsSummaryStatsResponse {
-  period: PeriodKey;
-  items: SummaryStat[];
-}
-
-interface AnalyticsRevenueComparisonResponse {
-  period: PeriodKey;
-  items: RevenueComparison[];
-}
-
-interface AnalyticsCoversActivityResponse {
-  period: PeriodKey;
-  items: SummaryStat[];
-}
-
-interface AnalyticsCostBreakdownResponse {
-  period: PeriodKey;
-  items: SummaryStat[];
-}
-
-interface AnalyticsSupplierAlertsResponse {
-  period: PeriodKey;
-  items: SupplierAlert[];
 }
 
 interface AnalyticsOverviewResponse {
@@ -119,7 +90,31 @@ interface AnalyticsOverviewResponse {
   supplier_price_alerts: SupplierAlert[];
 }
 
-const SECTION_LOAD_DELAY_MS = 180;
+const ANALYTICS_CACHE_TTL_MS = 60 * 1000;
+
+const hasPeriodAnalyticsData = (
+  period: PeriodKey,
+  data: {
+    businessInsight: InsightBanner | null;
+    metricTilesByPeriod: Partial<Record<PeriodKey, MetricTile[]>>;
+    revenueTrendByPeriod: Partial<Record<PeriodKey, AnalyticsRevenueTrendResponse>>;
+    summaryStatsByPeriod: Partial<Record<PeriodKey, SummaryStat[]>>;
+    revenueComparisonByPeriod: Partial<Record<PeriodKey, RevenueComparison[]>>;
+    coversActivityByPeriod: Partial<Record<PeriodKey, SummaryStat[]>>;
+    costBreakdownByPeriod: Partial<Record<PeriodKey, SummaryStat[]>>;
+    supplierAlertsByPeriod: Partial<Record<PeriodKey, SupplierAlert[]>>;
+  },
+) =>
+  Boolean(
+    data.businessInsight &&
+      data.metricTilesByPeriod[period] &&
+      data.revenueTrendByPeriod[period] &&
+      data.summaryStatsByPeriod[period] &&
+      data.revenueComparisonByPeriod[period] &&
+      data.coversActivityByPeriod[period] &&
+      data.costBreakdownByPeriod[period] &&
+      data.supplierAlertsByPeriod[period],
+  );
 
 export default function AnalyticsScreen() {
   const { t } = useTranslation();
@@ -129,6 +124,9 @@ export default function AnalyticsScreen() {
 
   const [activePeriod, setActivePeriod] = React.useState<PeriodKey>('weekly');
   const [refreshing, setRefreshing] = React.useState(false);
+  const [loading, setLoading] = React.useState(
+    !hasPeriodAnalyticsData('weekly', analyticsScreenCache as any),
+  );
 
   const [businessInsight, setBusinessInsight] = React.useState<InsightBanner | null>(analyticsScreenCache.businessInsight);
   const [metricTilesByPeriod, setMetricTilesByPeriod] = React.useState<Partial<Record<PeriodKey, MetricTile[]>>>(analyticsScreenCache.metricTilesByPeriod);
@@ -139,312 +137,114 @@ export default function AnalyticsScreen() {
   const [costBreakdownByPeriod, setCostBreakdownByPeriod] = React.useState<Partial<Record<PeriodKey, SummaryStat[]>>>(analyticsScreenCache.costBreakdownByPeriod);
   const [supplierAlertsByPeriod, setSupplierAlertsByPeriod] = React.useState<Partial<Record<PeriodKey, SupplierAlert[]>>>(analyticsScreenCache.supplierAlertsByPeriod);
 
-  const [insightLoading, setInsightLoading] = React.useState(false);
-  const [metricTilesLoading, setMetricTilesLoading] = React.useState(false);
-  const [revenueTrendLoading, setRevenueTrendLoading] = React.useState(false);
-  const [summaryStatsLoading, setSummaryStatsLoading] = React.useState(false);
-  const [revenueComparisonLoading, setRevenueComparisonLoading] = React.useState(false);
-  const [coversActivityLoading, setCoversActivityLoading] = React.useState(false);
-  const [costBreakdownLoading, setCostBreakdownLoading] = React.useState(false);
-  const [supplierAlertsLoading, setSupplierAlertsLoading] = React.useState(false);
+  const currentSnapshot = React.useMemo(
+    () => ({
+      businessInsight,
+      metricTilesByPeriod,
+      revenueTrendByPeriod,
+      summaryStatsByPeriod,
+      revenueComparisonByPeriod,
+      coversActivityByPeriod,
+      costBreakdownByPeriod,
+      supplierAlertsByPeriod,
+    }),
+    [
+      businessInsight,
+      costBreakdownByPeriod,
+      coversActivityByPeriod,
+      metricTilesByPeriod,
+      revenueComparisonByPeriod,
+      revenueTrendByPeriod,
+      summaryStatsByPeriod,
+      supplierAlertsByPeriod,
+    ],
+  );
 
-  const fetchBusinessInsight = React.useCallback(async () => {
-    setInsightLoading(true);
-    try {
-      const response = await apiClient.get<InsightBanner>('/api/v1/restaurant/analytics/business-insight');
-      setBusinessInsight(response.data);
-      setAnalyticsScreenCache({ businessInsight: response.data });
-    } catch (error) {
-      console.error('Error fetching business insight:', error);
-    } finally {
-      setInsightLoading(false);
-    }
-  }, [setAnalyticsScreenCache]);
+  const hasCachedPeriodData = React.useMemo(
+    () => hasPeriodAnalyticsData(activePeriod, currentSnapshot),
+    [activePeriod, currentSnapshot],
+  );
 
-  const fetchMetricTiles = React.useCallback(async (period: PeriodKey) => {
-    setMetricTilesLoading(true);
-    try {
-      const response = await apiClient.get<AnalyticsMetricTilesResponse>('/api/v1/restaurant/analytics/metric-tiles', {
-        params: { period },
+  const applyAnalyticsOverview = React.useCallback(
+    (period: PeriodKey, data: AnalyticsOverviewResponse) => {
+      const nextRevenueTrend = {
+        period,
+        revenue_total: data.revenue_total,
+        change_percent: data.revenue_change_percent,
+        points: data.weekly_revenue,
+      };
+
+      const nextMetricTilesByPeriod = { ...currentSnapshot.metricTilesByPeriod, [period]: data.metric_tiles };
+      const nextRevenueTrendByPeriod = { ...currentSnapshot.revenueTrendByPeriod, [period]: nextRevenueTrend };
+      const nextSummaryStatsByPeriod = { ...currentSnapshot.summaryStatsByPeriod, [period]: data.summary_stats };
+      const nextRevenueComparisonByPeriod = {
+        ...currentSnapshot.revenueComparisonByPeriod,
+        [period]: data.revenue_comparison,
+      };
+      const nextCoversActivityByPeriod = { ...currentSnapshot.coversActivityByPeriod, [period]: data.covers_activity };
+      const nextCostBreakdownByPeriod = { ...currentSnapshot.costBreakdownByPeriod, [period]: data.cost_breakdown };
+      const nextSupplierAlertsByPeriod = {
+        ...currentSnapshot.supplierAlertsByPeriod,
+        [period]: data.supplier_price_alerts,
+      };
+      const fetchedAt = Date.now();
+
+      setBusinessInsight(data.insight_banner);
+      setMetricTilesByPeriod(nextMetricTilesByPeriod);
+      setRevenueTrendByPeriod(nextRevenueTrendByPeriod);
+      setSummaryStatsByPeriod(nextSummaryStatsByPeriod);
+      setRevenueComparisonByPeriod(nextRevenueComparisonByPeriod);
+      setCoversActivityByPeriod(nextCoversActivityByPeriod);
+      setCostBreakdownByPeriod(nextCostBreakdownByPeriod);
+      setSupplierAlertsByPeriod(nextSupplierAlertsByPeriod);
+
+      setAnalyticsScreenCache({
+        businessInsight: data.insight_banner,
+        metricTilesByPeriod: nextMetricTilesByPeriod,
+        revenueTrendByPeriod: nextRevenueTrendByPeriod,
+        summaryStatsByPeriod: nextSummaryStatsByPeriod,
+        revenueComparisonByPeriod: nextRevenueComparisonByPeriod,
+        coversActivityByPeriod: nextCoversActivityByPeriod,
+        costBreakdownByPeriod: nextCostBreakdownByPeriod,
+        supplierAlertsByPeriod: nextSupplierAlertsByPeriod,
+        fetchedAt,
       });
-      let nextMetricTilesByPeriod: Partial<Record<PeriodKey, MetricTile[]>> | null = null;
-      setMetricTilesByPeriod((current) => {
-        nextMetricTilesByPeriod = { ...current, [period]: response.data.items };
-        return nextMetricTilesByPeriod;
-      });
-      if (nextMetricTilesByPeriod) {
-        setAnalyticsScreenCache({ metricTilesByPeriod: nextMetricTilesByPeriod });
+    },
+    [currentSnapshot, setAnalyticsScreenCache],
+  );
+
+  const fetchAnalyticsData = React.useCallback(
+    async (period: PeriodKey, silent = false) => {
+      if (!silent) {
+        setLoading(true);
       }
-    } catch (error) {
-      console.error('Error fetching analytics metric tiles:', error);
-    } finally {
-      setMetricTilesLoading(false);
-    }
-  }, [setAnalyticsScreenCache]);
 
-  const fetchRevenueTrend = React.useCallback(async (period: PeriodKey) => {
-    setRevenueTrendLoading(true);
-    try {
-      const response = await apiClient.get<AnalyticsRevenueTrendResponse>('/api/v1/restaurant/analytics/revenue-trend', {
-        params: { period },
-      });
-      let nextRevenueTrendByPeriod: Partial<Record<PeriodKey, AnalyticsRevenueTrendResponse>> | null = null;
-      setRevenueTrendByPeriod((current) => {
-        nextRevenueTrendByPeriod = { ...current, [period]: response.data };
-        return nextRevenueTrendByPeriod;
-      });
-      if (nextRevenueTrendByPeriod) {
-        setAnalyticsScreenCache({ revenueTrendByPeriod: nextRevenueTrendByPeriod });
+      try {
+        const response = await apiClient.get<AnalyticsOverviewResponse>('/api/v1/restaurant/analytics/overview', {
+          params: { period },
+        });
+        applyAnalyticsOverview(period, response.data);
+      } catch (error) {
+        console.error('Error fetching analytics overview:', error);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-    } catch (error) {
-      console.error('Error fetching analytics revenue trend:', error);
-    } finally {
-      setRevenueTrendLoading(false);
-    }
-  }, [setAnalyticsScreenCache]);
+    },
+    [applyAnalyticsOverview],
+  );
 
-  const fetchSummaryStats = React.useCallback(async (period: PeriodKey) => {
-    setSummaryStatsLoading(true);
-    try {
-      const response = await apiClient.get<AnalyticsSummaryStatsResponse>('/api/v1/restaurant/analytics/summary-stats', {
-        params: { period },
-      });
-      let nextSummaryStatsByPeriod: Partial<Record<PeriodKey, SummaryStat[]>> | null = null;
-      setSummaryStatsByPeriod((current) => {
-        nextSummaryStatsByPeriod = { ...current, [period]: response.data.items };
-        return nextSummaryStatsByPeriod;
-      });
-      if (nextSummaryStatsByPeriod) {
-        setAnalyticsScreenCache({ summaryStatsByPeriod: nextSummaryStatsByPeriod });
-      }
-    } catch (error) {
-      console.error('Error fetching analytics summary stats:', error);
-    } finally {
-      setSummaryStatsLoading(false);
-    }
-  }, [setAnalyticsScreenCache]);
-
-  const fetchRevenueComparison = React.useCallback(async (period: PeriodKey) => {
-    setRevenueComparisonLoading(true);
-    try {
-      const response = await apiClient.get<AnalyticsRevenueComparisonResponse>('/api/v1/restaurant/analytics/revenue-comparison', {
-        params: { period },
-      });
-      let nextRevenueComparisonByPeriod: Partial<Record<PeriodKey, RevenueComparison[]>> | null = null;
-      setRevenueComparisonByPeriod((current) => {
-        nextRevenueComparisonByPeriod = { ...current, [period]: response.data.items };
-        return nextRevenueComparisonByPeriod;
-      });
-      if (nextRevenueComparisonByPeriod) {
-        setAnalyticsScreenCache({ revenueComparisonByPeriod: nextRevenueComparisonByPeriod });
-      }
-    } catch (error) {
-      console.error('Error fetching analytics revenue comparison:', error);
-    } finally {
-      setRevenueComparisonLoading(false);
-    }
-  }, [setAnalyticsScreenCache]);
-
-  const fetchCoversActivity = React.useCallback(async (period: PeriodKey) => {
-    setCoversActivityLoading(true);
-    try {
-      const response = await apiClient.get<AnalyticsCoversActivityResponse>('/api/v1/restaurant/analytics/covers-activity', {
-        params: { period },
-      });
-      let nextCoversActivityByPeriod: Partial<Record<PeriodKey, SummaryStat[]>> | null = null;
-      setCoversActivityByPeriod((current) => {
-        nextCoversActivityByPeriod = { ...current, [period]: response.data.items };
-        return nextCoversActivityByPeriod;
-      });
-      if (nextCoversActivityByPeriod) {
-        setAnalyticsScreenCache({ coversActivityByPeriod: nextCoversActivityByPeriod });
-      }
-    } catch (error) {
-      console.error('Error fetching analytics covers activity:', error);
-    } finally {
-      setCoversActivityLoading(false);
-    }
-  }, [setAnalyticsScreenCache]);
-
-  const fetchCostBreakdown = React.useCallback(async (period: PeriodKey) => {
-    setCostBreakdownLoading(true);
-    try {
-      const response = await apiClient.get<AnalyticsCostBreakdownResponse>('/api/v1/restaurant/analytics/cost-breakdown', {
-        params: { period },
-      });
-      let nextCostBreakdownByPeriod: Partial<Record<PeriodKey, SummaryStat[]>> | null = null;
-      setCostBreakdownByPeriod((current) => {
-        nextCostBreakdownByPeriod = { ...current, [period]: response.data.items };
-        return nextCostBreakdownByPeriod;
-      });
-      if (nextCostBreakdownByPeriod) {
-        setAnalyticsScreenCache({ costBreakdownByPeriod: nextCostBreakdownByPeriod });
-      }
-    } catch (error) {
-      console.error('Error fetching analytics cost breakdown:', error);
-    } finally {
-      setCostBreakdownLoading(false);
-    }
-  }, [setAnalyticsScreenCache]);
-
-  const fetchSupplierAlerts = React.useCallback(async (period: PeriodKey) => {
-    setSupplierAlertsLoading(true);
-    try {
-      const response = await apiClient.get<AnalyticsSupplierAlertsResponse>('/api/v1/restaurant/analytics/supplier-alerts', {
-        params: { period },
-      });
-      let nextSupplierAlertsByPeriod: Partial<Record<PeriodKey, SupplierAlert[]>> | null = null;
-      setSupplierAlertsByPeriod((current) => {
-        nextSupplierAlertsByPeriod = { ...current, [period]: response.data.items };
-        return nextSupplierAlertsByPeriod;
-      });
-      if (nextSupplierAlertsByPeriod) {
-        setAnalyticsScreenCache({ supplierAlertsByPeriod: nextSupplierAlertsByPeriod });
-      }
-    } catch (error) {
-      console.error('Error fetching analytics supplier alerts:', error);
-    } finally {
-      setSupplierAlertsLoading(false);
-    }
-  }, [setAnalyticsScreenCache]);
-
-  const applyAnalyticsOverview = React.useCallback((period: PeriodKey, data: AnalyticsOverviewResponse) => {
-    const nextRevenueTrend = {
-      period,
-      revenue_total: data.revenue_total,
-      change_percent: data.revenue_change_percent,
-      points: data.weekly_revenue,
-    };
-
-    setBusinessInsight(data.insight_banner);
-    setMetricTilesByPeriod((current) => ({ ...current, [period]: data.metric_tiles }));
-    setRevenueTrendByPeriod((current) => ({ ...current, [period]: nextRevenueTrend }));
-    setSummaryStatsByPeriod((current) => ({ ...current, [period]: data.summary_stats }));
-    setRevenueComparisonByPeriod((current) => ({ ...current, [period]: data.revenue_comparison }));
-    setCoversActivityByPeriod((current) => ({ ...current, [period]: data.covers_activity }));
-    setCostBreakdownByPeriod((current) => ({ ...current, [period]: data.cost_breakdown }));
-    setSupplierAlertsByPeriod((current) => ({ ...current, [period]: data.supplier_price_alerts }));
-    setAnalyticsScreenCache({
-      businessInsight: data.insight_banner,
-      metricTilesByPeriod: { ...metricTilesByPeriod, [period]: data.metric_tiles },
-      revenueTrendByPeriod: { ...revenueTrendByPeriod, [period]: nextRevenueTrend },
-      summaryStatsByPeriod: { ...summaryStatsByPeriod, [period]: data.summary_stats },
-      revenueComparisonByPeriod: { ...revenueComparisonByPeriod, [period]: data.revenue_comparison },
-      coversActivityByPeriod: { ...coversActivityByPeriod, [period]: data.covers_activity },
-      costBreakdownByPeriod: { ...costBreakdownByPeriod, [period]: data.cost_breakdown },
-      supplierAlertsByPeriod: { ...supplierAlertsByPeriod, [period]: data.supplier_price_alerts },
-    });
-  }, [
-    costBreakdownByPeriod,
-    coversActivityByPeriod,
-    metricTilesByPeriod,
-    revenueComparisonByPeriod,
-    revenueTrendByPeriod,
-    setAnalyticsScreenCache,
-    summaryStatsByPeriod,
-    supplierAlertsByPeriod,
-  ]);
-
-  const fetchAnalyticsOverview = React.useCallback(async (period: PeriodKey) => {
-    setMetricTilesLoading(true);
-    setRevenueTrendLoading(true);
-    setSummaryStatsLoading(true);
-    setRevenueComparisonLoading(true);
-    setCoversActivityLoading(true);
-    setCostBreakdownLoading(true);
-    setSupplierAlertsLoading(true);
-
-    try {
-      const response = await apiClient.get<AnalyticsOverviewResponse>('/api/v1/restaurant/analytics/overview', {
-        params: { period },
-      });
-      applyAnalyticsOverview(period, response.data);
-    } catch (error) {
-      console.error('Error fetching analytics overview:', error);
-    } finally {
-      setMetricTilesLoading(false);
-      setRevenueTrendLoading(false);
-      setSummaryStatsLoading(false);
-      setRevenueComparisonLoading(false);
-      setCoversActivityLoading(false);
-      setCostBreakdownLoading(false);
-      setSupplierAlertsLoading(false);
-    }
-  }, [applyAnalyticsOverview]);
-
-  const waitForDelay = React.useCallback((delayMs: number) => {
-    return new Promise<void>((resolve) => {
-      setTimeout(resolve, delayMs);
-    });
-  }, []);
-
-  const fetchNonAiSectionsStaggered = React.useCallback(async (period: PeriodKey, force = false) => {
-    const sectionTasks: Promise<void>[] = [];
-
-    const scheduleSection = (
-      shouldFetch: boolean,
-      order: number,
-      fetcher: () => Promise<void>,
-    ) => {
-      if (!shouldFetch) {
-        return;
-      }
-      sectionTasks.push((async () => {
-        await waitForDelay(order * SECTION_LOAD_DELAY_MS);
-        await fetcher();
-      })());
-    };
-
-    scheduleSection(force || !metricTilesByPeriod[period], 0, () => fetchMetricTiles(period));
-    scheduleSection(force || !revenueTrendByPeriod[period], 0, () => fetchRevenueTrend(period));
-    scheduleSection(force || !summaryStatsByPeriod[period], 0, () => fetchSummaryStats(period));
-    scheduleSection(force || !revenueComparisonByPeriod[period], 1, () => fetchRevenueComparison(period));
-    scheduleSection(force || !coversActivityByPeriod[period], 1, () => fetchCoversActivity(period));
-    scheduleSection(force || !costBreakdownByPeriod[period], 1, () => fetchCostBreakdown(period));
-    scheduleSection(force || !supplierAlertsByPeriod[period], 2, () => fetchSupplierAlerts(period));
-
-    await Promise.all(sectionTasks);
-  }, [
-    costBreakdownByPeriod,
-    coversActivityByPeriod,
-    fetchCostBreakdown,
-    fetchCoversActivity,
-    fetchMetricTiles,
-    fetchRevenueComparison,
-    fetchRevenueTrend,
-    fetchSummaryStats,
-    fetchSupplierAlerts,
-    metricTilesByPeriod,
-    revenueComparisonByPeriod,
-    revenueTrendByPeriod,
-    summaryStatsByPeriod,
-    supplierAlertsByPeriod,
-    waitForDelay,
-  ]);
-
-  const fetchAnalyticsData = React.useCallback(async (period: PeriodKey, force = false) => {
-    try {
-      if (force) {
-        await fetchAnalyticsOverview(period);
-        return;
-      }
-      if (businessInsight === null) {
-        void fetchBusinessInsight();
-      }
-      await fetchNonAiSectionsStaggered(period, false);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [businessInsight, fetchAnalyticsOverview, fetchBusinessInsight, fetchNonAiSectionsStaggered]);
-
-  const hasCachedPeriodData =
-    !!metricTilesByPeriod[activePeriod] &&
-    !!revenueTrendByPeriod[activePeriod] &&
-    !!summaryStatsByPeriod[activePeriod] &&
-    !!revenueComparisonByPeriod[activePeriod] &&
-    !!coversActivityByPeriod[activePeriod] &&
-    !!costBreakdownByPeriod[activePeriod] &&
-    !!supplierAlertsByPeriod[activePeriod];
+  useCachedFocusRefresh({
+    hasCache: hasCachedPeriodData,
+    fetchedAt: analyticsScreenCache.fetchedAt,
+    ttlMs: ANALYTICS_CACHE_TTL_MS,
+    loadOnEmpty: () => {
+      void fetchAnalyticsData(activePeriod, false);
+    },
+    refreshStale: () => {
+      void fetchAnalyticsData(activePeriod, true);
+    },
+  });
 
   const localizeAnalyticsLabel = React.useCallback((label: string) => {
     const normalizedLabel = label.trim().toLowerCase();
@@ -567,26 +367,16 @@ export default function AnalyticsScreen() {
     [activePeriod, localizeAnalyticsLabel, costBreakdownByPeriod],
   );
 
-  React.useEffect(() => {
-    void fetchAnalyticsData(activePeriod, !hasCachedPeriodData);
-  }, [activePeriod]);
-
-  React.useEffect(() => {
-    if (!businessInsight && !hasCachedPeriodData) {
-      void fetchAnalyticsData(activePeriod, true);
-    }
-  }, [activePeriod, appLanguage, businessInsight, fetchAnalyticsData, hasCachedPeriodData]);
-
-  const handlePeriodChange = (period: string) => {
+  const handlePeriodChange = React.useCallback((period: string) => {
     setActivePeriod(period as PeriodKey);
-  };
+  }, []);
 
-  const onRefresh = () => {
+  const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    void fetchAnalyticsData(activePeriod, true);
-  };
+    void fetchAnalyticsData(activePeriod, false);
+  }, [activePeriod, fetchAnalyticsData]);
 
-  const handleExport = async (format: 'pdf' | 'excel') => {
+  const handleExport = React.useCallback(async (format: 'pdf' | 'excel') => {
     const analyticsData = {
       insight_banner: localizedBusinessInsight,
       revenue_total: revenueTrendByPeriod[activePeriod]?.revenue_total ?? 0,
@@ -602,10 +392,21 @@ export default function AnalyticsScreen() {
 
     if (format === 'pdf') {
       await generateAnalyticsPdfExport({ analyticsData: analyticsData as any, period: activePeriod });
-    } else {
-      await generateAnalyticsExcelExport({ analyticsData: analyticsData as any, period: activePeriod });
+      return;
     }
-  };
+
+    await generateAnalyticsExcelExport({ analyticsData: analyticsData as any, period: activePeriod });
+  }, [
+    activePeriod,
+    costBreakdownByPeriod,
+    coversActivityByPeriod,
+    localizedBusinessInsight,
+    localizedSupplierAlerts,
+    metricTilesByPeriod,
+    revenueComparisonByPeriod,
+    revenueTrendByPeriod,
+    summaryStatsByPeriod,
+  ]);
 
   return (
     <View style={styles.safeArea}>
@@ -626,89 +427,59 @@ export default function AnalyticsScreen() {
           dropdownTop={verticalScale(130)}
         />
 
-        {insightLoading && !businessInsight ? (
-          <SkeletonCard style={styles.sectionCard}>
-            <Skeleton width="42%" height={moderateScale(12)} borderRadius={6} />
-            <Skeleton width="94%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
-            <Skeleton width="86%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
-            <Skeleton width="76%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
-          </SkeletonCard>
-        ) : localizedBusinessInsight ? (
-          <AnalyticsAIInsightCard insight={localizedBusinessInsight} />
-        ) : null}
+        {loading ? (
+          <>
+            <SkeletonCard style={styles.sectionCard}>
+              <Skeleton width="42%" height={moderateScale(12)} borderRadius={6} />
+              <Skeleton width="94%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
+              <Skeleton width="86%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
+              <Skeleton width="76%" height={moderateScale(14)} borderRadius={7} style={styles.gap8} />
+            </SkeletonCard>
 
-        {metricTilesLoading && !metricTilesByPeriod[activePeriod] ? (
-          <View style={styles.twoCardRow}>
-            {[0, 1].map((index) => (
-              <SkeletonCard key={index} style={styles.metricCardSkeleton}>
-                <Skeleton width="46%" height={moderateScale(10)} borderRadius={5} />
-                <Skeleton width="72%" height={moderateScale(20)} borderRadius={8} style={styles.gap8} />
-                <Skeleton width="34%" height={moderateScale(10)} borderRadius={5} />
-              </SkeletonCard>
-            ))}
-          </View>
-        ) : metricTilesByPeriod[activePeriod] ? (
-          <SummaryCards metrics={localizedMetricTiles} />
-        ) : null}
+            <View style={styles.twoCardRow}>
+              {[0, 1].map((index) => (
+                <SkeletonCard key={index} style={styles.metricCardSkeleton}>
+                  <Skeleton width="46%" height={moderateScale(10)} borderRadius={5} />
+                  <Skeleton width="72%" height={moderateScale(20)} borderRadius={8} style={styles.gap8} />
+                  <Skeleton width="34%" height={moderateScale(10)} borderRadius={5} />
+                </SkeletonCard>
+              ))}
+            </View>
 
-        {revenueTrendLoading && !revenueTrendByPeriod[activePeriod] ? (
-          <SkeletonCard style={styles.sectionCard}>
-            <Skeleton width="34%" height={moderateScale(12)} borderRadius={6} />
-            <Skeleton width="28%" height={moderateScale(22)} borderRadius={8} style={styles.gap8} />
-            <Skeleton width="100%" height={verticalScale(150)} borderRadius={12} style={styles.gap12} />
-          </SkeletonCard>
-        ) : revenueTrendByPeriod[activePeriod] ? (
-          <RevenueTrendChart
-            weeklyRevenue={localizedRevenueTrendPoints}
-            totalRevenue={revenueTrendByPeriod[activePeriod]?.revenue_total ?? 0}
-            changePercent={revenueTrendByPeriod[activePeriod]?.change_percent ?? 0}
-          />
-        ) : null}
-
-        {summaryStatsLoading && !summaryStatsByPeriod[activePeriod] ? (
-          <View style={styles.threeCardRow}>
-            {[0, 1, 2].map((index) => (
-              <SkeletonCard key={index} style={styles.statCardSkeleton}>
-                <Skeleton width="54%" height={moderateScale(9)} borderRadius={5} />
-                <Skeleton width="72%" height={moderateScale(16)} borderRadius={7} style={styles.gap8} />
-              </SkeletonCard>
-            ))}
-          </View>
-        ) : summaryStatsByPeriod[activePeriod] ? (
-          <StatsSelector stats={localizedSummaryStats} />
-        ) : null}
-
-        {revenueComparisonLoading && !revenueComparisonByPeriod[activePeriod] ? (
-          <SkeletonCard style={styles.sectionCard}>
-            <Skeleton width="38%" height={moderateScale(12)} borderRadius={6} />
-            {[0, 1].map((index) => (
-              <View key={index} style={styles.gap12}>
-                <Skeleton width="100%" height={moderateScale(12)} borderRadius={6} />
-                <Skeleton width="100%" height={moderateScale(8)} borderRadius={4} style={styles.gap8} />
-              </View>
-            ))}
-          </SkeletonCard>
-        ) : revenueComparisonByPeriod[activePeriod] ? (
-          <RevenueComparisonChart comparison={localizedRevenueComparison} />
-        ) : null}
-
-        {coversActivityLoading || costBreakdownLoading || coversActivityByPeriod[activePeriod] || costBreakdownByPeriod[activePeriod] ? (
-          <ActivityCostSection
-            coversActivity={localizedCoversActivity}
-            costBreakdown={localizedCostBreakdown}
-            coversLoading={coversActivityLoading && !coversActivityByPeriod[activePeriod]}
-            costLoading={costBreakdownLoading && !costBreakdownByPeriod[activePeriod]}
-          />
-        ) : null}
-
-        {supplierAlertsLoading && !supplierAlertsByPeriod[activePeriod] ? (
-          <SkeletonCard style={styles.sectionCard}>
-            <Skeleton width="44%" height={moderateScale(12)} borderRadius={6} />
-            <Skeleton width="100%" height={verticalScale(72)} borderRadius={12} style={styles.gap12} />
-          </SkeletonCard>
-        ) : supplierAlertsByPeriod[activePeriod] ? (
-          <SupplierPriceAlerts alerts={localizedSupplierAlerts} />
-        ) : null}
+            <SkeletonCard style={styles.sectionCard}>
+              <Skeleton width="34%" height={moderateScale(12)} borderRadius={6} />
+              <Skeleton width="28%" height={moderateScale(22)} borderRadius={8} style={styles.gap8} />
+              <Skeleton width="100%" height={verticalScale(150)} borderRadius={12} style={styles.gap12} />
+            </SkeletonCard>
+          </>
+        ) : (
+          <>
+            {localizedBusinessInsight ? <AnalyticsAIInsightCard insight={localizedBusinessInsight} /> : null}
+            {metricTilesByPeriod[activePeriod] ? <SummaryCards metrics={localizedMetricTiles} /> : null}
+            {revenueTrendByPeriod[activePeriod] ? (
+              <RevenueTrendChart
+                weeklyRevenue={localizedRevenueTrendPoints}
+                totalRevenue={revenueTrendByPeriod[activePeriod]?.revenue_total ?? 0}
+                changePercent={revenueTrendByPeriod[activePeriod]?.change_percent ?? 0}
+              />
+            ) : null}
+            {summaryStatsByPeriod[activePeriod] ? <StatsSelector stats={localizedSummaryStats} /> : null}
+            {revenueComparisonByPeriod[activePeriod] ? (
+              <RevenueComparisonChart comparison={localizedRevenueComparison} />
+            ) : null}
+            {coversActivityByPeriod[activePeriod] || costBreakdownByPeriod[activePeriod] ? (
+              <ActivityCostSection
+                coversActivity={localizedCoversActivity}
+                costBreakdown={localizedCostBreakdown}
+                coversLoading={false}
+                costLoading={false}
+              />
+            ) : null}
+            {supplierAlertsByPeriod[activePeriod] ? (
+              <SupplierPriceAlerts alerts={localizedSupplierAlerts} />
+            ) : null}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -731,19 +502,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: verticalScale(24),
   },
-  threeCardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: verticalScale(24),
-  },
   metricCardSkeleton: {
     flex: 1,
     marginHorizontal: scale(4),
-  },
-  statCardSkeleton: {
-    flex: 1,
-    marginHorizontal: scale(4),
-    paddingVertical: scale(12),
   },
   gap8: {
     marginTop: verticalScale(8),

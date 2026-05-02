@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import apiClient from '../../../api/apiClient';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   LayoutAnimation,
   Platform,
@@ -17,6 +17,8 @@ import {
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
+import { useCachedFocusRefresh } from '../../../hooks/useCachedFocusRefresh';
+import { isCacheFresh } from '../../../utils/cache';
 import { useTranslation } from '../../../utils/i18n';
 
 import { FilterChips } from '../../../components/inventory/Inventory/FilterChips';
@@ -43,6 +45,8 @@ interface InventoryListResponse {
   total_inventory_value?: number | string | null;
   items: InventoryApiItem[];
 }
+
+const INVENTORY_CACHE_TTL_MS = 60 * 1000;
 
 const toSafeNumber = (value: unknown) => {
   const parsed = Number(value);
@@ -130,22 +134,29 @@ export default function InventoryScreen() {
   const { notice, noticeKey } = useLocalSearchParams<{ notice?: string; noticeKey?: string }>();
   const inventoryRefreshToken = useAppStore((state) => state.inventoryRefreshToken);
   const inventoryListCache = useAppStore((state) => state.inventoryListCache);
+  const inventoryListFetchedAt = useAppStore((state) => state.inventoryListFetchedAt);
   const setInventoryListCache = useAppStore((state) => state.setInventoryListCache);
   const setInventoryDetailCacheItem = useAppStore((state) => state.setInventoryDetailCacheItem);
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [items, setItems] = useState<InventoryCardItem[]>(inventoryListCache);
   const [totalValue, setTotalValue] = useState(calculateInventoryValueFromCache(inventoryListCache));
-  const [valueLoading, setValueLoading] = useState(inventoryListCache.length === 0);
-  const [loading, setLoading] = useState(inventoryListCache.length === 0);
+  const hasCachedInventory = inventoryListCache.length > 0;
+  const [valueLoading, setValueLoading] = useState(!hasCachedInventory);
+  const [loading, setLoading] = useState(!hasCachedInventory);
   const [refreshing, setRefreshing] = useState(false);
   const [bannerMessage, setBannerMessage] = useState('');
+  const lastHandledRefreshTokenRef = useRef(inventoryRefreshToken);
 
-  const fetchInventory = useCallback(async (query: string, withRefresh = false) => {
+  const fetchInventory = useCallback(async (query: string, options?: { withRefresh?: boolean; silent?: boolean }) => {
+    const withRefresh = options?.withRefresh ?? false;
+    const silent = options?.silent ?? false;
+
     if (withRefresh) {
       setRefreshing(true);
-    } else if (!(query.trim().length === 0 && inventoryListCache.length > 0)) {
+    } else if (!silent) {
       setLoading(true);
+      setValueLoading(true);
     }
 
     try {
@@ -196,28 +207,48 @@ export default function InventoryScreen() {
       console.log('Inventory list error:', error.response?.data || error.message);
     } finally {
       setLoading(false);
-    }
-  }, [inventoryListCache.length, setInventoryDetailCacheItem, setInventoryListCache]);
-
-  const loadInventoryScreen = useCallback(async (query: string, withRefresh = false) => {
-    if (withRefresh) {
-      setRefreshing(true);
-    }
-
-    try {
-      await fetchInventory(query, withRefresh);
-    } finally {
+      setValueLoading(false);
       setRefreshing(false);
     }
-  }, [fetchInventory]);
+  }, [setInventoryDetailCacheItem, setInventoryListCache]);
+
+  const isDefaultQuery = search.trim().length === 0;
+
+  useCachedFocusRefresh({
+    enabled: isDefaultQuery,
+    hasCache: hasCachedInventory,
+    fetchedAt: inventoryListFetchedAt,
+    ttlMs: INVENTORY_CACHE_TTL_MS,
+    loadOnEmpty: () => {
+      lastHandledRefreshTokenRef.current = inventoryRefreshToken;
+      void fetchInventory('', { silent: false });
+    },
+    refreshStale: () => {
+      const refreshTokenChanged = inventoryRefreshToken !== lastHandledRefreshTokenRef.current;
+      lastHandledRefreshTokenRef.current = inventoryRefreshToken;
+
+      if (refreshTokenChanged || !isCacheFresh(inventoryListFetchedAt, INVENTORY_CACHE_TTL_MS)) {
+        void fetchInventory('', { silent: true });
+      }
+    },
+  });
 
   useEffect(() => {
+    const query = search.trim();
+    if (query.length === 0) {
+      setItems(inventoryListCache);
+      setTotalValue(calculateInventoryValueFromCache(inventoryListCache));
+      setLoading(false);
+      setValueLoading(false);
+      return;
+    }
+
     const timeoutId = setTimeout(() => {
-      void loadInventoryScreen(search);
+      void fetchInventory(query, { silent: false });
     }, 250);
 
     return () => clearTimeout(timeoutId);
-  }, [inventoryRefreshToken, loadInventoryScreen, search]);
+  }, [fetchInventory, inventoryListCache, search]);
 
   useEffect(() => {
     if (!notice || !noticeKey) {
@@ -285,7 +316,7 @@ export default function InventoryScreen() {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => void loadInventoryScreen(search, true)}
+            onRefresh={() => void fetchInventory(search.trim(), { withRefresh: true })}
             colors={['#FA8C4C']}
           />
         }

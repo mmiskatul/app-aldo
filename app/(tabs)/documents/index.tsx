@@ -1,7 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState, useCallback } from "react";
-import { useFocusEffect } from "@react-navigation/native";
 import {
   ScrollView,
   StyleSheet,
@@ -14,14 +13,12 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
 import AIExtractionBanner from "../../../components/documents/AIExtractionBanner";
 import RecentDocumentsList from "../../../components/documents/RecentDocumentsList";
+import { useCachedFocusRefresh } from "../../../hooks/useCachedFocusRefresh";
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore";
 import { useTranslation } from "../../../utils/i18n";
-
+ 
 const DOCUMENTS_CACHE_TTL_MS = 60 * 1000;
-
-const isDocumentsCacheFresh = (fetchedAt: number | null) =>
-  typeof fetchedAt === "number" && Date.now() - fetchedAt < DOCUMENTS_CACHE_TTL_MS;
 
 export default function DocumentsScreen() {
   const { t } = useTranslation();
@@ -31,12 +28,10 @@ export default function DocumentsScreen() {
   const hasCachedContent =
     documentsScreenCache.documents.length > 0 ||
     Boolean(documentsScreenCache.bannerData.title || documentsScreenCache.bannerData.subtitle);
-  const [documents, setDocuments] = useState<any[]>(documentsScreenCache.documents);
-  const [bannerData, setBannerData] = useState(documentsScreenCache.bannerData);
   const [loading, setLoading] = useState(!hasCachedContent);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchDocuments = async (silent = false) => {
+  const fetchDocuments = useCallback(async (silent = false) => {
     if (!silent) {
       setLoading(true);
     }
@@ -53,8 +48,6 @@ export default function DocumentsScreen() {
         subtitle: response.data.ai_banner_subtitle,
       };
       const fetchedAt = Date.now();
-      setDocuments(nextDocuments);
-      setBannerData(nextBanner);
       setDocumentsScreenCache({
         documents: nextDocuments,
         bannerData: nextBanner,
@@ -66,25 +59,24 @@ export default function DocumentsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [setDocumentsScreenCache]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!hasCachedContent) {
-        void fetchDocuments(false);
-        return;
-      }
+  useCachedFocusRefresh({
+    hasCache: hasCachedContent,
+    fetchedAt: documentsScreenCache.fetchedAt,
+    ttlMs: DOCUMENTS_CACHE_TTL_MS,
+    loadOnEmpty: () => {
+      void fetchDocuments(false);
+    },
+    refreshStale: () => {
+      void fetchDocuments(true);
+    },
+  });
 
-      if (!isDocumentsCacheFresh(documentsScreenCache.fetchedAt)) {
-        void fetchDocuments(true);
-      }
-    }, [documentsScreenCache.fetchedAt, hasCachedContent])
-  );
-
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
     void fetchDocuments(false);
-  };
+  }, [fetchDocuments]);
 
   return (
     <View style={styles.container}>
@@ -120,10 +112,10 @@ export default function DocumentsScreen() {
         ) : (
           <>
             <AIExtractionBanner
-              title={bannerData.title}
-              subtitle={bannerData.subtitle}
+              title={documentsScreenCache.bannerData.title}
+              subtitle={documentsScreenCache.bannerData.subtitle}
             />
-            <RecentDocumentsList documents={documents} loading={false} />
+            <RecentDocumentsList documents={documentsScreenCache.documents} loading={false} />
           </>
         )}
       </ScrollView>

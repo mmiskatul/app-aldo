@@ -243,6 +243,7 @@ export interface HomeScreenCache {
   insightByPeriod: Partial<Record<'weekly' | 'monthly', HomeInsightCacheItem | null>>;
   recentActivity: HomeActivityCacheItem[] | null;
   vatBalance: number | null;
+  fetchedAt: number | null;
 }
 
 export interface AnalyticsInsightCacheItem {
@@ -305,6 +306,7 @@ export interface AnalyticsScreenCache {
   coversActivityByPeriod: Partial<Record<'weekly' | 'monthly', AnalyticsSummaryCacheItem[]>>;
   costBreakdownByPeriod: Partial<Record<'weekly' | 'monthly', AnalyticsSummaryCacheItem[]>>;
   supplierAlertsByPeriod: Partial<Record<'weekly' | 'monthly', AnalyticsSupplierAlertCacheItem[]>>;
+  fetchedAt: number | null;
 }
 
 export interface DocumentsScreenCache {
@@ -352,11 +354,14 @@ interface AppState {
   cashOverviewData: CashOverviewData | null;
   vatOverviewData: VatOverviewData | null;
   profile: Profile | null;
+  profileFetchedAt: number | null;
   pendingRegistration: PendingRegistration | null;
   inventoryRefreshToken: number;
   inventoryListCache: InventoryListCacheItem[];
+  inventoryListFetchedAt: number | null;
   inventoryDetailCache: Record<string, InventoryDetailCacheItem>;
   chatMessagesCache: ChatCacheMessage[];
+  chatMessagesFetchedAt: number | null;
   legalDocumentCache: Record<string, LegalDocumentCacheItem>;
   homeScreenCache: HomeScreenCache;
   analyticsScreenCache: AnalyticsScreenCache;
@@ -412,11 +417,14 @@ export const useAppStore = create<AppState>()(
       cashOverviewData: null,
       vatOverviewData: null,
       profile: null,
+      profileFetchedAt: null,
       pendingRegistration: null,
       inventoryRefreshToken: 0,
       inventoryListCache: [],
+      inventoryListFetchedAt: null,
       inventoryDetailCache: {},
       chatMessagesCache: [],
+      chatMessagesFetchedAt: null,
       legalDocumentCache: {},
       homeScreenCache: {
         shellData: null,
@@ -426,6 +434,7 @@ export const useAppStore = create<AppState>()(
         insightByPeriod: {},
         recentActivity: null,
         vatBalance: null,
+        fetchedAt: null,
       },
       analyticsScreenCache: {
         businessInsight: null,
@@ -436,6 +445,7 @@ export const useAppStore = create<AppState>()(
         coversActivityByPeriod: {},
         costBreakdownByPeriod: {},
         supplierAlertsByPeriod: {},
+        fetchedAt: null,
       },
       documentsScreenCache: {
         documents: [],
@@ -462,11 +472,23 @@ export const useAppStore = create<AppState>()(
       setAnalyticsData: (data) => set({ analyticsData: data }),
       setCashOverviewData: (data) => set({ cashOverviewData: data }),
       setVatOverviewData: (data) => set({ vatOverviewData: data }),
-      setProfile: (profile) => set({ profile }),
+      setProfile: (profile) =>
+        set({
+          profile,
+          profileFetchedAt: profile ? Date.now() : null,
+        }),
       setPendingRegistration: (payload) => set({ pendingRegistration: payload }),
       bumpInventoryRefreshToken: () => set((state) => ({ inventoryRefreshToken: state.inventoryRefreshToken + 1 })),
-      setInventoryListCache: (items) => set({ inventoryListCache: items }),
-      clearInventoryListCache: () => set({ inventoryListCache: [] }),
+      setInventoryListCache: (items) =>
+        set({
+          inventoryListCache: items,
+          inventoryListFetchedAt: Date.now(),
+        }),
+      clearInventoryListCache: () =>
+        set({
+          inventoryListCache: [],
+          inventoryListFetchedAt: null,
+        }),
       setInventoryDetailCacheItem: (itemId, payload) =>
         set((state) => ({
           inventoryDetailCache: {
@@ -481,8 +503,16 @@ export const useAppStore = create<AppState>()(
           return { inventoryDetailCache: nextCache };
         }),
       clearInventoryDetailCache: () => set({ inventoryDetailCache: {} }),
-      setChatMessagesCache: (messages) => set({ chatMessagesCache: messages }),
-      clearChatMessagesCache: () => set({ chatMessagesCache: [] }),
+      setChatMessagesCache: (messages) =>
+        set({
+          chatMessagesCache: messages,
+          chatMessagesFetchedAt: Date.now(),
+        }),
+      clearChatMessagesCache: () =>
+        set({
+          chatMessagesCache: [],
+          chatMessagesFetchedAt: null,
+        }),
       setLegalDocumentCacheItem: (cacheKey, document) =>
         set((state) => ({
           legalDocumentCache: {
@@ -508,6 +538,7 @@ export const useAppStore = create<AppState>()(
             insightByPeriod: {},
             recentActivity: null,
             vatBalance: null,
+            fetchedAt: null,
           },
         }),
       setAnalyticsScreenCache: (payload) =>
@@ -528,6 +559,7 @@ export const useAppStore = create<AppState>()(
             coversActivityByPeriod: {},
             costBreakdownByPeriod: {},
             supplierAlertsByPeriod: {},
+            fetchedAt: null,
           },
         }),
       setDocumentsScreenCache: (payload) => set({ documentsScreenCache: payload }),
@@ -582,11 +614,14 @@ export const useAppStore = create<AppState>()(
           cashOverviewData: null,
           vatOverviewData: null,
           profile: null,
+          profileFetchedAt: null,
           pendingRegistration: null,
           inventoryRefreshToken: 0,
           inventoryListCache: [],
+          inventoryListFetchedAt: null,
           inventoryDetailCache: {},
           chatMessagesCache: [],
+          chatMessagesFetchedAt: null,
           legalDocumentCache: {},
           homeScreenCache: {
             shellData: null,
@@ -596,6 +631,7 @@ export const useAppStore = create<AppState>()(
             insightByPeriod: {},
             recentActivity: null,
             vatBalance: null,
+            fetchedAt: null,
           },
           analyticsScreenCache: {
             businessInsight: null,
@@ -606,6 +642,7 @@ export const useAppStore = create<AppState>()(
             coversActivityByPeriod: {},
             costBreakdownByPeriod: {},
             supplierAlertsByPeriod: {},
+            fetchedAt: null,
           },
           documentsScreenCache: {
             documents: [],

@@ -9,29 +9,45 @@ import LanguageSelector from '../../../components/settings/LanguageSelector';
 import ProfileCard from '../../../components/settings/ProfileCard';
 import SettingsList from '../../../components/settings/SettingsList';
 import Header from '../../../components/ui/Header';
+import { useCachedFocusRefresh } from '../../../hooks/useCachedFocusRefresh';
 import { useAppStore } from '../../../store/useAppStore';
 import { useTranslation } from '../../../utils/i18n';
 import apiClient from '../../../api/apiClient';
+
+const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { notice, noticeKey } = useLocalSearchParams<{ notice?: string; noticeKey?: string }>();
   const logout = useAppStore((state) => state.logout);
+  const profile = useAppStore((state) => state.profile);
+  const profileFetchedAt = useAppStore((state) => state.profileFetchedAt);
   const setProfile = useAppStore((state) => state.setProfile);
   const [bannerMessage, setBannerMessage] = useState('');
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await apiClient.get('/api/v1/restaurant/settings/profile');
-        setProfile(response.data);
-      } catch (error) {
+  const fetchProfile = React.useCallback(async (silent = false) => {
+    try {
+      const response = await apiClient.get('/api/v1/restaurant/settings/profile');
+      setProfile(response.data);
+    } catch (error) {
+      if (!silent) {
         console.error('Error fetching profile:', error);
       }
-    };
-    fetchProfile();
+    }
   }, [setProfile]);
+
+  useCachedFocusRefresh({
+    hasCache: Boolean(profile),
+    fetchedAt: profileFetchedAt,
+    ttlMs: PROFILE_CACHE_TTL_MS,
+    loadOnEmpty: () => {
+      void fetchProfile(false);
+    },
+    refreshStale: () => {
+      void fetchProfile(true);
+    },
+  });
 
   useEffect(() => {
     if (!notice || !noticeKey) {

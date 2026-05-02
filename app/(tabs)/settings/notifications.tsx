@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   RefreshControl,
@@ -22,6 +22,7 @@ import {
 import apiClient from "../../../api/apiClient";
 import Header from "../../../components/ui/Header";
 import { ListRouteSkeleton } from "../../../components/ui/RouteSkeletons";
+import { useCachedFocusRefresh } from "../../../hooks/useCachedFocusRefresh";
 import { useAppStore } from "../../../store/useAppStore";
 
 type NotificationItem = {
@@ -39,6 +40,8 @@ type NotificationItem = {
 type NotificationFeedResponse = {
   items: NotificationItem[];
 };
+
+const NOTIFICATIONS_CACHE_TTL_MS = 60 * 1000;
 
 const resolveNotificationRoute = (item: NotificationItem) => {
   const sourceKind = item.source_kind || item.kind;
@@ -151,7 +154,6 @@ export default function NotificationsScreen() {
   const insets = useSafeAreaInsets();
   const notificationsScreenCache = useAppStore((state) => state.notificationsScreenCache);
   const setNotificationsScreenCache = useAppStore((state) => state.setNotificationsScreenCache);
-  const [items, setItems] = useState<NotificationItem[]>(notificationsScreenCache.items as NotificationItem[]);
   const [loading, setLoading] = useState(notificationsScreenCache.items.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -168,7 +170,6 @@ export default function NotificationsScreen() {
         "/api/v1/restaurant/notifications/feed"
       );
       const nextItems = response.data.items || [];
-      setItems(nextItems);
       setNotificationsScreenCache({
         items: nextItems,
         fetchedAt: Date.now(),
@@ -183,17 +184,24 @@ export default function NotificationsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [setNotificationsScreenCache]);
 
-  useEffect(() => {
-    if (notificationsScreenCache.items.length === 0) {
+  useCachedFocusRefresh({
+    hasCache: notificationsScreenCache.items.length > 0,
+    fetchedAt: notificationsScreenCache.fetchedAt,
+    ttlMs: NOTIFICATIONS_CACHE_TTL_MS,
+    loadOnEmpty: () => {
       void fetchNotifications(false);
-      return;
-    }
-    void fetchNotifications(true);
-  }, [fetchNotifications, notificationsScreenCache.items.length]);
+    },
+    refreshStale: () => {
+      void fetchNotifications(true);
+    },
+  });
 
-  const notifications = useMemo(() => items, [items]);
+  const notifications = useMemo(
+    () => notificationsScreenCache.items as NotificationItem[],
+    [notificationsScreenCache.items],
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
