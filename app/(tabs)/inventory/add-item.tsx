@@ -1,7 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import apiClient from '../../../api/apiClient';
-import React, { useState } from 'react';
+import { getInventoryCategories, getInventorySuppliers, InventoryMetaItem } from '../../../api/inventoryMeta';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Header from '../../../components/ui/Header';
@@ -24,6 +25,58 @@ export default function AddInventoryItemScreen() {
   const [unitPrice, setUnitPrice] = useState('');
   const [alertThreshold, setAlertThreshold] = useState('');
   const [saving, setSaving] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<InventoryMetaItem[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<InventoryMetaItem[]>([]);
+  const [categoryFocused, setCategoryFocused] = useState(false);
+  const [supplierFocused, setSupplierFocused] = useState(false);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadInventoryMeta = async () => {
+      try {
+        const [categories, suppliers] = await Promise.all([
+          getInventoryCategories(),
+          getInventorySuppliers(),
+        ]);
+
+        if (!isActive) {
+          return;
+        }
+
+        setCategoryOptions(categories);
+        setSupplierOptions(suppliers);
+      } catch {
+        if (!isActive) {
+          return;
+        }
+        setCategoryOptions([]);
+        setSupplierOptions([]);
+      }
+    };
+
+    void loadInventoryMeta();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const filteredCategoryOptions = useMemo(() => {
+    const query = category.trim().toLowerCase();
+    const matches = categoryOptions.filter((item) =>
+      item.name.toLowerCase().includes(query),
+    );
+    return matches.slice(0, 6);
+  }, [category, categoryOptions]);
+
+  const filteredSupplierOptions = useMemo(() => {
+    const query = supplierName.trim().toLowerCase();
+    const matches = supplierOptions.filter((item) =>
+      item.name.toLowerCase().includes(query),
+    );
+    return matches.slice(0, 6);
+  }, [supplierName, supplierOptions]);
 
   const buildErrorMessage = (error: any) => {
     const detail = error?.response?.data?.detail;
@@ -116,7 +169,32 @@ export default function AddInventoryItemScreen() {
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>{t('category')}</Text>
-            <TextInput style={styles.input} placeholder={t('select_category')} placeholderTextColor="#9CA3AF" value={category} onChangeText={setCategory} />
+            <TextInput
+              style={styles.input}
+              placeholder={t('select_category')}
+              placeholderTextColor="#9CA3AF"
+              value={category}
+              onChangeText={setCategory}
+              onFocus={() => setCategoryFocused(true)}
+              onBlur={() => setTimeout(() => setCategoryFocused(false), 120)}
+            />
+            {categoryFocused && filteredCategoryOptions.length > 0 ? (
+              <View style={styles.suggestionList}>
+                {filteredCategoryOptions.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.suggestionItem}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setCategory(item.name);
+                      setCategoryFocused(false);
+                    }}
+                  >
+                    <Text style={styles.suggestionText}>{item.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.row}>
@@ -132,7 +210,32 @@ export default function AddInventoryItemScreen() {
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>{t('supplier_name')}</Text>
-            <TextInput style={styles.input} placeholder={t('enter_supplier_name')} placeholderTextColor="#9CA3AF" value={supplierName} onChangeText={setSupplierName} />
+            <TextInput
+              style={styles.input}
+              placeholder={t('enter_supplier_name')}
+              placeholderTextColor="#9CA3AF"
+              value={supplierName}
+              onChangeText={setSupplierName}
+              onFocus={() => setSupplierFocused(true)}
+              onBlur={() => setTimeout(() => setSupplierFocused(false), 120)}
+            />
+            {supplierFocused && filteredSupplierOptions.length > 0 ? (
+              <View style={styles.suggestionList}>
+                {filteredSupplierOptions.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.suggestionItem}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setSupplierName(item.name);
+                      setSupplierFocused(false);
+                    }}
+                  >
+                    <Text style={styles.suggestionText}>{item.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.row}>
@@ -188,6 +291,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(14),
     paddingVertical: verticalScale(12),
     fontSize: moderateScale(14),
+    color: '#111827',
+  },
+  suggestionList: {
+    marginTop: verticalScale(8),
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderRadius: scale(10),
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(11),
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+  },
+  suggestionText: {
+    fontSize: moderateScale(13),
     color: '#111827',
   },
   footer: {

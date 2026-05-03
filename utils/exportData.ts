@@ -22,6 +22,17 @@ export interface AnalyticsExportDataProps {
   period: string;
 }
 
+const BRAND_PRIMARY = '#FA8C4C';
+const BRAND_SOFT = '#FFF4EC';
+const TEXT_PRIMARY = '#172033';
+const TEXT_MUTED = '#667085';
+const BORDER_SOFT = '#E4E7EC';
+const SURFACE = '#FFFFFF';
+const SURFACE_ALT = '#F8FAFC';
+const POSITIVE = '#0F9D76';
+const NEGATIVE = '#D64545';
+const WARNING = '#C88913';
+
 const getExportDirectory = () => FileSystem.documentDirectory || FileSystem.cacheDirectory || null;
 
 const buildTimestamp = () => new Date().toISOString().replace(/[:.]/g, '-');
@@ -69,150 +80,524 @@ const shareOrNotify = async ({
   showInfoMessage(`${fileName} was saved to app storage. Sharing is not available on this device.`, 'Export Ready');
 };
 
-export const generatePdfExport = async (data: ExportDataProps) => {
-  const getMetric = (name: string) => {
-    return data.metrics?.find((m) => m.label.toLowerCase() === name.toLowerCase());
+const escapeHtml = (value: unknown) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const toTitleCase = (value: string) =>
+  value
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+
+const formatPeriodLabel = (period: string) => `${toTitleCase(period)} Report`;
+
+const formatGeneratedAt = () =>
+  new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date());
+
+const getCurrencySymbol = (currency?: string) => {
+  switch ((currency || 'EUR').toUpperCase()) {
+    case 'USD':
+      return '$';
+    case 'GBP':
+      return 'GBP ';
+    case 'EUR':
+    default:
+      return 'EUR ';
+  }
+};
+
+const formatNumber = (value: unknown, fractionDigits = 2) => {
+  const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+  if (!Number.isFinite(numericValue)) {
+    return '0.00';
+  }
+  return numericValue.toLocaleString(undefined, {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
+};
+
+const formatMoney = (value: unknown, currency?: string, fractionDigits = 2) =>
+  `${getCurrencySymbol(currency)}${formatNumber(value, fractionDigits)}`;
+
+const formatPercent = (value: unknown, fractionDigits = 1) => {
+  const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+  if (!Number.isFinite(numericValue)) {
+    return '0.0%';
+  }
+  return `${numericValue.toLocaleString(undefined, {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  })}%`;
+};
+
+const formatCellValue = (value: unknown) => {
+  if (value === null || value === undefined || value === '') {
+    return 'N/A';
+  }
+  if (typeof value === 'number') {
+    return formatNumber(value, 2);
+  }
+  return String(value);
+};
+
+const formatAnalyticsMetricValue = (label: string, value: unknown) => {
+  if (typeof value !== 'number') {
+    return formatCellValue(value);
+  }
+
+  const normalizedLabel = label.trim().toLowerCase();
+  if (normalizedLabel.includes('cover') || normalizedLabel.includes('coperti')) {
+    return value.toLocaleString();
+  }
+
+  return formatMoney(value, 'EUR');
+};
+
+const metricToneClass = (label: string) => {
+  const normalized = label.toLowerCase();
+  if (normalized.includes('expense')) {
+    return 'tone-negative';
+  }
+  if (normalized.includes('profit')) {
+    return 'tone-positive';
+  }
+  if (normalized.includes('cost')) {
+    return 'tone-warning';
+  }
+  return 'tone-primary';
+};
+
+const pdfStyles = `
+  :root {
+    --brand: ${BRAND_PRIMARY};
+    --brand-soft: ${BRAND_SOFT};
+    --text: ${TEXT_PRIMARY};
+    --muted: ${TEXT_MUTED};
+    --border: ${BORDER_SOFT};
+    --surface: ${SURFACE};
+    --surface-alt: ${SURFACE_ALT};
+    --positive: ${POSITIVE};
+    --negative: ${NEGATIVE};
+    --warning: ${WARNING};
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    padding: 28px;
+    color: var(--text);
+    background: #f4f7fb;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .report-shell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .hero {
+    padding: 28px 32px 24px;
+    background:
+      linear-gradient(135deg, rgba(250, 140, 76, 0.18), rgba(250, 140, 76, 0.02)),
+      linear-gradient(180deg, #ffffff, #fff8f3);
+    border-bottom: 1px solid var(--border);
+  }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--brand);
+    margin-bottom: 10px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.2;
+  }
+  .hero-grid {
+    display: table;
+    width: 100%;
+    margin-top: 18px;
+  }
+  .hero-main,
+  .hero-meta {
+    display: table-cell;
+    vertical-align: top;
+  }
+  .hero-meta {
+    width: 220px;
+    text-align: right;
+  }
+  .hero-subtitle {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .meta-chip {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(250, 140, 76, 0.24);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text);
+    margin-left: 8px;
+    margin-bottom: 8px;
+  }
+  .content {
+    padding: 28px 32px 32px;
+  }
+  .section + .section {
+    margin-top: 24px;
+  }
+  .section-title {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .section-copy {
+    margin: 0 0 16px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .summary-grid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 12px;
+    margin: 0 -12px;
+  }
+  .summary-grid td {
+    width: 50%;
+    vertical-align: top;
+    padding: 0;
+  }
+  .metric-card {
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    border-radius: 16px;
+    padding: 18px;
+    min-height: 112px;
+  }
+  .metric-label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .metric-value {
+    margin-top: 12px;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .metric-note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .tone-primary .metric-value {
+    color: var(--brand);
+  }
+  .tone-positive .metric-value {
+    color: var(--positive);
+  }
+  .tone-negative .metric-value {
+    color: var(--negative);
+  }
+  .tone-warning .metric-value {
+    color: var(--warning);
+  }
+  .highlight {
+    border: 1px solid rgba(250, 140, 76, 0.24);
+    border-radius: 16px;
+    padding: 18px 20px;
+    background: var(--brand-soft);
+  }
+  .highlight-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--brand);
+    margin-bottom: 8px;
+  }
+  .highlight-copy {
+    margin: 0;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .data-table thead th {
+    background: #f8fafc;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  .data-table tbody td {
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text);
+  }
+  .data-table tbody tr:nth-child(even) td {
+    background: #fcfdff;
+  }
+  .data-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  .align-right {
+    text-align: right;
+  }
+  .muted {
+    color: var(--muted);
+  }
+`;
+
+const renderMetricCards = (
+  metrics: { label: string; value: string; note: string; toneClass: string }[],
+) => {
+  const rows: string[] = [];
+  for (let index = 0; index < metrics.length; index += 2) {
+    const pair = metrics.slice(index, index + 2);
+    const cells = pair
+      .map(
+        (metric) => `
+          <td>
+            <div class="metric-card ${metric.toneClass}">
+              <div class="metric-label">${escapeHtml(metric.label)}</div>
+              <div class="metric-value">${escapeHtml(metric.value)}</div>
+              <div class="metric-note">${escapeHtml(metric.note)}</div>
+            </div>
+          </td>
+        `,
+      )
+      .join('');
+
+    const filler = pair.length === 1 ? '<td></td>' : '';
+    rows.push(`<tr>${cells}${filler}</tr>`);
+  }
+
+  return `<table class="summary-grid"><tbody>${rows.join('')}</tbody></table>`;
+};
+
+const renderTable = ({
+  headers,
+  rows,
+  emptyMessage,
+}: {
+  headers: { label: string; align?: 'left' | 'right' }[];
+  rows: string[][];
+  emptyMessage: string;
+}) => {
+  const headerHtml = headers
+    .map(
+      (header) =>
+        `<th class="${header.align === 'right' ? 'align-right' : ''}">${escapeHtml(header.label)}</th>`,
+    )
+    .join('');
+
+  const bodyHtml =
+    rows.length > 0
+      ? rows
+          .map(
+            (row) => `
+              <tr>
+                ${row
+                  .map((cell, index) => {
+                    const alignRight = headers[index]?.align === 'right';
+                    return `<td class="${alignRight ? 'align-right' : ''}">${escapeHtml(cell)}</td>`;
+                  })
+                  .join('')}
+              </tr>
+            `,
+          )
+          .join('')
+      : `<tr><td colspan="${headers.length}" class="muted">${escapeHtml(emptyMessage)}</td></tr>`;
+
+  return `
+    <table class="data-table">
+      <thead>
+        <tr>${headerHtml}</tr>
+      </thead>
+      <tbody>${bodyHtml}</tbody>
+    </table>
+  `;
+};
+
+const createWorksheet = (rows: (string | number)[][]) => XLSX.utils.aoa_to_sheet(rows);
+
+const appendTable = (
+  sheet: XLSX.WorkSheet,
+  headers: string[],
+  rows: (string | number)[][],
+  originRow: number,
+) => {
+  XLSX.utils.sheet_add_aoa(sheet, [headers], { origin: { r: originRow, c: 0 } });
+  if (rows.length > 0) {
+    XLSX.utils.sheet_add_aoa(sheet, rows, { origin: { r: originRow + 1, c: 0 } });
+  }
+
+  const endColumn = Math.max(headers.length - 1, 0);
+  const endRow = originRow + Math.max(rows.length, 1);
+  sheet['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: originRow, c: 0 }, e: { r: endRow, c: endColumn } }) };
+};
+
+const setSheetColumns = (sheet: XLSX.WorkSheet, widths: number[]) => {
+  sheet['!cols'] = widths.map((width) => ({ wch: width }));
+};
+
+const setWorkbookProps = (workbook: XLSX.WorkBook, title: string, subject: string) => {
+  workbook.Props = {
+    Title: title,
+    Subject: subject,
+    Author: 'Aldo',
+    Company: 'Aldo',
+    CreatedDate: new Date(),
   };
+};
+
+export const generatePdfExport = async (data: ExportDataProps) => {
+  const getMetric = (name: string) => data.metrics?.find((metric) => metric.label.toLowerCase() === name.toLowerCase());
 
   const revenue = getMetric('revenue');
   const expenses = getMetric('expenses');
   const foodCost = getMetric('food cost');
   const profit = getMetric('profit');
+  const primaryCurrency = revenue?.currency || expenses?.currency || foodCost?.currency || profit?.currency || 'EUR';
 
-  const parseCurrency = (c: string) => (c === 'USD' ? '$' : c === 'EUR' ? '€' : '');
+  const summaryCards = [
+    {
+      label: 'Revenue',
+      value: formatMoney(revenue?.value ?? 0, revenue?.currency || primaryCurrency),
+      note: 'Top-line income recorded for the selected period.',
+      toneClass: metricToneClass('revenue'),
+    },
+    {
+      label: 'Expenses',
+      value: formatMoney(expenses?.value ?? 0, expenses?.currency || primaryCurrency),
+      note: 'Operating spend and tracked outflows for the period.',
+      toneClass: metricToneClass('expenses'),
+    },
+    {
+      label: 'Food Cost',
+      value: formatMoney(foodCost?.value ?? 0, foodCost?.currency || primaryCurrency),
+      note: 'Ingredient and supply cost captured in reporting.',
+      toneClass: metricToneClass('food cost'),
+    },
+    {
+      label: 'Profit',
+      value: formatMoney(profit?.value ?? 0, profit?.currency || primaryCurrency),
+      note: 'Net contribution after expenses and cost of goods.',
+      toneClass: metricToneClass('profit'),
+    },
+  ];
 
-  const cashHtml = data.cashData && data.cashData.length > 0 
-    ? data.cashData.map((item) => `
-      <tr>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #ddd;">${item.label}</td>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">
-          €${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </td>
-      </tr>
-    `).join('') 
-    : '<tr><td colspan="2" style="padding: 12px 8px; text-align: center; color: #6b7280;">No cash data available</td></tr>';
+  const cashRows =
+    data.cashData?.map((item) => [item.label, formatMoney(item.amount, primaryCurrency)]) || [];
 
-  const formatMetric = (metric?: { value: number; currency: string }) => {
-    if (!metric) return '€0.00';
-    return `${parseCurrency(metric.currency)}${metric.value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
-  };
+  const metricsRows =
+    data.metrics?.map((metric) => [
+      metric.label,
+      formatMoney(metric.value, metric.currency || primaryCurrency),
+      metric.currency || primaryCurrency,
+    ]) || [];
+
+  const reportNarrative = `This financial export summarizes the ${data.period.toLowerCase()} performance snapshot, with key commercial metrics and a cash position overview prepared for review or sharing.`;
 
   const html = `
     <html>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-        <style>
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            padding: 30px; 
-            color: #111827; 
-            background: #ffffff;
-          }
-          .header {
-            border-bottom: 2px solid #FA8C4C;
-            padding-bottom: 15px;
-            margin-bottom: 30px;
-          }
-          h1 { 
-            color: #111827; 
-            margin: 0;
-            font-size: 28px;
-          }
-          .period {
-            color: #6B7280;
-            font-size: 16px;
-            margin-top: 5px;
-            text-transform: capitalize;
-          }
-          h3 { 
-            color: #374151; 
-            margin-top: 30px; 
-            font-size: 20px;
-            border-bottom: 1px solid #E5E7EB;
-            padding-bottom: 8px;
-          }
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 15px; 
-          }
-          th { 
-            text-align: left; 
-            padding: 12px 8px; 
-            border-bottom: 2px solid #E5E7EB; 
-            color: #6B7280; 
-            font-weight: 600; 
-            background-color: #F9FAFB;
-          }
-          .metrics-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-top: 15px;
-          }
-          .metric-card {
-            flex: 1;
-            min-width: 45%;
-            background: #F9FAFB;
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid #E5E7EB;
-          }
-          .metric-label {
-            font-size: 14px;
-            color: #6B7280;
-            margin-bottom: 8px;
-            font-weight: 500;
-          }
-          .metric-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #111827;
-          }
-          .revenue { color: #FA8C4C; }
-          .expenses { color: #EF4444; }
-          .profit { color: #10B981; }
-          .food-cost { color: #D97706; }
-        </style>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>${pdfStyles}</style>
       </head>
       <body>
-        <div class="header">
-          <h1>Financial Report</h1>
-          <div class="period">${data.period} Period</div>
-        </div>
-        
-        <h3>Key Metrics</h3>
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <div class="metric-label">Revenue</div>
-            <div class="metric-value revenue">${formatMetric(revenue)}</div>
+        <div class="report-shell">
+          <div class="hero">
+            <div class="eyebrow">Aldo Reporting</div>
+            <div class="hero-grid">
+              <div class="hero-main">
+                <h1>Financial Performance Report</h1>
+                <div class="hero-subtitle">${escapeHtml(reportNarrative)}</div>
+              </div>
+              <div class="hero-meta">
+                <div class="meta-chip">${escapeHtml(formatPeriodLabel(data.period))}</div>
+                <div class="meta-chip">Generated ${escapeHtml(formatGeneratedAt())}</div>
+              </div>
+            </div>
           </div>
-          <div class="metric-card">
-            <div class="metric-label">Expenses</div>
-            <div class="metric-value expenses">${formatMetric(expenses)}</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">Food Cost</div>
-            <div class="metric-value food-cost">${formatMetric(foodCost)}</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">Profit</div>
-            <div class="metric-value profit">${formatMetric(profit)}</div>
-          </div>
-        </div>
+          <div class="content">
+            <div class="section">
+              <div class="section-title">Executive Summary</div>
+              <div class="section-copy">A quick view of the most important values for the selected reporting window.</div>
+              ${renderMetricCards(summaryCards)}
+            </div>
 
-        <h3>Cash Management</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th style="text-align: right;">Amount (€)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${cashHtml}
-          </tbody>
-        </table>
+            <div class="section">
+              <div class="highlight">
+                <div class="highlight-title">Management Note</div>
+                <p class="highlight-copy">Use this document as a clean handoff for finance reviews, weekly standups, or owner reporting. All amounts reflect the values currently available in the app at export time.</p>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Detailed Metrics</div>
+              <div class="section-copy">Structured metric output for reconciliation and internal performance review.</div>
+              ${renderTable({
+                headers: [
+                  { label: 'Metric' },
+                  { label: 'Value', align: 'right' },
+                  { label: 'Currency' },
+                ],
+                rows: metricsRows,
+                emptyMessage: 'No financial metrics are available for this period.',
+              })}
+            </div>
+
+            <div class="section">
+              <div class="section-title">Cash Management</div>
+              <div class="section-copy">Cash position categories prepared in a shareable format.</div>
+              ${renderTable({
+                headers: [
+                  { label: 'Category' },
+                  { label: 'Amount', align: 'right' },
+                ],
+                rows: cashRows,
+                emptyMessage: 'No cash management data is available for this period.',
+              })}
+            </div>
+          </div>
+        </div>
       </body>
     </html>
   `;
@@ -237,34 +622,62 @@ export const generatePdfExport = async (data: ExportDataProps) => {
 
 export const generateExcelExport = async (data: ExportDataProps) => {
   try {
-    const metricsData = data.metrics?.map(m => ({
-      Category: 'Metrics',
-      Label: m.label,
-      Value: m.value,
-      Currency: m.currency
-    })) || [];
+    const workbook = XLSX.utils.book_new();
+    setWorkbookProps(workbook, 'Financial Performance Report', 'Aldo financial export');
 
-    const cashData = data.cashData?.map(c => ({
-      Category: 'Cash Management',
-      Label: c.label,
-      Value: c.amount,
-      Currency: 'EUR'
-    })) || [];
+    const generatedAt = formatGeneratedAt();
+    const overviewRows: (string | number)[][] = [
+      ['Aldo Financial Performance Report'],
+      [],
+      ['Report Period', formatPeriodLabel(data.period)],
+      ['Generated At', generatedAt],
+      ['Metrics Count', data.metrics?.length || 0],
+      ['Cash Categories', data.cashData?.length || 0],
+    ];
 
-    const wb = XLSX.utils.book_new();
+    const overviewSheet = createWorksheet(overviewRows);
+    setSheetColumns(overviewSheet, [20, 42]);
+    XLSX.utils.book_append_sheet(workbook, overviewSheet, 'Overview');
 
-    const metricsSheet = XLSX.utils.json_to_sheet(metricsData);
-    XLSX.utils.book_append_sheet(wb, metricsSheet, 'Metrics');
+    const primaryCurrency = data.metrics?.[0]?.currency || 'EUR';
+    const metricsSheet = createWorksheet([
+      ['Financial Metrics'],
+      [],
+      ['Metric', 'Amount', 'Currency', 'Formatted Value'],
+    ]);
 
-    const cashSheet = XLSX.utils.json_to_sheet(cashData);
-    XLSX.utils.book_append_sheet(wb, cashSheet, 'Cash Management');
+    const metricsRows =
+      data.metrics?.map((metric) => [
+        metric.label,
+        Number.isFinite(metric.value) ? metric.value : 0,
+        metric.currency || primaryCurrency,
+        formatMoney(metric.value, metric.currency || primaryCurrency),
+      ]) || [];
+    appendTable(metricsSheet, ['Metric', 'Amount', 'Currency', 'Formatted Value'], metricsRows, 2);
+    setSheetColumns(metricsSheet, [24, 16, 14, 20]);
+    XLSX.utils.book_append_sheet(workbook, metricsSheet, 'Metrics');
 
-    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    const cashSheet = createWorksheet([
+      ['Cash Management'],
+      [],
+      ['Category', 'Amount', 'Formatted Amount'],
+    ]);
+    const cashRows =
+      data.cashData?.map((item) => [
+        item.label,
+        Number.isFinite(item.amount) ? item.amount : 0,
+        formatMoney(item.amount, primaryCurrency),
+      ]) || [];
+    appendTable(cashSheet, ['Category', 'Amount', 'Formatted Amount'], cashRows, 2);
+    setSheetColumns(cashSheet, [28, 16, 20]);
+    XLSX.utils.book_append_sheet(workbook, cashSheet, 'Cash Management');
+
+    const base64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
     const fileName = `Financial_Report_${data.period}_${buildTimestamp()}.xlsx`;
     const uri = buildExportUri(fileName);
 
     await FileSystem.writeAsStringAsync(uri, base64, {
-      encoding: FileSystem.EncodingType.Base64
+      encoding: FileSystem.EncodingType.Base64,
     });
 
     await shareOrNotify({
@@ -282,172 +695,136 @@ export const generateExcelExport = async (data: ExportDataProps) => {
 
 export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps) => {
   const { analyticsData, period } = data;
-  
-  const metricTilesHtml = analyticsData.metric_tiles?.map((item: any) => `
-    <div class="metric-card">
-      <div class="metric-label">${item.label}</div>
-      <div class="metric-value">${typeof item.value === 'number' ? `€${item.value.toLocaleString()}` : item.value}</div>
-      ${item.change_percent !== undefined ? `<div class="trend ${item.change_percent >= 0 ? 'profit' : 'expenses'}">${item.change_percent >= 0 ? '+' : ''}${item.change_percent}%</div>` : ''}
-    </div>
-  `).join('') || '';
 
-  const summaryStatsHtml = analyticsData.summary_stats?.map((item: any) => `
-    <tr>
-      <td style="padding: 12px 8px; border-bottom: 1px solid #ddd;">${item.label}</td>
-      <td style="padding: 12px 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">
-        ${typeof item.value === 'number' ? `€${item.value.toLocaleString()}` : item.value}
-      </td>
-    </tr>
-  `).join('') || '';
+  const summaryCards = [
+    {
+      label: 'Total Revenue',
+      value: formatMoney(analyticsData.revenue_total ?? 0, 'EUR'),
+      note: `Period change: ${formatPercent(analyticsData.revenue_change_percent ?? 0)}`,
+      toneClass: metricToneClass('revenue'),
+    },
+    ...((analyticsData.metric_tiles || []) as any[]).map((item) => ({
+      label: item.label || 'Metric',
+      value: formatAnalyticsMetricValue(item.label || 'Metric', item.value),
+      note:
+        item.change_percent !== undefined
+          ? `Variance: ${item.change_percent >= 0 ? '+' : ''}${formatPercent(item.change_percent)}`
+          : 'Tracked in current analytics view.',
+      toneClass:
+        item.change_percent === undefined
+          ? metricToneClass(item.label || '')
+          : item.change_percent >= 0
+            ? 'tone-positive'
+            : 'tone-negative',
+    })),
+  ];
 
-  const coversActivityHtml = analyticsData.covers_activity?.map((item: any) => `
-    <tr>
-      <td style="padding: 12px 8px; border-bottom: 1px solid #ddd;">${item.label}</td>
-      <td style="padding: 12px 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">${item.value}</td>
-    </tr>
-  `).join('') || '';
+  const summaryRows =
+    (analyticsData.summary_stats || []).map((item: any) => [item.label || 'Metric', formatCellValue(item.value)]) || [];
 
-  const costBreakdownHtml = analyticsData.cost_breakdown?.map((item: any) => `
-    <tr>
-      <td style="padding: 12px 8px; border-bottom: 1px solid #ddd;">${item.label}</td>
-      <td style="padding: 12px 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">${item.value}%</td>
-    </tr>
-  `).join('') || '';
+  const activityRows = [
+    ...((analyticsData.covers_activity || []).map((item: any) => [
+      'Covers Activity',
+      item.label || 'Item',
+      formatCellValue(item.value),
+    ]) as string[][]),
+    ...((analyticsData.cost_breakdown || []).map((item: any) => [
+      'Cost Breakdown',
+      item.label || 'Item',
+      formatPercent(item.value),
+    ]) as string[][]),
+  ];
+
+  const revenueTrendRows =
+    (analyticsData.weekly_revenue || []).map((item: any) => [
+      item.week_label || item.label || item.period || 'Period',
+      typeof item.amount === 'number'
+        ? formatMoney(item.amount, 'EUR')
+        : formatCellValue(item.amount ?? item.value),
+    ]) || [];
+
+  const insightTitle = analyticsData.insight_banner?.title || 'Business Insight';
+  const insightSubtitle =
+    analyticsData.insight_banner?.subtitle ||
+    'This report compiles the analytics snapshot currently available in the application.';
 
   const html = `
     <html>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-        <style>
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            padding: 30px; 
-            color: #111827; 
-            background: #ffffff;
-          }
-          .header {
-            border-bottom: 2px solid #FA8C4C;
-            padding-bottom: 15px;
-            margin-bottom: 30px;
-          }
-          h1 { 
-            color: #111827; 
-            margin: 0;
-            font-size: 28px;
-          }
-          .period {
-            color: #6B7280;
-            font-size: 16px;
-            margin-top: 5px;
-            text-transform: capitalize;
-          }
-          h3 { 
-            color: #374151; 
-            margin-top: 30px; 
-            font-size: 20px;
-            border-bottom: 1px solid #E5E7EB;
-            padding-bottom: 8px;
-          }
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 15px; 
-          }
-          th { 
-            text-align: left; 
-            padding: 12px 8px; 
-            border-bottom: 2px solid #E5E7EB; 
-            color: #6B7280; 
-            font-weight: 600; 
-            background-color: #F9FAFB;
-          }
-          .metrics-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-top: 15px;
-          }
-          .metric-card {
-            flex: 1;
-            min-width: 45%;
-            background: #F9FAFB;
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid #E5E7EB;
-          }
-          .metric-label {
-            font-size: 14px;
-            color: #6B7280;
-            margin-bottom: 8px;
-            font-weight: 500;
-          }
-          .metric-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #111827;
-          }
-          .trend { font-size: 14px; font-weight: bold; margin-top: 5px; }
-          .profit { color: #10B981; }
-          .expenses { color: #EF4444; }
-          .insight { 
-            background: #FCE7D6; 
-            padding: 15px; 
-            border-radius: 8px; 
-            margin-bottom: 20px;
-            border-left: 4px solid #FA8C4C;
-          }
-          .insight-title { font-weight: bold; color: #FA8C4C; margin-bottom: 5px; }
-        </style>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>${pdfStyles}</style>
       </head>
       <body>
-        <div class="header">
-          <h1>Analytics Overview</h1>
-          <div class="period">${period} Period</div>
-        </div>
-
-        <div class="insight">
-          <div class="insight-title">${analyticsData.insight_banner?.title}</div>
-          <div>${analyticsData.insight_banner?.subtitle}</div>
-        </div>
-        
-        <h3>Key Metrics</h3>
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <div class="metric-label">Total Revenue</div>
-            <div class="metric-value">€${analyticsData.revenue_total?.toLocaleString()}</div>
-            <div class="trend ${analyticsData.revenue_change_percent >= 0 ? 'profit' : 'expenses'}">
-              ${analyticsData.revenue_change_percent >= 0 ? '+' : ''}${analyticsData.revenue_change_percent}%
+        <div class="report-shell">
+          <div class="hero">
+            <div class="eyebrow">Aldo Analytics</div>
+            <div class="hero-grid">
+              <div class="hero-main">
+                <h1>Analytics Overview Report</h1>
+                <div class="hero-subtitle">A professional summary of revenue movement, activity signals, and operational indicators for the selected reporting period.</div>
+              </div>
+              <div class="hero-meta">
+                <div class="meta-chip">${escapeHtml(formatPeriodLabel(period))}</div>
+                <div class="meta-chip">Generated ${escapeHtml(formatGeneratedAt())}</div>
+              </div>
             </div>
           </div>
-          ${metricTilesHtml}
+          <div class="content">
+            <div class="section">
+              <div class="highlight">
+                <div class="highlight-title">${escapeHtml(insightTitle)}</div>
+                <p class="highlight-copy">${escapeHtml(insightSubtitle)}</p>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">Headline Metrics</div>
+              <div class="section-copy">A top-level view of the most important indicators in the analytics dashboard.</div>
+              ${renderMetricCards(summaryCards)}
+            </div>
+
+            <div class="section">
+              <div class="section-title">Statistics Summary</div>
+              <div class="section-copy">Reference metrics prepared for management review and comparison.</div>
+              ${renderTable({
+                headers: [
+                  { label: 'Metric' },
+                  { label: 'Value', align: 'right' },
+                ],
+                rows: summaryRows,
+                emptyMessage: 'No summary statistics are available for this period.',
+              })}
+            </div>
+
+            <div class="section">
+              <div class="section-title">Revenue Trend</div>
+              <div class="section-copy">Period-based revenue entries exported from the analytics view.</div>
+              ${renderTable({
+                headers: [
+                  { label: 'Period' },
+                  { label: 'Revenue', align: 'right' },
+                ],
+                rows: revenueTrendRows,
+                emptyMessage: 'No revenue trend data is available for this period.',
+              })}
+            </div>
+
+            <div class="section">
+              <div class="section-title">Activity And Cost Signals</div>
+              <div class="section-copy">Operational activity and cost indicators aligned into a single report table.</div>
+              ${renderTable({
+                headers: [
+                  { label: 'Section' },
+                  { label: 'Indicator' },
+                  { label: 'Value', align: 'right' },
+                ],
+                rows: activityRows,
+                emptyMessage: 'No activity or cost breakdown data is available for this period.',
+              })}
+            </div>
+          </div>
         </div>
-
-        <h3>Statistics Summary</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th style="text-align: right;">Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${summaryStatsHtml}
-          </tbody>
-        </table>
-
-        <h3>Activity & Costs</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th style="text-align: right;">Activity / Cost (%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${coversActivityHtml}
-            ${costBreakdownHtml}
-          </tbody>
-        </table>
       </body>
     </html>
   `;
@@ -473,44 +850,114 @@ export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps)
 export const generateAnalyticsExcelExport = async (data: AnalyticsExportDataProps) => {
   try {
     const { analyticsData, period } = data;
-    const wb = XLSX.utils.book_new();
+    const workbook = XLSX.utils.book_new();
+    setWorkbookProps(workbook, 'Analytics Overview Report', 'Aldo analytics export');
 
-    // Summary Sheet
-    const summaryData = [
-      { Category: 'Overview', Label: 'Total Revenue', Value: analyticsData.revenue_total },
-      { Category: 'Overview', Label: 'Revenue Change %', Value: analyticsData.revenue_change_percent },
-      ...(analyticsData.metric_tiles || []).map((m: any) => ({
-        Category: 'Key Metrics',
-        Label: m.label,
-        Value: m.value
-      })),
-      ...(analyticsData.summary_stats || []).map((s: any) => ({
-        Category: 'Stats',
-        Label: s.label,
-        Value: s.value
-      }))
+    const overviewSheet = createWorksheet([
+      ['Aldo Analytics Overview Report'],
+      [],
+      ['Report Period', formatPeriodLabel(period)],
+      ['Generated At', formatGeneratedAt()],
+      ['Metric Tiles', (analyticsData.metric_tiles || []).length],
+      ['Summary Stats', (analyticsData.summary_stats || []).length],
+      ['Revenue Points', (analyticsData.weekly_revenue || []).length],
+      ['Supplier Alerts', (analyticsData.supplier_price_alerts || []).length],
+    ]);
+    setSheetColumns(overviewSheet, [22, 42]);
+    XLSX.utils.book_append_sheet(workbook, overviewSheet, 'Overview');
+
+    const summarySheet = createWorksheet([
+      ['Analytics Summary'],
+      [],
+      ['Section', 'Label', 'Value', 'Formatted'],
+    ]);
+    const summaryRows = [
+      ['Overview', 'Total Revenue', analyticsData.revenue_total ?? 0, formatMoney(analyticsData.revenue_total ?? 0, 'EUR')],
+      [
+        'Overview',
+        'Revenue Change %',
+        analyticsData.revenue_change_percent ?? 0,
+        formatPercent(analyticsData.revenue_change_percent ?? 0),
+      ],
+      ...((analyticsData.metric_tiles || []).map((item: any) => [
+        'Metric Tile',
+        item.label || 'Metric',
+        typeof item.value === 'number' ? item.value : formatCellValue(item.value),
+        formatAnalyticsMetricValue(item.label || 'Metric', item.value),
+      ]) as (string | number)[][]),
+      ...((analyticsData.summary_stats || []).map((item: any) => [
+        'Summary Stat',
+        item.label || 'Metric',
+        typeof item.value === 'number' ? item.value : formatCellValue(item.value),
+        formatCellValue(item.value),
+      ]) as (string | number)[][]),
     ];
-    const summarySheet = XLSX.utils.json_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+    appendTable(summarySheet, ['Section', 'Label', 'Value', 'Formatted'], summaryRows, 2);
+    setSheetColumns(summarySheet, [18, 28, 18, 20]);
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
 
-    // Revenue Breakdown Sheet
-    const weeklyRevenueSheet = XLSX.utils.json_to_sheet(analyticsData.weekly_revenue || []);
-    XLSX.utils.book_append_sheet(wb, weeklyRevenueSheet, 'Weekly Revenue');
+    const revenueSheet = createWorksheet([
+      ['Revenue Trend'],
+      [],
+      ['Period', 'Amount', 'Formatted Revenue'],
+    ]);
+    const revenueRows =
+      (analyticsData.weekly_revenue || []).map((item: any) => {
+        const amountValue = typeof item.amount === 'number' ? item.amount : Number(item.amount ?? item.value ?? 0);
+        return [
+          item.week_label || item.label || item.period || 'Period',
+          Number.isFinite(amountValue) ? amountValue : 0,
+          formatMoney(Number.isFinite(amountValue) ? amountValue : 0, 'EUR'),
+        ];
+      }) || [];
+    appendTable(revenueSheet, ['Period', 'Amount', 'Formatted Revenue'], revenueRows, 2);
+    setSheetColumns(revenueSheet, [22, 16, 20]);
+    XLSX.utils.book_append_sheet(workbook, revenueSheet, 'Revenue Trend');
 
-    // Activity & Cost Sheet
-    const activityData = [
-      ...(analyticsData.covers_activity || []).map((c: any) => ({ Type: 'Covers Activity', Label: c.label, Value: c.value })),
-      ...(analyticsData.cost_breakdown || []).map((ct: any) => ({ Type: 'Cost %', Label: ct.label, Value: ct.value + '%' }))
+    const activitySheet = createWorksheet([
+      ['Activity And Cost Signals'],
+      [],
+      ['Section', 'Label', 'Value', 'Formatted'],
+    ]);
+    const activityRows = [
+      ...((analyticsData.covers_activity || []).map((item: any) => [
+        'Covers Activity',
+        item.label || 'Indicator',
+        item.value ?? '',
+        formatCellValue(item.value),
+      ]) as (string | number)[][]),
+      ...((analyticsData.cost_breakdown || []).map((item: any) => [
+        'Cost Breakdown',
+        item.label || 'Indicator',
+        item.value ?? 0,
+        formatPercent(item.value),
+      ]) as (string | number)[][]),
     ];
-    const activitySheet = XLSX.utils.json_to_sheet(activityData);
-    XLSX.utils.book_append_sheet(wb, activitySheet, 'Activity & Cost');
+    appendTable(activitySheet, ['Section', 'Label', 'Value', 'Formatted'], activityRows, 2);
+    setSheetColumns(activitySheet, [20, 28, 16, 18]);
+    XLSX.utils.book_append_sheet(workbook, activitySheet, 'Activity & Cost');
 
-    const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+    const alertsSheet = createWorksheet([
+      ['Supplier Price Alerts'],
+      [],
+      ['Supplier', 'Item', 'Message'],
+    ]);
+    const alertRows =
+      (analyticsData.supplier_price_alerts || []).map((item: any) => [
+        item.title || 'Price Alert',
+        item.impact || 'N/A',
+        item.subtitle || item.description || 'Alert available in analytics view.',
+      ]) || [];
+    appendTable(alertsSheet, ['Alert', 'Impact', 'Details'], alertRows, 2);
+    setSheetColumns(alertsSheet, [28, 18, 48]);
+    XLSX.utils.book_append_sheet(workbook, alertsSheet, 'Supplier Alerts');
+
+    const base64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
     const fileName = `Analytics_Report_${period}_${buildTimestamp()}.xlsx`;
     const uri = buildExportUri(fileName);
 
     await FileSystem.writeAsStringAsync(uri, base64, {
-      encoding: FileSystem.EncodingType.Base64
+      encoding: FileSystem.EncodingType.Base64,
     });
 
     await shareOrNotify({
