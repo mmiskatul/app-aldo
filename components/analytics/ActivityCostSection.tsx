@@ -19,6 +19,17 @@ interface ActivityCostSectionProps {
 
 export default function ActivityCostSection({ coversActivity, costBreakdown, coversLoading = false, costLoading = false }: ActivityCostSectionProps) {
   const { t } = useTranslation();
+
+  const formatPercent = (value: number | string) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) {
+      return '0%';
+    }
+
+    const rounded = Math.round(numericValue * 10) / 10;
+    return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+  };
+
   return (
     <View style={styles.container}>
       {/* Covers Activity */}
@@ -40,9 +51,9 @@ export default function ActivityCostSection({ coversActivity, costBreakdown, cov
           <View key={index} style={styles.row}>
             <View style={styles.subRow}>
               <Feather 
-                name={item.label.toLowerCase() === 'lunch' ? 'sun' : 'moon'} 
+                name={index === 0 ? 'sun' : 'moon'} 
                 size={moderateScale(14)} 
-                color={item.label.toLowerCase() === 'lunch' ? '#F59E0B' : '#6366F1'} 
+                color={index === 0 ? '#F59E0B' : '#6366F1'} 
               />
               <Text style={styles.label}>{item.label}</Text>
             </View>
@@ -67,7 +78,7 @@ export default function ActivityCostSection({ coversActivity, costBreakdown, cov
           <View key={index} style={styles.row}>
             <Text style={styles.label}>{item.label}</Text>
             <Text style={[styles.value, { color: index === 0 ? '#EF4444' : '#F59E0B' }]}>
-              {Number(item.value)}%
+              {formatPercent(item.value)}
             </Text>
           </View>
         ))}

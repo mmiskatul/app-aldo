@@ -15,14 +15,25 @@ interface SummaryCardsProps {
 }
 
 export default function SummaryCards({ metrics }: SummaryCardsProps) {
+  const formatMetricValue = (card: SummaryCardData) => {
+    if (typeof card.value !== 'number') {
+      return card.value;
+    }
+
+    const normalizedLabel = card.label.trim().toLowerCase();
+    if (normalizedLabel.includes('cover') || normalizedLabel.includes('coperti')) {
+      return card.value.toLocaleString();
+    }
+
+    return `$${card.value.toLocaleString()}`;
+  };
+
   return (
     <View style={styles.container}>
       {metrics.map((card, index) => (
         <View key={index} style={styles.card}>
           <Text style={styles.label}>{card.label}</Text>
-          <Text style={styles.value}>
-            {typeof card.value === 'number' ? `$${card.value.toLocaleString()}` : card.value}
-          </Text>
+          <Text style={styles.value}>{formatMetricValue(card)}</Text>
           
           {card.change_percent !== undefined && (
             <View style={styles.trendContainer}>
