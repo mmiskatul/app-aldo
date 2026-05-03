@@ -2,13 +2,13 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
-import { BillingCycle, UserSubscriptionPlan, getUserSubscriptionPlans } from "../../api/settings";
+import { BillingCycle, UserSubscriptionPlan, getUserSubscriptionPlans, selectUserSubscriptionPlan } from "../../api/settings";
 import { ListRouteSkeleton } from "../../components/ui/RouteSkeletons";
-import { showErrorMessage } from "../../utils/feedback";
+import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -18,6 +18,7 @@ export default function SubscriptionScreen() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("1_month");
   const [plans, setPlans] = useState<UserSubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -43,8 +44,24 @@ export default function SubscriptionScreen() {
     return plans.find((plan) => plan.is_best_plan) ?? plans[0];
   }, [plans]);
 
-  const handleContinue = () => {
-    router.push("/(auth)/setup");
+  const handleContinue = async () => {
+    if (!selectedPlan) {
+      showErrorMessage("No subscription plan is available right now.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await selectUserSubscriptionPlan(billingCycle, false, selectedPlan.id);
+      showSuccessMessage("Subscription activated successfully.");
+      router.push("/(auth)/setup");
+    } catch (error: any) {
+      showErrorMessage(
+        error?.response?.data?.message || error?.message || "Unable to activate subscription.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const features = selectedPlan?.features ?? [];
@@ -125,8 +142,12 @@ export default function SubscriptionScreen() {
                 ))}
               </View>
 
-              <TouchableOpacity style={styles.startButton} onPress={handleContinue}>
-                <Text style={styles.startButtonText}>Continue Setup</Text>
+              <TouchableOpacity style={styles.startButton} onPress={() => { void handleContinue(); }} disabled={submitting}>
+                {submitting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.startButtonText}>Continue Setup</Text>
+                )}
               </TouchableOpacity>
             </View>
           </>

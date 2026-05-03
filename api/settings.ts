@@ -61,6 +61,18 @@ export interface CustomerPortalResponse {
   portal_url: string;
 }
 
+export interface UserSubscriptionActionResponse {
+  message: string;
+  subscription: {
+    selection_required: boolean;
+    plan_name: string | null;
+    billing_cycle: BillingCycle | null;
+    status: SubscriptionStatus | null;
+    started_at: string | null;
+    expires_at: string | null;
+  };
+}
+
 export interface PublicLegalDocument {
   key: string;
   title: string;
@@ -163,6 +175,22 @@ export const getUserSubscriptionPlans =
     return response.data;
   };
 
+export const selectUserSubscriptionPlan = async (
+  billingCycle: BillingCycle,
+  startTrial = false,
+  planId?: string | null,
+): Promise<UserSubscriptionActionResponse> => {
+  const response = await apiClient.post<UserSubscriptionActionResponse>(
+    '/api/v1/subscriptions/user/select',
+    {
+      plan_id: planId ?? null,
+      billing_cycle: billingCycle,
+      start_trial: startTrial,
+    },
+  );
+  return response.data;
+};
+
 export const createSubscriptionCheckoutSession = async (
   billingCycle: BillingCycle,
   startTrial = true,
@@ -183,6 +211,14 @@ export const createCustomerPortalSession =
   async (): Promise<CustomerPortalResponse> => {
     const response = await apiClient.post<CustomerPortalResponse>(
       '/api/v1/subscriptions/user/customer-portal'
+    );
+    return response.data;
+  };
+
+export const cancelUserSubscription =
+  async (): Promise<UserSubscriptionActionResponse> => {
+    const response = await apiClient.post<UserSubscriptionActionResponse>(
+      '/api/v1/subscriptions/user/cancel'
     );
     return response.data;
   };
