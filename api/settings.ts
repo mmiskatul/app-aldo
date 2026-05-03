@@ -73,6 +73,17 @@ export interface MessageResponse {
   message: string;
 }
 
+export interface PushDeviceRegistrationPayload {
+  expo_push_token: string;
+  device_id: string;
+  platform: 'ios' | 'android' | 'web' | 'unknown';
+  device_name?: string | null;
+}
+
+export interface PushDeviceUnregisterPayload {
+  device_id: string;
+}
+
 const normalizeApiError = (error: any): never => {
   const errorPayload = error?.response?.data?.error;
   const validationErrors = errorPayload?.details?.errors;
@@ -111,6 +122,26 @@ export const updateRestaurantNotificationSettings = async (
 ): Promise<RestaurantNotificationSettings> => {
   const response = await apiClient.put<RestaurantNotificationSettings>(
     '/api/v1/restaurant/settings/notifications',
+    payload
+  );
+  return response.data;
+};
+
+export const registerPushDevice = async (
+  payload: PushDeviceRegistrationPayload
+): Promise<MessageResponse> => {
+  const response = await apiClient.post<MessageResponse>(
+    '/api/v1/restaurant/settings/push-devices/register',
+    payload
+  );
+  return response.data;
+};
+
+export const unregisterPushDevice = async (
+  payload: PushDeviceUnregisterPayload
+): Promise<MessageResponse> => {
+  const response = await apiClient.post<MessageResponse>(
+    '/api/v1/restaurant/settings/push-devices/unregister',
     payload
   );
   return response.data;

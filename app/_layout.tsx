@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import PushNotificationRegistrar from '../components/app/PushNotificationRegistrar';
 import AppLaunchSplash from '../components/ui/AppLaunchSplash';
 import TopSnackbar from '../components/ui/TopSnackbar';
 import { useColorScheme } from '../hooks/use-color-scheme';
@@ -45,6 +46,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: i18n.t('modal_title') }} />
           </Stack>
+          <PushNotificationRegistrar />
           <TopSnackbar />
           <StatusBar style="dark" />
           {showLaunchSplash ? <AppLaunchSplash onFinish={handleLaunchSplashFinish} /> : null}

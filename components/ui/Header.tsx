@@ -58,7 +58,7 @@ export default function Header({
     ({
       pathname: '/(tabs)/settings/notifications',
       params: { origin: pathname },
-    } as Href<string>);
+    } as unknown as Href<string>);
 
   return (
     <View style={[styles.safeArea, { paddingTop: Math.max(insets.top, verticalScale(16)) }]}>

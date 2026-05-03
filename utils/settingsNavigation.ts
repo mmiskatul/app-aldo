@@ -33,5 +33,5 @@ export const buildSettingsHref = (
   return {
     pathname: pathname as Href<string>,
     params,
-  } as Href<string>;
+  } as unknown as Href<string>;
 };

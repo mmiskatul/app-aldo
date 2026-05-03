@@ -21,8 +21,13 @@ import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 import {
   RestaurantNotificationSettings,
   getRestaurantNotificationSettings,
+  registerPushDevice,
   updateRestaurantNotificationSettings,
 } from '../../../api/settings';
+import {
+  getPushDeviceId,
+  registerForPushNotificationsAsync,
+} from '../../../utils/pushNotifications';
 
 type NotificationKey = keyof RestaurantNotificationSettings;
 
@@ -107,6 +112,20 @@ export default function NotificationSettingsScreen() {
     setSettings((current) => ({ ...current, [id]: nextValue }));
 
     try {
+      if (id === 'push_notifications' && nextValue) {
+        const expoPushToken = await registerForPushNotificationsAsync();
+        if (!expoPushToken) {
+          throw new Error('Push notification permission was not granted.');
+        }
+        const deviceId = await getPushDeviceId();
+        await registerPushDevice({
+          expo_push_token: expoPushToken,
+          device_id: deviceId,
+          platform: Platform.OS === 'ios' || Platform.OS === 'android' || Platform.OS === 'web' ? Platform.OS : 'unknown',
+          device_name: Platform.OS,
+        });
+      }
+
       const updated = await updateRestaurantNotificationSettings({
         [id]: nextValue,
       });

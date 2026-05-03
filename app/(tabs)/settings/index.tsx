@@ -14,6 +14,8 @@ import { useAppStore } from '../../../store/useAppStore';
 import { getApiDisplayMessage, logApiError } from '../../../utils/apiErrors';
 import { useTranslation } from '../../../utils/i18n';
 import apiClient from '../../../api/apiClient';
+import { unregisterPushDevice } from '../../../api/settings';
+import { getExistingPushDeviceId } from '../../../utils/pushNotifications';
 import { buildSettingsHref, normalizeOrigin } from '../../../utils/settingsNavigation';
 
 const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -29,6 +31,20 @@ export default function SettingsScreen() {
   const setProfile = useAppStore((state) => state.setProfile);
   const [bannerMessage, setBannerMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
+  const handleLogout = React.useCallback(async () => {
+    try {
+      const deviceId = await getExistingPushDeviceId();
+      if (deviceId) {
+        await unregisterPushDevice({ device_id: deviceId });
+      }
+    } catch (error) {
+      console.log('[push] unregister on logout skipped:', error);
+    } finally {
+      logout();
+      router.replace('/(auth)' as any);
+    }
+  }, [logout, router]);
 
   const fetchProfile = React.useCallback(async (silent = false) => {
     try {
@@ -118,8 +134,7 @@ export default function SettingsScreen() {
         <TouchableOpacity 
           style={styles.logoutButton}
           onPress={() => {
-            logout();
-            router.replace('/(auth)' as any);
+            void handleLogout();
           }}
         >
           <Feather name="log-out" size={moderateScale(18)} color="#EF4444" />
