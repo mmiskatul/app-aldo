@@ -1,4 +1,5 @@
 import axios from "axios";
+import { router } from "expo-router";
 import { useAppStore } from "../store/useAppStore";
 import { API_REQUEST_TIMEOUT_MS, getApiBaseUrl, getApiErrorMessage, isNetworkLikeApiError } from "../utils/api";
 import { showErrorMessage } from "../utils/feedback";
@@ -15,6 +16,7 @@ const apiClient = axios.create({
 let isRefreshing = false;
 let failedQueue: any[] = [];
 let lastConnectionErrorShownAt = 0;
+let isRedirectingToSubscription = false;
 
 const CONNECTION_ERROR_THROTTLE_MS = 4000;
 
@@ -46,6 +48,17 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+const redirectToSubscriptionSelection = () => {
+  if (isRedirectingToSubscription) {
+    return;
+  }
+  isRedirectingToSubscription = true;
+  router.replace("/(auth)/subscription" as any);
+  setTimeout(() => {
+    isRedirectingToSubscription = false;
+  }, 1500);
+};
+
 // Request interceptor: Attach token
 apiClient.interceptors.request.use(
   (config) => {
@@ -69,6 +82,11 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (isNetworkLikeApiError(error)) {
       showConnectionError();
+    }
+
+    const subscriptionErrorCode = error.response?.data?.error?.code;
+    if (error.response?.status === 403 && subscriptionErrorCode === "subscription_required") {
+      redirectToSubscriptionSelection();
     }
 
     const originalRequest = error.config;
