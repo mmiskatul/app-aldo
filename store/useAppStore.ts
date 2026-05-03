@@ -2,22 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-const safeGetLocales = () => {
-  try {
-    const localization = require("expo-localization") as {
-      getLocales?: () => Array<{ languageCode?: string; languageTag?: string }>;
-    };
-    return localization.getLocales?.() ?? [];
-  } catch {
-    return [];
-  }
-};
-
-const getInitialAppLanguage = (): "en" | "it" => {
-  const locale = safeGetLocales()[0];
-  const language = (locale?.languageCode || locale?.languageTag || "en").toLowerCase();
-  return language.startsWith("it") ? "it" : "en";
-};
+const DEFAULT_APP_LANGUAGE = "it" as const;
 
 export interface User {
   id: string;
@@ -399,6 +384,7 @@ interface AppState {
   setDailyDataScreenCache: (payload: Partial<DailyDataScreenCache>) => void;
   clearDailyDataScreenCache: () => void;
   appLanguage: 'en' | 'it';
+  appLanguageWasSet: boolean;
   setAppLanguage: (lang: 'en' | 'it') => void;
   logout: () => void;
 }
@@ -604,8 +590,9 @@ export const useAppStore = create<AppState>()(
             fetchedAtBySegment: {},
           },
         }),
-      appLanguage: getInitialAppLanguage(),
-      setAppLanguage: (lang) => set({ appLanguage: lang }),
+      appLanguage: DEFAULT_APP_LANGUAGE,
+      appLanguageWasSet: false,
+      setAppLanguage: (lang) => set({ appLanguage: lang, appLanguageWasSet: true }),
       logout: () =>
         set({
           user: null,
@@ -669,6 +656,23 @@ export const useAppStore = create<AppState>()(
     {
       name: "app-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      version: 1,
+      migrate: (persistedState) => {
+        if (!persistedState || typeof persistedState !== "object") {
+          return persistedState;
+        }
+
+        const state = persistedState as Partial<AppState>;
+        if (!state.appLanguageWasSet) {
+          return {
+            ...state,
+            appLanguage: DEFAULT_APP_LANGUAGE,
+            appLanguageWasSet: false,
+          };
+        }
+
+        return state;
+      },
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
@@ -678,6 +682,7 @@ export const useAppStore = create<AppState>()(
         tokens: state.tokens,
         pendingRegistration: state.pendingRegistration,
         appLanguage: state.appLanguage,
+        appLanguageWasSet: state.appLanguageWasSet,
         documentsScreenCache: state.documentsScreenCache,
       }),
     },

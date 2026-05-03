@@ -12,6 +12,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getRestrictedAccessStatus, useAppStore } from "../store/useAppStore";
+import LanguageModal from "../components/home/LanguageModal";
+import { useTranslation } from "../utils/i18n";
 
 // @ts-ignore
 import BackgroundSVG from "../assets/images/onboarding/Background+Border+Shadow.svg";
@@ -23,37 +25,33 @@ import AIChatSVG from "../assets/images/onboarding/AI Chat Interface Mockup.svg"
 const slides = [
   {
     id: "1",
-    title: "Upload Invoices Instantly",
-    description:
-      "Take a photo or upload supplier invoices and let AI automatically extract product and expense data.",
+    titleKey: "intro_slide_upload_title",
+    descriptionKey: "intro_slide_upload_description",
     ImageComponent: BackgroundSVG,
-    primaryButton: "Next",
     showSkip: true,
   },
   {
     id: "2",
-    title: "Manage Your Restaurant Smarter",
-    description:
-      "Track revenue, expenses, and key performance metrics in one powerful dashboard.",
+    titleKey: "intro_slide_manage_title",
+    descriptionKey: "intro_slide_manage_description",
     ImageComponent: ContainerSVG,
-    primaryButton: "Next",
     showSkip: false,
   },
   {
     id: "3",
-    title: "AI Chat Assistant",
-    description:
-      "Chat with Risto AI to analyze your restaurant data, get instant insights, and receive smart business recommendations.",
+    titleKey: "intro_slide_chat_title",
+    descriptionKey: "intro_slide_chat_description",
     ImageComponent: AIChatSVG,
-    primaryButton: "Get Started",
     showSkip: false,
   },
-];
+] as const;
 
 export default function OnboardingScreen() {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const slidesRef = useRef<FlatList<any>>(null);
   const router = useRouter();
   const viewableItemsChanged = useRef(({ viewableItems }: any) => {
@@ -64,6 +62,8 @@ export default function OnboardingScreen() {
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
   const user = useAppStore((state) => state.user);
+  const appLanguage = useAppStore((state) => state.appLanguage);
+  const setAppLanguage = useAppStore((state) => state.setAppLanguage);
   const hasRestrictedAccess = getRestrictedAccessStatus(user) !== null;
 
   if (user) {
@@ -112,9 +112,11 @@ export default function OnboardingScreen() {
           >
             <Feather name="arrow-left" size={24} color="#111827" />
           </TouchableOpacity>
-          <Text style={styles.stepText}>Step {currentIndex + 1} of 3</Text>
-          <TouchableOpacity style={styles.langSelector}>
-            <Text style={styles.langText}>Eng</Text>
+          <Text style={styles.stepText}>
+            {t("intro_step_label", { step: currentIndex + 1, total: slides.length })}
+          </Text>
+          <TouchableOpacity style={styles.langSelector} onPress={() => setIsLangMenuOpen(true)}>
+            <Text style={styles.langText}>{appLanguage === "it" ? "Ita" : "Eng"}</Text>
             <Feather
               name="chevron-down"
               size={16}
@@ -133,8 +135,8 @@ export default function OnboardingScreen() {
               <item.ImageComponent width={width * 0.8} height={width * 0.8} />
             </View>
             <View style={styles.textContainer}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.description}>{item.description}</Text>
+              <Text style={styles.title}>{t(item.titleKey)}</Text>
+              <Text style={styles.description}>{t(item.descriptionKey)}</Text>
             </View>
           </View>
         )}
@@ -158,7 +160,7 @@ export default function OnboardingScreen() {
 
         <TouchableOpacity style={styles.mainButton} onPress={scrollToNext}>
           <Text style={styles.mainButtonText}>
-            {currentIndex === slides.length - 1 ? "Get Started" : "Next"}
+            {currentIndex === slides.length - 1 ? t("get_started") : t("next")}
           </Text>
           {currentIndex > 0 && (
             <Feather
@@ -172,12 +174,21 @@ export default function OnboardingScreen() {
 
         {currentSlide.showSkip ? (
           <TouchableOpacity style={styles.skipButton} onPress={skipToAuth}>
-            <Text style={styles.skipText}>Skip Intro</Text>
+            <Text style={styles.skipText}>{t("skip_intro")}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.skipButtonPlaceholder} />
         )}
       </View>
+      <LanguageModal
+        visible={isLangMenuOpen}
+        onClose={() => setIsLangMenuOpen(false)}
+        selectedLang={appLanguage}
+        onSelectLang={(lang) => {
+          setAppLanguage(lang);
+          setIsLangMenuOpen(false);
+        }}
+      />
     </View>
   );
 }
@@ -186,7 +197,7 @@ const Paginator = ({
   data,
   currentIndex,
 }: {
-  data: any[];
+  data: readonly any[];
   currentIndex: number;
 }) => {
   return (

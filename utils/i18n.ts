@@ -4,16 +4,7 @@ import { useAppStore } from '../store/useAppStore';
 
 export type AppLanguage = 'en' | 'it';
 
-const safeGetLocales = () => {
-  try {
-    const localization = require('expo-localization') as {
-      getLocales?: () => Array<{ languageCode?: string; languageTag?: string }>;
-    };
-    return localization.getLocales?.() ?? [];
-  } catch {
-    return [];
-  }
-};
+export const DEFAULT_APP_LANGUAGE: AppLanguage = 'it';
 
 const baseTranslations = {
   en: {
@@ -61,6 +52,16 @@ const baseTranslations = {
     onboarding_restaurant_subtitle: 'Help Risto AI understand your business to provide personalized insights and recommendations.',
     onboarding_restaurant_name_placeholder: 'e.g. The Italian Bistro',
     onboarding_change_later: 'You can change these details later in settings.',
+    intro_step_label: 'Step {{step}} of {{total}}',
+    intro_slide_upload_title: 'Upload Invoices Instantly',
+    intro_slide_upload_description: 'Take a photo or upload supplier invoices and let AI automatically extract product and expense data.',
+    intro_slide_manage_title: 'Manage Your Restaurant Smarter',
+    intro_slide_manage_description: 'Track revenue, expenses, and key performance metrics in one powerful dashboard.',
+    intro_slide_chat_title: 'AI Chat Assistant',
+    intro_slide_chat_description: 'Chat with Risto AI to analyze your restaurant data, get instant insights, and receive smart business recommendations.',
+    next: 'Next',
+    get_started: 'Get Started',
+    skip_intro: 'Skip Intro',
     restaurant_type_pizzeria: 'Pizzeria',
     restaurant_type_fine_dining: 'Fine Dining',
     restaurant_type_fast_food: 'Fast Food',
@@ -315,6 +316,16 @@ const baseTranslations = {
     onboarding_restaurant_subtitle: 'Aiuta Risto AI a capire la tua attivita per fornire approfondimenti e suggerimenti personalizzati.',
     onboarding_restaurant_name_placeholder: 'es. Il Bistrot Italiano',
     onboarding_change_later: 'Potrai modificare questi dettagli piu tardi nelle impostazioni.',
+    intro_step_label: 'Passo {{step}} di {{total}}',
+    intro_slide_upload_title: 'Carica fatture in un attimo',
+    intro_slide_upload_description: 'Scatta una foto o carica le fatture dei fornitori e lascia che l IA estragga automaticamente prodotti e spese.',
+    intro_slide_manage_title: 'Gestisci meglio il tuo ristorante',
+    intro_slide_manage_description: 'Monitora ricavi, spese e metriche chiave in una dashboard potente.',
+    intro_slide_chat_title: 'Assistente chat AI',
+    intro_slide_chat_description: 'Chatta con Risto AI per analizzare i dati del ristorante, ottenere insight immediati e ricevere consigli intelligenti.',
+    next: 'Avanti',
+    get_started: 'Inizia',
+    skip_intro: 'Salta introduzione',
     restaurant_type_pizzeria: 'Pizzeria',
     restaurant_type_fine_dining: 'Ristorazione elegante',
     restaurant_type_fast_food: 'Fast food',
@@ -535,22 +546,21 @@ export type TranslationKey = keyof typeof baseTranslations.en;
 
 export const normalizeAppLanguage = (language?: string | null): AppLanguage => {
   if (!language) {
-    return 'en';
+    return DEFAULT_APP_LANGUAGE;
   }
 
   return language.toLowerCase().startsWith('it') ? 'it' : 'en';
 };
 
 export const getDeviceLanguage = (): AppLanguage => {
-  const locale = safeGetLocales()[0];
-  return normalizeAppLanguage(locale?.languageCode || locale?.languageTag || 'en');
+  return DEFAULT_APP_LANGUAGE;
 };
 
 if (!i18n.isInitialized) {
   void i18n.use(initReactI18next).init({
     resources,
     lng: getDeviceLanguage(),
-    fallbackLng: 'en',
+    fallbackLng: DEFAULT_APP_LANGUAGE,
     interpolation: {
       escapeValue: false,
     },
@@ -558,8 +568,8 @@ if (!i18n.isInitialized) {
   });
 }
 
-export const t = (key: TranslationKey): string => {
-  return i18n.t(key);
+export const t = (key: TranslationKey, options?: Record<string, unknown>): string => {
+  return i18n.t(key, options);
 };
 
 export const setI18nLanguage = async (language: AppLanguage) => {
@@ -571,15 +581,15 @@ export const setI18nLanguage = async (language: AppLanguage) => {
 export const useTranslation = () => {
   const translation = useI18NextTranslation();
 
-  const tHook = (key: TranslationKey): string => {
-    return translation.t(key);
+  const tHook = (key: TranslationKey, options?: Record<string, unknown>): string => {
+    return translation.t(key, options);
   };
 
   return { ...translation, t: tHook };
 };
 
 export const getLocale = (language?: AppLanguage): string => {
-  switch (language || useAppStore.getState().appLanguage || 'en') {
+  switch (language || useAppStore.getState().appLanguage || DEFAULT_APP_LANGUAGE) {
     case 'it':
       return 'it-IT';
     case 'en':
@@ -589,7 +599,7 @@ export const getLocale = (language?: AppLanguage): string => {
 };
 
 export const useLocale = () => {
-  const language = useAppStore((state) => state.appLanguage) || 'en';
+  const language = useAppStore((state) => state.appLanguage) || DEFAULT_APP_LANGUAGE;
   return getLocale(language);
 };
 

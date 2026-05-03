@@ -25,6 +25,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { buildFileName, inferMimeType } from "../../utils/fileMetadata";
 import { getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
+import LanguageModal from "../../components/home/LanguageModal";
 
 type OnboardingProfileResponse = {
   restaurant_name?: string | null;
@@ -44,9 +45,12 @@ export default function SetupScreen() {
   const setProfile = useAppStore((state) => state.setProfile);
   const setUser = useAppStore((state) => state.setUser);
   const tokens = useAppStore((state) => state.tokens);
+  const appLanguage = useAppStore((state) => state.appLanguage);
+  const setAppLanguage = useAppStore((state) => state.setAppLanguage);
   const [step, setStep] = useState(1);
   const [loadingInitialData, setLoadingInitialData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
 
   // Step 1 State
   const [restaurantName, setRestaurantName] = useState("");
@@ -242,7 +246,14 @@ export default function SetupScreen() {
             <Text style={styles.logoTextOrange}>AI</Text>
           </View>
 
-          <View style={{ width: moderateScale(40) }} />
+          <TouchableOpacity
+            style={styles.langSelector}
+            onPress={() => setIsLangMenuOpen(true)}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.langText}>{appLanguage === "it" ? "Ita" : "Eng"}</Text>
+            <Feather name="chevron-down" size={moderateScale(15)} color="#4B5563" />
+          </TouchableOpacity>
         </View>
         {step < 6 && renderProgressBar()}
       </View>
@@ -320,6 +331,15 @@ export default function SetupScreen() {
           </ScrollView>
           )}
         </View>
+        <LanguageModal
+          visible={isLangMenuOpen}
+          onClose={() => setIsLangMenuOpen(false)}
+          selectedLang={appLanguage}
+          onSelectLang={(lang) => {
+            setAppLanguage(lang);
+            setIsLangMenuOpen(false);
+          }}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -376,6 +396,22 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(22, 0.3),
     fontWeight: "800",
     color: "#D97706",
+  },
+  langSelector: {
+    minWidth: scale(64),
+    height: moderateScale(36),
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFF0E5",
+    paddingHorizontal: scale(10),
+    borderRadius: scale(18),
+  },
+  langText: {
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: "700",
+    color: "#111827",
+    marginRight: scale(2),
   },
   progressContainer: {
     flexDirection: "row",
