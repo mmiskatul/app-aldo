@@ -33,7 +33,7 @@ const toSingleParam = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] || '' : value || '';
 
 const formatCurrency = (value: number) =>
-  `EUR ${Number(value || 0).toLocaleString('en-US', {
+  `€${Number(value || 0).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

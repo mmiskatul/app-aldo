@@ -2,6 +2,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import * as XLSX from 'xlsx';
+import { showErrorMessage, showInfoMessage, showSuccessMessage } from './feedback';
 
 export interface ExportDataProps {
   metrics?: {
@@ -21,6 +22,53 @@ export interface AnalyticsExportDataProps {
   period: string;
 }
 
+const getExportDirectory = () => FileSystem.documentDirectory || FileSystem.cacheDirectory || null;
+
+const buildTimestamp = () => new Date().toISOString().replace(/[:.]/g, '-');
+
+const buildExportUri = (fileName: string) => {
+  const directory = getExportDirectory();
+  if (!directory) {
+    throw new Error('No writable directory is available for exports.');
+  }
+  return `${directory}${fileName}`;
+};
+
+const persistTempFile = async (tempUri: string, fileName: string) => {
+  const targetUri = buildExportUri(fileName);
+  await FileSystem.deleteAsync(targetUri, { idempotent: true });
+  await FileSystem.copyAsync({ from: tempUri, to: targetUri });
+  return targetUri;
+};
+
+const shareOrNotify = async ({
+  uri,
+  fileName,
+  mimeType,
+  dialogTitle,
+  uti,
+  successMessage,
+}: {
+  uri: string;
+  fileName: string;
+  mimeType: string;
+  dialogTitle: string;
+  uti?: string;
+  successMessage: string;
+}) => {
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      mimeType,
+      dialogTitle,
+      UTI: uti,
+    });
+    showSuccessMessage(successMessage);
+    return;
+  }
+
+  showInfoMessage(`${fileName} was saved to app storage. Sharing is not available on this device.`, 'Export Ready');
+};
+
 export const generatePdfExport = async (data: ExportDataProps) => {
   const getMetric = (name: string) => {
     return data.metrics?.find((m) => m.label.toLowerCase() === name.toLowerCase());
@@ -31,7 +79,7 @@ export const generatePdfExport = async (data: ExportDataProps) => {
   const foodCost = getMetric('food cost');
   const profit = getMetric('profit');
 
-  const parseCurrency = (c: string) => (c === "USD" ? "$" : (c === "EUR" ? "€" : ""));
+  const parseCurrency = (c: string) => (c === 'USD' ? '$' : c === 'EUR' ? '€' : '');
 
   const cashHtml = data.cashData && data.cashData.length > 0 
     ? data.cashData.map((item) => `
@@ -45,7 +93,7 @@ export const generatePdfExport = async (data: ExportDataProps) => {
     : '<tr><td colspan="2" style="padding: 12px 8px; text-align: center; color: #6b7280;">No cash data available</td></tr>';
 
   const formatMetric = (metric?: { value: number; currency: string }) => {
-    if (!metric) return '$0.00';
+    if (!metric) return '€0.00';
     return `${parseCurrency(metric.currency)}${metric.value.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
   };
 
@@ -170,12 +218,20 @@ export const generatePdfExport = async (data: ExportDataProps) => {
   `;
 
   try {
+    const fileName = `Financial_Report_${data.period}_${buildTimestamp()}.pdf`;
     const { uri } = await Print.printToFileAsync({ html, base64: false });
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-    }
+    const savedUri = await persistTempFile(uri, fileName);
+    await shareOrNotify({
+      uri: savedUri,
+      fileName,
+      mimeType: 'application/pdf',
+      dialogTitle: 'Share Financial Report',
+      uti: '.pdf',
+      successMessage: 'Financial report ready to share.',
+    });
   } catch (error) {
     console.error('Error exporting PDF:', error);
+    showErrorMessage('Failed to export the financial report PDF.');
   }
 };
 
@@ -204,21 +260,23 @@ export const generateExcelExport = async (data: ExportDataProps) => {
     XLSX.utils.book_append_sheet(wb, cashSheet, 'Cash Management');
 
     const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-    const fileName = `Financial_Report_${data.period}.xlsx`;
-    const uri = (FileSystem.cacheDirectory || '') + fileName;
+    const fileName = `Financial_Report_${data.period}_${buildTimestamp()}.xlsx`;
+    const uri = buildExportUri(fileName);
 
     await FileSystem.writeAsStringAsync(uri, base64, {
       encoding: FileSystem.EncodingType.Base64
     });
 
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        dialogTitle: 'Share Excel Report'
-      });
-    }
+    await shareOrNotify({
+      uri,
+      fileName,
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      dialogTitle: 'Share Excel Report',
+      successMessage: 'Financial report ready to share.',
+    });
   } catch (error) {
     console.error('Error exporting Excel:', error);
+    showErrorMessage('Failed to export the financial report spreadsheet.');
   }
 };
 
@@ -228,7 +286,7 @@ export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps)
   const metricTilesHtml = analyticsData.metric_tiles?.map((item: any) => `
     <div class="metric-card">
       <div class="metric-label">${item.label}</div>
-      <div class="metric-value">${typeof item.value === 'number' ? `$${item.value.toLocaleString()}` : item.value}</div>
+      <div class="metric-value">${typeof item.value === 'number' ? `€${item.value.toLocaleString()}` : item.value}</div>
       ${item.change_percent !== undefined ? `<div class="trend ${item.change_percent >= 0 ? 'profit' : 'expenses'}">${item.change_percent >= 0 ? '+' : ''}${item.change_percent}%</div>` : ''}
     </div>
   `).join('') || '';
@@ -237,7 +295,7 @@ export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps)
     <tr>
       <td style="padding: 12px 8px; border-bottom: 1px solid #ddd;">${item.label}</td>
       <td style="padding: 12px 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold;">
-        ${typeof item.value === 'number' ? `$${item.value.toLocaleString()}` : item.value}
+        ${typeof item.value === 'number' ? `€${item.value.toLocaleString()}` : item.value}
       </td>
     </tr>
   `).join('') || '';
@@ -356,7 +414,7 @@ export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps)
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-label">Total Revenue</div>
-            <div class="metric-value">$${analyticsData.revenue_total?.toLocaleString()}</div>
+            <div class="metric-value">€${analyticsData.revenue_total?.toLocaleString()}</div>
             <div class="trend ${analyticsData.revenue_change_percent >= 0 ? 'profit' : 'expenses'}">
               ${analyticsData.revenue_change_percent >= 0 ? '+' : ''}${analyticsData.revenue_change_percent}%
             </div>
@@ -395,12 +453,20 @@ export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps)
   `;
 
   try {
+    const fileName = `Analytics_Report_${period}_${buildTimestamp()}.pdf`;
     const { uri } = await Print.printToFileAsync({ html, base64: false });
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-    }
+    const savedUri = await persistTempFile(uri, fileName);
+    await shareOrNotify({
+      uri: savedUri,
+      fileName,
+      mimeType: 'application/pdf',
+      dialogTitle: 'Share Analytics Report',
+      uti: '.pdf',
+      successMessage: 'Analytics report ready to share.',
+    });
   } catch (error) {
     console.error('Error exporting PDF:', error);
+    showErrorMessage('Failed to export the analytics PDF.');
   }
 };
 
@@ -440,20 +506,22 @@ export const generateAnalyticsExcelExport = async (data: AnalyticsExportDataProp
     XLSX.utils.book_append_sheet(wb, activitySheet, 'Activity & Cost');
 
     const base64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-    const fileName = `Analytics_Report_${period}.xlsx`;
-    const uri = (FileSystem.cacheDirectory || '') + fileName;
+    const fileName = `Analytics_Report_${period}_${buildTimestamp()}.xlsx`;
+    const uri = buildExportUri(fileName);
 
     await FileSystem.writeAsStringAsync(uri, base64, {
       encoding: FileSystem.EncodingType.Base64
     });
 
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, {
-        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        dialogTitle: 'Share Excel Analytics Report'
-      });
-    }
+    await shareOrNotify({
+      uri,
+      fileName,
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      dialogTitle: 'Share Excel Analytics Report',
+      successMessage: 'Analytics spreadsheet ready to share.',
+    });
   } catch (error) {
     console.error('Error exporting Excel analytics:', error);
+    showErrorMessage('Failed to export the analytics spreadsheet.');
   }
 };

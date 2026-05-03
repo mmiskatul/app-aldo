@@ -19,9 +19,9 @@ const PADDING_LEFT = scale(10);
 const GRID_LINES = 4;
 
 const formatCompactCurrency = (value: number) => {
-  if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
-  return `$${Math.round(value)}`;
+  if (value >= 1000000) return `€${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `€${(value / 1000).toFixed(1)}k`;
+  return `€${Math.round(value)}`;
 };
 
 const buildSmoothPath = (points: { x: number; y: number }[]) => {
@@ -75,7 +75,7 @@ export default function RevenueTrendChart({
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>{t('revenue_trend')}</Text>
-          <Text style={styles.value}>${totalRevenue.toLocaleString()}</Text>
+          <Text style={styles.value}>€{totalRevenue.toLocaleString()}</Text>
         </View>
         <Text style={[styles.trend, { color: changePercent >= 0 ? '#10B981' : '#EF4444' }]}>
           {changePercent >= 0 ? '+' : ''}

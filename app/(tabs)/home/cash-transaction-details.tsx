@@ -71,7 +71,7 @@ const parseDateValue = (value: string) => {
 };
 
 const formatCurrency = (value: number) =>
-  `EUR ${value.toLocaleString("en-US", {
+  `€${value.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -353,7 +353,7 @@ export default function CashTransactionDetailsScreen() {
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Amount</Text>
                   <View style={styles.textInputContainer}>
-                    <Text style={styles.prefix}>EUR </Text>
+                    <Text style={styles.prefix}>€ </Text>
                     <TextInput
                       style={styles.textInput}
                       value={amount}

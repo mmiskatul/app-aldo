@@ -23,7 +23,7 @@ export default function RevenueComparisonChart({ comparison }: RevenueComparison
           <View key={index} style={styles.row}>
             <View style={styles.labelRow}>
               <Text style={styles.label}>{item.label}</Text>
-              <Text style={styles.value}>${item.value.toLocaleString()}</Text>
+              <Text style={styles.value}>€{item.value.toLocaleString()}</Text>
             </View>
             <View style={styles.barContainer}>
               <View style={[styles.bar, { width: `${widthPercent}%`, backgroundColor: color }]} />

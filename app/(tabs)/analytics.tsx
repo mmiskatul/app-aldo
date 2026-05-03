@@ -16,6 +16,7 @@ import Skeleton, { SkeletonCard } from '../../components/ui/Skeleton';
 import apiClient from '../../api/apiClient';
 import { useAppStore } from '../../store/useAppStore';
 import { getApiDisplayMessage, logApiError } from '../../utils/apiErrors';
+import { showErrorMessage } from '../../utils/feedback';
 import { useTranslation } from '../../utils/i18n';
 import { resolveLocalizedText } from '../../utils/localizedContent';
 import { generateAnalyticsPdfExport, generateAnalyticsExcelExport } from '../../utils/exportData';
@@ -383,16 +384,31 @@ export default function AnalyticsScreen() {
   }, [activePeriod, fetchAnalyticsData]);
 
   const handleExport = React.useCallback(async (format: 'pdf' | 'excel') => {
+    const hasExportableData =
+      Boolean(localizedBusinessInsight) ||
+      localizedMetricTiles.length > 0 ||
+      localizedRevenueTrendPoints.length > 0 ||
+      localizedSummaryStats.length > 0 ||
+      localizedRevenueComparison.length > 0 ||
+      localizedCoversActivity.length > 0 ||
+      localizedCostBreakdown.length > 0 ||
+      localizedSupplierAlerts.length > 0;
+
+    if (!hasExportableData) {
+      showErrorMessage('No analytics data is available to export.');
+      return;
+    }
+
     const analyticsData = {
       insight_banner: localizedBusinessInsight,
       revenue_total: revenueTrendByPeriod[activePeriod]?.revenue_total ?? 0,
       revenue_change_percent: revenueTrendByPeriod[activePeriod]?.change_percent ?? 0,
-      weekly_revenue: revenueTrendByPeriod[activePeriod]?.points ?? [],
-      metric_tiles: metricTilesByPeriod[activePeriod] ?? [],
-      summary_stats: summaryStatsByPeriod[activePeriod] ?? [],
-      revenue_comparison: revenueComparisonByPeriod[activePeriod] ?? [],
-      covers_activity: coversActivityByPeriod[activePeriod] ?? [],
-      cost_breakdown: costBreakdownByPeriod[activePeriod] ?? [],
+      weekly_revenue: localizedRevenueTrendPoints,
+      metric_tiles: localizedMetricTiles,
+      summary_stats: localizedSummaryStats,
+      revenue_comparison: localizedRevenueComparison,
+      covers_activity: localizedCoversActivity,
+      cost_breakdown: localizedCostBreakdown,
       supplier_price_alerts: localizedSupplierAlerts,
     };
 

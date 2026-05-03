@@ -32,7 +32,7 @@ export default function Method1Form({ data, onChange }: Props) {
         <View style={styles.inputContainer}>
           <Feather name="credit-card" size={moderateScale(20)} color="#FA8C4C" style={styles.icon} />
           <TextInput style={styles.input} placeholder="0.00" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.pos_payments} onChangeText={(val) => onChange('pos_payments', val)} />
-          <Text style={styles.currency}>USD</Text>
+          <Text style={styles.currency}>€</Text>
         </View>
       </View>
 
@@ -41,7 +41,7 @@ export default function Method1Form({ data, onChange }: Props) {
         <View style={styles.inputContainer}>
           <Feather name="briefcase" size={moderateScale(20)} color="#FA8C4C" style={styles.icon} />
           <TextInput style={styles.input} placeholder="0.00" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.cash_withdrawals} onChangeText={(val) => onChange('cash_withdrawals', val)} />
-          <Text style={styles.currency}>USD</Text>
+          <Text style={styles.currency}>€</Text>
         </View>
       </View>
 
@@ -71,7 +71,7 @@ export default function Method1Form({ data, onChange }: Props) {
         <View style={styles.inputContainer}>
           <Feather name="file-text" size={moderateScale(20)} color="#FA8C4C" style={styles.icon} />
           <TextInput style={styles.input} placeholder="0.00" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.expenses_in_cash} onChangeText={(val) => onChange('expenses_in_cash', val)} />
-          <Text style={styles.currency}>USD</Text>
+          <Text style={styles.currency}>€</Text>
         </View>
         <TextInput 
           style={[styles.inputContainer, { height: verticalScale(80), paddingTop: verticalScale(12), paddingHorizontal: scale(16), marginTop: verticalScale(8) }]} 

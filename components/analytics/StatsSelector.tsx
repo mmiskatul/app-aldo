@@ -22,7 +22,7 @@ export default function StatsSelector({ stats }: StatsSelectorProps) {
           >
             <Text style={[styles.label, isActive && styles.labelActive]}>{tab.label}</Text>
             <Text style={[styles.value, isActive && styles.valueActive]}>
-              {typeof tab.value === 'number' ? `$${tab.value.toLocaleString()}` : tab.value}
+              {typeof tab.value === 'number' ? `€${tab.value.toLocaleString()}` : tab.value}
             </Text>
           </TouchableOpacity>
         );

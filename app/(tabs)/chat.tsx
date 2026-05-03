@@ -317,7 +317,11 @@ export default function ChatScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
         enabled={Platform.OS === "ios"}
       >
-        <Header title={t('chat_title')} showBell={true} />
+        <Header
+          title={t('chat_title')}
+          showBack={true}
+          showBell={true}
+        />
 
         {loading ? (
           <View style={styles.scrollView}>

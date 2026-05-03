@@ -347,7 +347,7 @@ export default function InventoryScreen() {
             <View style={styles.valueAmountSkeleton} />
           ) : (
             <Text style={styles.valueAmount}>
-              ${toSafeNumber(totalValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              €{toSafeNumber(totalValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
           )}
           <View style={styles.valueBadge}>

@@ -10,6 +10,12 @@ interface AppLaunchSplashProps {
 export default function AppLaunchSplash({ onFinish }: AppLaunchSplashProps) {
   const scale = useRef(new Animated.Value(0.78)).current;
   const opacity = useRef(new Animated.Value(1)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+
+  const rotateInterpolate = rotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['-45deg', '0deg'],
+  });
 
   useEffect(() => {
     const animation = Animated.sequence([
@@ -27,6 +33,12 @@ export default function AppLaunchSplash({ onFinish }: AppLaunchSplashProps) {
           easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
+        Animated.timing(rotate, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
       ]),
     ]);
 
@@ -37,7 +49,7 @@ export default function AppLaunchSplash({ onFinish }: AppLaunchSplashProps) {
     });
 
     return () => animation.stop();
-  }, [onFinish, opacity, scale]);
+  }, [onFinish, opacity, rotate, scale]);
 
   return (
     <View style={styles.container} pointerEvents="none">
@@ -46,7 +58,7 @@ export default function AppLaunchSplash({ onFinish }: AppLaunchSplashProps) {
           styles.logoWrap,
           {
             opacity,
-            transform: [{ scale }],
+            transform: [{ scale }, { rotate: rotateInterpolate }],
           },
         ]}
       >

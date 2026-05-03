@@ -8,13 +8,14 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import Header from '../../../components/ui/Header';
 import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { getUserTickets, TicketListItem } from '../../../api/support';
+import { buildSettingsHref, normalizeOrigin } from '../../../utils/settingsNavigation';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -72,6 +73,8 @@ const TicketCard = ({ item, onPress }: { item: TicketListItem; onPress: () => vo
 
 export default function TicketsScreen() {
   const router = useRouter();
+  const { origin } = useLocalSearchParams<{ origin?: string | string[] }>();
+  const settingsOrigin = normalizeOrigin(origin);
   const insets = useSafeAreaInsets();
   const [tickets, setTickets] = useState<TicketListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,7 +136,7 @@ export default function TicketsScreen() {
           renderItem={({ item }) => (
             <TicketCard
               item={item}
-              onPress={() => router.push(`/(tabs)/settings/ticket-detail?id=${item.id}` as any)}
+              onPress={() => router.push(buildSettingsHref('/(tabs)/settings/ticket-detail', settingsOrigin, { id: item.id }))}
             />
           )}
           ListEmptyComponent={renderEmpty}

@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -11,6 +11,7 @@ import { getCurrentUser } from '../../../api/auth';
 import { getApiDisplayMessage, logApiError } from '../../../utils/apiErrors';
 import { useTranslation } from '../../../utils/i18n';
 import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
+import { normalizeOrigin } from '../../../utils/settingsNavigation';
 
 // Components
 import Header from '../../../components/ui/Header';
@@ -23,6 +24,8 @@ const SAVE_SUCCESS_SOUND = require('../../../assets/sounds/save-success.wav');
 export default function EditProfileScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { origin } = useLocalSearchParams<{ origin?: string | string[] }>();
+  const settingsOrigin = normalizeOrigin(origin);
   const profile = useAppStore((state) => state.profile);
   const appLanguage = useAppStore((state) => state.appLanguage);
   const setProfile = useAppStore((state) => state.setProfile);
@@ -166,6 +169,7 @@ export default function EditProfileScreen() {
         params: {
           notice: 'profile-updated',
           noticeKey: Date.now().toString(),
+          ...(settingsOrigin ? { origin: settingsOrigin } : {}),
         },
       } as any);
     } catch (error: any) {

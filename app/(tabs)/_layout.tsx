@@ -8,7 +8,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import * as HugeiconsModule from "@hugeicons/react-native";
 import { Redirect, Tabs, useSegments } from "expo-router";
-import { CommonActions } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getCurrentUser } from "../../api/auth";
@@ -143,31 +142,8 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="inventory"
-        listeners={({ navigation }) => ({
-          tabPress: () => {
-            navigation.dispatch(
-              CommonActions.navigate({
-                name: "inventory",
-                params: {
-                  screen: "index",
-                },
-              })
-            );
-          },
-          blur: () => {
-            navigation.dispatch(
-              CommonActions.navigate({
-                name: "inventory",
-                params: {
-                  screen: "index",
-                },
-              })
-            );
-          },
-        })}
         options={{
           tabBarLabel: "Inventory",
-          unmountOnBlur: true,
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={CheckListIcon}
@@ -179,31 +155,8 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="documents"
-        listeners={({ navigation }) => ({
-          tabPress: () => {
-            navigation.dispatch(
-              CommonActions.navigate({
-                name: "documents",
-                params: {
-                  screen: "index",
-                },
-              })
-            );
-          },
-          blur: () => {
-            navigation.dispatch(
-              CommonActions.navigate({
-                name: "documents",
-                params: {
-                  screen: "index",
-                },
-              })
-            );
-          },
-        })}
         options={{
           tabBarLabel: "Documents",
-          unmountOnBlur: true,
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={DocumentAttachmentIcon}
@@ -228,28 +181,6 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="settings"
-        listeners={({ navigation }) => ({
-          tabPress: () => {
-            navigation.dispatch(
-              CommonActions.navigate({
-                name: "settings",
-                params: {
-                  screen: "index",
-                },
-              })
-            );
-          },
-          blur: () => {
-            navigation.dispatch(
-              CommonActions.navigate({
-                name: "settings",
-                params: {
-                  screen: "index",
-                },
-              })
-            );
-          },
-        })}
         options={{
           tabBarLabel: "Settings",
           tabBarIcon: ({ color }) => (

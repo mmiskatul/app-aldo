@@ -220,7 +220,10 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Notifications" showBack={true} />
+      <Header
+        title="Notifications"
+        showBack={true}
+      />
 
       {loading ? (
         <ListRouteSkeleton withAction={false} itemCount={4} />

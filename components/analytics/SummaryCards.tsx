@@ -25,7 +25,7 @@ export default function SummaryCards({ metrics }: SummaryCardsProps) {
       return card.value.toLocaleString();
     }
 
-    return `$${card.value.toLocaleString()}`;
+    return `€${card.value.toLocaleString()}`;
   };
 
   return (

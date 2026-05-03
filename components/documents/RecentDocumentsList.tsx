@@ -126,7 +126,7 @@ export default function RecentDocumentsList({
         supplier: item.counterparty_name || item.supplier_name || 'Unknown Supplier',
         invoiceNumber: item.document_number || item.invoice_number || 'N/A',
         date: item.document_date || item.invoice_date_formatted || item.invoice_date || 'N/A',
-        amount: `EUR ${(item.total_amount || 0).toFixed(2)}`,
+        amount: `€${(item.total_amount || 0).toFixed(2)}`,
         itemCount: item.line_item_count || 0,
         status: item.status === 'processed' ? 'Processed' : 'Pending Review',
         tag: item.status === 'processed' ? 'AUTO-EXTRACTED' : 'PENDING',

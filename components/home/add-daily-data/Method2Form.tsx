@@ -39,7 +39,7 @@ export default function Method2Form({ data, onChange }: Props) {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>POS Payments (+)</Text>
         <View style={styles.inputContainer}>
-          <Text style={styles.prefixSign}>EUR</Text>
+          <Text style={styles.prefixSign}>€</Text>
           <TextInput
             style={styles.input}
             placeholder="0.00"
@@ -54,7 +54,7 @@ export default function Method2Form({ data, onChange }: Props) {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Cash Payments (+)</Text>
         <View style={styles.inputContainer}>
-          <Text style={styles.prefixSign}>EUR</Text>
+          <Text style={styles.prefixSign}>€</Text>
           <TextInput
             style={styles.input}
             placeholder="0.00"
@@ -69,7 +69,7 @@ export default function Method2Form({ data, onChange }: Props) {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Invoices Paid by Bank Transfer (+)</Text>
         <View style={styles.inputContainer}>
-          <Text style={styles.prefixSign}>EUR</Text>
+          <Text style={styles.prefixSign}>€</Text>
           <TextInput
             style={styles.input}
             placeholder="0.00"
@@ -136,7 +136,7 @@ export default function Method2Form({ data, onChange }: Props) {
             Amount of cash in the register at the beginning of the day
           </Text>
           <View style={styles.inputContainerBgWhite}>
-            <Text style={styles.prefixSign}>EUR</Text>
+            <Text style={styles.prefixSign}>€</Text>
             <TextInput
               style={styles.input}
               placeholder="0.00"
@@ -154,7 +154,7 @@ export default function Method2Form({ data, onChange }: Props) {
             Amount of cash counted in the register at the end of the day
           </Text>
           <View style={styles.inputContainerBgWhite}>
-            <Text style={styles.prefixSign}>EUR</Text>
+            <Text style={styles.prefixSign}>€</Text>
             <TextInput
               style={styles.input}
               placeholder="0.00"

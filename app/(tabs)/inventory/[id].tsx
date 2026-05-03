@@ -117,7 +117,7 @@ export default function ItemDetailScreen() {
         supplierName: item.supplier_name || t('unknown_supplier'),
         supplierRole: t('primary_distributor'),
         lastPurchase: formatLongDate(item.purchase_date, locale, t('not_available')),
-        pricePerUnitLabel: `$${item.unit_price.toFixed(2)} / ${item.unit_type}`,
+        pricePerUnitLabel: `€${item.unit_price.toFixed(2)} / ${item.unit_type}`,
       },
       history: (Array.isArray(item.history) ? item.history : []).map((entry) => ({
         type: (entry.kind === 'stock_added' ? 'add' : entry.kind === 'stock_removed' ? 'remove' : 'purchase') as HistoryEntryType,

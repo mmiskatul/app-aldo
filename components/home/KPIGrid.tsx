@@ -131,28 +131,28 @@ export default function KPIGrid({ metrics, loading = false }: KPIGridProps) {
   const getFallbackData = (): KPIItemProps[] => [
     {
       title: t('revenue'),
-      value: '$0.00',
+      value: '€0.00',
       trend: '0.0%',
       isPositive: true,
       ...getIconData('Revenue'),
     },
     {
       title: t('expenses'),
-      value: '$0.00',
+      value: '€0.00',
       trend: '0.0%',
       isPositive: false,
       ...getIconData('Expenses'),
     },
     {
       title: t('food_cost'),
-      value: '$0.00',
+      value: '€0.00',
       trend: '0.0%',
       isPositive: false,
       ...getIconData('Food Cost'),
     },
     {
       title: t('profit'),
-      value: '$0.00',
+      value: '€0.00',
       trend: '0.0%',
       isPositive: true,
       ...getIconData('Profit'),

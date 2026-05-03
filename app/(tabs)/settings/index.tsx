@@ -14,13 +14,15 @@ import { useAppStore } from '../../../store/useAppStore';
 import { getApiDisplayMessage, logApiError } from '../../../utils/apiErrors';
 import { useTranslation } from '../../../utils/i18n';
 import apiClient from '../../../api/apiClient';
+import { buildSettingsHref, normalizeOrigin } from '../../../utils/settingsNavigation';
 
 const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { notice, noticeKey } = useLocalSearchParams<{ notice?: string; noticeKey?: string }>();
+  const { notice, noticeKey, origin } = useLocalSearchParams<{ notice?: string; noticeKey?: string; origin?: string | string[] }>();
+  const settingsOrigin = normalizeOrigin(origin);
   const logout = useAppStore((state) => state.logout);
   const profile = useAppStore((state) => state.profile);
   const profileFetchedAt = useAppStore((state) => state.profileFetchedAt);
@@ -86,7 +88,7 @@ export default function SettingsScreen() {
         ) : null}
 
         <ProfileCard
-          onEditProfile={() => router.push('/(tabs)/settings/edit-profile')}
+          onEditProfile={() => router.push(buildSettingsHref('/(tabs)/settings/edit-profile', settingsOrigin))}
         />
 
         <LanguageSelector />
@@ -95,9 +97,9 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>{t('account_settings')}</Text>
           <SettingsList
             items={[
-              { icon: 'credit-card', label: t('manage_subscription'), iconBg: '#FFF7ED', iconColor: '#FA8C4C', onPress: () => router.push('/(tabs)/settings/manage-subscription') },
-              { icon: 'bell', label: t('notification_settings'), iconBg: '#FFF7ED', iconColor: '#FA8C4C', onPress: () => router.push('/(tabs)/settings/notification-settings') },
-              { icon: 'lock', label: t('change_password'), iconBg: '#FFF7ED', iconColor: '#FA8C4C', onPress: () => router.push('/(tabs)/settings/change-password') },
+              { icon: 'credit-card', label: t('manage_subscription'), iconBg: '#FFF7ED', iconColor: '#FA8C4C', onPress: () => router.push(buildSettingsHref('/(tabs)/settings/manage-subscription', settingsOrigin)) },
+              { icon: 'bell', label: t('notification_settings'), iconBg: '#FFF7ED', iconColor: '#FA8C4C', onPress: () => router.push(buildSettingsHref('/(tabs)/settings/notification-settings', settingsOrigin)) },
+              { icon: 'lock', label: t('change_password'), iconBg: '#FFF7ED', iconColor: '#FA8C4C', onPress: () => router.push(buildSettingsHref('/(tabs)/settings/change-password', settingsOrigin)) },
             ]}
           />
         </View>
@@ -106,9 +108,9 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>{t('support_legal')}</Text>
           <SettingsList
             items={[
-              { icon: 'file-text', label: t('terms_of_service'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/terms-of-service') },
-              { icon: 'shield', label: t('privacy_policy'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/privacy') },
-              { icon: 'help-circle', label: t('help_center'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push('/(tabs)/settings/help-center') },
+              { icon: 'file-text', label: t('terms_of_service'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push(buildSettingsHref('/(tabs)/settings/terms-of-service', settingsOrigin)) },
+              { icon: 'shield', label: t('privacy_policy'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push(buildSettingsHref('/(tabs)/settings/privacy', settingsOrigin)) },
+              { icon: 'help-circle', label: t('help_center'), iconBg: '#F0F9FF', iconColor: '#0EA5E9', onPress: () => router.push(buildSettingsHref('/(tabs)/settings/help-center', settingsOrigin)) },
             ]}
           />
         </View>

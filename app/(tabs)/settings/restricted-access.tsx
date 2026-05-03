@@ -1,16 +1,19 @@
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { AppState, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getRestrictedAccessStatus, useAppStore } from "../../../store/useAppStore";
 import { getCurrentUser } from "../../../api/auth";
 import { showSuccessMessage } from "../../../utils/feedback";
+import { buildSettingsHref, normalizeOrigin } from "../../../utils/settingsNavigation";
 
 const ACCESS_REFRESH_INTERVAL_MS = 8000;
 
 export default function RestrictedAccessScreen() {
   const router = useRouter();
+  const { origin } = useLocalSearchParams<{ origin?: string | string[] }>();
+  const settingsOrigin = normalizeOrigin(origin);
   const user = useAppStore((state) => state.user);
   const tokens = useAppStore((state) => state.tokens);
   const setUser = useAppStore((state) => state.setUser);
@@ -96,7 +99,7 @@ export default function RestrictedAccessScreen() {
         <TouchableOpacity
           style={styles.helpButton}
           activeOpacity={0.85}
-          onPress={() => router.push("/(tabs)/settings/help-center" as any)}
+          onPress={() => router.push(buildSettingsHref('/(tabs)/settings/help-center', settingsOrigin))}
         >
           <Text style={styles.helpButtonText}>Go To Help Center</Text>
         </TouchableOpacity>

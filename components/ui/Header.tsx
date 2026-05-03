@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Href, useNavigation, useRouter } from 'expo-router';
+import { Href, useLocalSearchParams, useNavigation, usePathname, useRouter } from 'expo-router';
 import { BellIcon } from "react-native-heroicons/outline";
+import { normalizeOrigin } from '../../utils/settingsNavigation';
 
 interface HeaderProps {
   title: string;
@@ -12,6 +13,7 @@ interface HeaderProps {
   showBell?: boolean;
   onBackPress?: () => void;
   fallbackHref?: Href<string>;
+  notificationHref?: Href<string>;
   rightComponent?: React.ReactNode;
   subtitle?: string;
   titleAlign?: 'left' | 'center';
@@ -23,6 +25,7 @@ export default function Header({
   showBell = false,
   onBackPress,
   fallbackHref,
+  notificationHref,
   rightComponent,
   subtitle,
   titleAlign = 'center',
@@ -30,6 +33,13 @@ export default function Header({
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
+  const pathname = usePathname();
+  const { origin } = useLocalSearchParams<{ origin?: string | string[] }>();
+  const normalizedOrigin = normalizeOrigin(origin);
+  const inferredFallbackHref =
+    fallbackHref ??
+    (normalizedOrigin as Href<string> | undefined) ??
+    (pathname.startsWith('/(tabs)/settings/') ? ('/(tabs)/settings' as Href<string>) : ('/(tabs)/home' as Href<string>));
 
   const handleBack = () => {
     if (onBackPress) {
@@ -40,8 +50,15 @@ export default function Header({
       router.back();
       return;
     }
-    router.replace((fallbackHref ?? '/(tabs)/home') as Href<string>);
+    router.replace(inferredFallbackHref);
   };
+
+  const resolvedNotificationHref =
+    notificationHref ??
+    ({
+      pathname: '/(tabs)/settings/notifications',
+      params: { origin: pathname },
+    } as Href<string>);
 
   return (
     <View style={[styles.safeArea, { paddingTop: Math.max(insets.top, verticalScale(16)) }]}>
@@ -86,7 +103,7 @@ export default function Header({
             <TouchableOpacity
               style={styles.iconButton}
               activeOpacity={0.7}
-              onPress={() => router.push('/(tabs)/settings/notifications' as any)}
+              onPress={() => router.push(resolvedNotificationHref as any)}
             >
               <BellIcon size={moderateScale(20)} color="#111827" />
               <View style={styles.notificationDot} />

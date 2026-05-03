@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import React, { useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -19,9 +19,12 @@ import Header from "../../../components/ui/Header";
 import { createSupportTicket } from "../../../api/support";
 import { getRestrictedAccessStatus, useAppStore } from "../../../store/useAppStore";
 import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
+import { buildSettingsHref, normalizeOrigin } from "../../../utils/settingsNavigation";
 
 export default function HelpCenterScreen() {
   const router = useRouter();
+  const { origin } = useLocalSearchParams<{ origin?: string | string[] }>();
+  const settingsOrigin = normalizeOrigin(origin);
   const insets = useSafeAreaInsets();
   const user = useAppStore((state) => state.user);
   const accessStatus = getRestrictedAccessStatus(user);
@@ -123,7 +126,7 @@ export default function HelpCenterScreen() {
                 <TouchableOpacity
                   style={styles.viewTicketsButton}
                   activeOpacity={0.7}
-                  onPress={() => router.push('/(tabs)/settings/tickets' as any)}
+                  onPress={() => router.push(buildSettingsHref('/(tabs)/settings/tickets', settingsOrigin))}
                 >
                   <Text style={styles.viewTicketsText}>View All Tickets</Text>
                 </TouchableOpacity>
