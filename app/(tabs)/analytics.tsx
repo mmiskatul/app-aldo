@@ -303,6 +303,10 @@ export default function AnalyticsScreen() {
       (metricTilesByPeriod[activePeriod] ?? []).map((item) => ({
         ...item,
         label: localizeAnalyticsLabel(item.label),
+        value:
+          item.label.trim().toLowerCase() === 'peak hour'
+            ? localizeAnalyticsLabel(String(item.value))
+            : item.value,
       })),
     [activePeriod, localizeAnalyticsLabel, metricTilesByPeriod],
   );
