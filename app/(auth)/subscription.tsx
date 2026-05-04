@@ -119,7 +119,7 @@ export default function SubscriptionScreen() {
               <Text style={styles.planTitle}>{selectedPlan?.name || "Subscription Plan"}</Text>
 
               <View style={styles.priceContainer}>
-                <Text style={styles.priceAmount}>${price}</Text>
+                <Text style={styles.priceAmount}>€{price}</Text>
                 <Text style={styles.pricePeriod}>
                   {billingCycle === "1_month" ? " / month" : " / year"}
                 </Text>

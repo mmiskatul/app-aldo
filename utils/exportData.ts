@@ -108,13 +108,11 @@ const formatGeneratedAt = () =>
 
 const getCurrencySymbol = (currency?: string) => {
   switch ((currency || 'EUR').toUpperCase()) {
-    case 'USD':
-      return '$';
     case 'GBP':
       return 'GBP ';
     case 'EUR':
     default:
-      return 'EUR ';
+      return '€';
   }
 };
 

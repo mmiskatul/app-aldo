@@ -213,7 +213,7 @@ export default function ManageSubscriptionScreen() {
               </View>
 
               <View style={styles.priceRow}>
-                <Text style={styles.priceAmount}>${currentPrice}</Text>
+                <Text style={styles.priceAmount}>€{currentPrice}</Text>
                 <Text style={styles.pricePeriod}>{billingCycle === '1_year' ? ' / year' : ' / month'}</Text>
               </View>
 

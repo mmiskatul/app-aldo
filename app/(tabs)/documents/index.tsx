@@ -226,7 +226,7 @@ export default function DocumentsScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title={t("documents_title")} showBell={true} />
+      <Header title={t("documents_title")} showBack={true} showBell={true} fallbackHref="/(tabs)/home" />
       <RecentDocumentsList
         documents={filteredDocuments}
         loading={loading}

@@ -33,7 +33,7 @@ const formatDocumentDate = (value?: string | null) => {
 
 const formatCurrency = (value: unknown) => {
   const amount = Number(value || 0);
-  return `€${(Number.isFinite(amount) ? amount : 0).toLocaleString(undefined, {
+  return `€${(Number.isFinite(amount) ? amount : 0).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -216,54 +216,58 @@ export default function RecentDocumentsList({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: scale(12),
+    paddingHorizontal: scale(10),
     paddingBottom: verticalScale(100),
   },
   sectionTitle: {
-    fontSize: moderateScale(13, 0.3),
+    fontSize: moderateScale(11, 0.3),
     fontWeight: "800",
     color: "#111827",
-    marginBottom: verticalScale(8),
+    marginBottom: verticalScale(9),
+    marginLeft: scale(2),
   },
   card: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#EEF2F7",
     borderRadius: scale(8),
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(14),
+    paddingHorizontal: scale(12),
+    paddingTop: verticalScale(12),
+    paddingBottom: verticalScale(9),
     marginBottom: verticalScale(10),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
+    shadowOpacity: 0.035,
+    shadowRadius: 7,
     elevation: 2,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: verticalScale(12),
+    marginBottom: verticalScale(11),
   },
   titleBlock: {
     flex: 1,
     paddingRight: scale(10),
   },
   supplierName: {
-    fontSize: moderateScale(14, 0.3),
+    fontSize: moderateScale(13, 0.3),
     fontWeight: "800",
     color: "#111827",
     marginBottom: verticalScale(4),
   },
   invoiceDetails: {
-    fontSize: moderateScale(11, 0.3),
+    fontSize: moderateScale(9, 0.3),
     color: "#6B7280",
     fontWeight: "500",
   },
   statusBadge: {
     paddingHorizontal: scale(9),
-    paddingVertical: verticalScale(4),
-    borderRadius: scale(12),
+    height: verticalScale(18),
+    borderRadius: scale(9),
+    alignItems: "center",
+    justifyContent: "center",
   },
   statusSuccess: {
     backgroundColor: "#DCFCE7",
@@ -272,8 +276,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF4E5",
   },
   statusText: {
-    fontSize: moderateScale(10, 0.3),
-    fontWeight: "700",
+    fontSize: moderateScale(8, 0.3),
+    fontWeight: "600",
   },
   statusSuccessText: {
     color: "#16A34A",
@@ -285,10 +289,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: verticalScale(16),
+    marginBottom: verticalScale(13),
   },
   amountText: {
-    fontSize: moderateScale(17, 0.3),
+    fontSize: moderateScale(14, 0.3),
     fontWeight: "900",
     color: "#111827",
   },
@@ -300,20 +304,20 @@ const styles = StyleSheet.create({
     marginLeft: scale(10),
   },
   itemCountText: {
-    fontSize: moderateScale(9, 0.3),
+    fontSize: moderateScale(7, 0.3),
     fontWeight: "800",
     color: "#9CA3AF",
     textTransform: "uppercase",
   },
   divider: {
     width: 1,
-    height: verticalScale(10),
+    height: verticalScale(8),
     backgroundColor: "#E5E7EB",
-    marginHorizontal: scale(8),
+    marginHorizontal: scale(7),
   },
   tagText: {
     flexShrink: 1,
-    fontSize: moderateScale(9, 0.3),
+    fontSize: moderateScale(7, 0.3),
     fontWeight: "800",
     color: "#9CA3AF",
   },
@@ -330,14 +334,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F8FAFC",
-    paddingVertical: verticalScale(9),
-    borderRadius: scale(8),
+    height: verticalScale(26),
+    borderRadius: scale(6),
   },
   actionIcon: {
     marginRight: scale(6),
   },
   actionButtonText: {
-    fontSize: moderateScale(12, 0.3),
+    fontSize: moderateScale(9, 0.3),
     fontWeight: "700",
     color: "#4B5563",
   },

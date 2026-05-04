@@ -123,9 +123,9 @@ export default function KPIGrid({ metrics, loading = false }: KPIGridProps) {
   };
 
   const parseCurrency = (currency: string) => {
-    if (currency === 'USD') return '$';
+    if (currency === 'USD') return '€';
     if (currency === 'EUR') return '€';
-    return '';
+    return '€';
   };
 
   const getFallbackData = (): KPIItemProps[] => [
