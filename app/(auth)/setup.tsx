@@ -198,7 +198,9 @@ export default function SetupScreen() {
             setFeatureScreens(featureResponse.data.screens);
           }
         } catch (featureError: any) {
-          console.log("Error loading onboarding feature screens:", featureError?.response?.data || featureError?.message);
+          if (featureError?.response?.status !== 404) {
+            console.log("Error loading onboarding feature screens:", featureError?.response?.data || featureError?.message);
+          }
           setFeatureScreens(FALLBACK_FEATURE_SCREENS);
         }
       } catch (error: any) {
