@@ -91,28 +91,31 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: verticalScale(24),
+    marginHorizontal: scale(-5),
+    marginBottom: verticalScale(18),
   },
   card: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: scale(16),
-    padding: scale(16),
+    borderRadius: scale(14),
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(15),
     borderWidth: 1,
-    borderColor: '#F3F4F6',
-    marginHorizontal: scale(4),
+    borderColor: '#E5E7EB',
+    marginHorizontal: scale(5),
+    minHeight: verticalScale(104),
   },
   title: {
-    fontSize: moderateScale(13, 0.3),
-    fontWeight: '700',
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: '800',
     color: '#111827',
-    marginBottom: verticalScale(12),
+    marginBottom: verticalScale(15),
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: verticalScale(8),
+    marginBottom: verticalScale(12),
   },
   subRow: {
     flexDirection: 'row',
@@ -120,8 +123,8 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: moderateScale(11, 0.3),
-    color: '#6B7280',
-    fontWeight: '500',
+    color: '#64748B',
+    fontWeight: '600',
     marginLeft: scale(6),
   },
   labelSkeleton: {
@@ -129,7 +132,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: moderateScale(12, 0.3),
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#111827',
   },
 });

@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-import { Feather } from '@expo/vector-icons';
 
 interface SummaryCardData {
   label: string;
@@ -30,27 +29,19 @@ export default function SummaryCards({ metrics }: SummaryCardsProps) {
 
   return (
     <View style={styles.container}>
-      {metrics.map((card, index) => (
-        <View key={index} style={styles.card}>
+      {metrics.slice(0, 2).map((card, index) => (
+        <View key={`${card.label}-${index}`} style={styles.card}>
           <Text style={styles.label}>{card.label}</Text>
           <Text style={styles.value}>{formatMetricValue(card)}</Text>
-          
-          {card.change_percent !== undefined && (
-            <View style={styles.trendContainer}>
-              <Feather 
-                name={card.change_percent >= 0 ? "trending-up" : "trending-down"} 
-                size={moderateScale(14)} 
-                color={card.change_percent >= 0 ? "#10B981" : "#EF4444"} 
-              />
-              <Text style={[styles.trendText, { color: card.change_percent >= 0 ? "#10B981" : "#EF4444" }]}>
-                {card.change_percent >= 0 ? '+' : ''}{card.change_percent}%
-              </Text>
-            </View>
-          )}
 
-          {card.subtitle && (
-            <Text style={styles.subtext}>{card.subtitle}</Text>
-          )}
+          {card.change_percent !== undefined ? (
+            <Text style={[styles.trendText, { color: card.change_percent >= 0 ? '#10B981' : '#EF4444' }]}>
+              {card.change_percent >= 0 ? '+' : ''}
+              {card.change_percent}%
+            </Text>
+          ) : null}
+
+          {card.subtitle ? <Text style={styles.subtext}>{card.subtitle}</Text> : null}
         </View>
       ))}
     </View>
@@ -61,42 +52,39 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: verticalScale(24),
+    marginHorizontal: scale(-5),
+    marginBottom: verticalScale(18),
   },
   card: {
-    flex: 1,
+    width: '47%',
+    minHeight: verticalScale(96),
     backgroundColor: '#FFFFFF',
-    borderRadius: scale(16),
-    padding: scale(16),
+    borderRadius: scale(14),
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(14),
     borderWidth: 1,
-    borderColor: '#F3F4F6',
-    marginHorizontal: scale(4),
+    borderColor: '#E5E7EB',
+    marginHorizontal: scale(5),
   },
   label: {
     fontSize: moderateScale(12, 0.3),
-    color: '#9CA3AF',
+    color: '#8B95A7',
     fontWeight: '600',
-    marginBottom: verticalScale(8),
+    marginBottom: verticalScale(9),
   },
   value: {
-    fontSize: moderateScale(20, 0.3),
+    fontSize: moderateScale(22, 0.3),
     fontWeight: '800',
     color: '#111827',
     marginBottom: verticalScale(4),
   },
-  trendContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   trendText: {
     fontSize: moderateScale(11, 0.3),
-    color: '#10B981',
     fontWeight: '700',
-    marginLeft: scale(4),
   },
   subtext: {
-    fontSize: moderateScale(11, 0.3),
-    color: '#9CA3AF',
+    fontSize: moderateScale(10, 0.3),
+    color: '#8B95A7',
     fontWeight: '500',
   },
 });

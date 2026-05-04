@@ -19,16 +19,23 @@ export interface Method1Data {
 interface Props {
   data: Method1Data;
   onChange: (key: keyof Method1Data, val: string) => void;
+  onInfoPress?: () => void;
 }
 
-export default function Method1Form({ data, onChange }: Props) {
+export default function Method1Form({ data, onChange, onInfoPress }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>CASH TRACKING</Text>
-        <View style={styles.infoIconContainer}>
+        <TouchableOpacity
+          style={styles.infoIconContainer}
+          onPress={onInfoPress}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Revenue input methods"
+        >
           <Feather name="info" size={moderateScale(12)} color="#B45309" />
-        </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.inputGroup}>
@@ -123,7 +130,7 @@ export default function Method1Form({ data, onChange }: Props) {
             Amount of cash in the register at the beginning of the day
           </Text>
           <View style={styles.inputContainer}>
-            <Text style={styles.prefixSign}>$</Text>
+            <Text style={styles.prefixSign}>€</Text>
             <TextInput style={styles.input} placeholder="0.00" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.opening_cash} onChangeText={(val) => onChange('opening_cash', val)} />
           </View>
         </View>
@@ -134,7 +141,7 @@ export default function Method1Form({ data, onChange }: Props) {
             Amount of cash counted in the register at the end of the day
           </Text>
           <View style={styles.inputContainer}>
-            <Text style={styles.prefixSign}>$</Text>
+            <Text style={styles.prefixSign}>€</Text>
             <TextInput style={styles.input} placeholder="0.00" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.closing_cash} onChangeText={(val) => onChange('closing_cash', val)} />
           </View>
         </View>

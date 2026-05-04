@@ -6,12 +6,20 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
 interface AnalyticsAIInsightCardProps {
   insight: {
-    title: string;
-    subtitle: string;
+    title?: string | null;
+    subtitle?: string | null;
   };
 }
 
 export default function AnalyticsAIInsightCard({ insight }: AnalyticsAIInsightCardProps) {
+  const title = String(insight.title || '').trim();
+  const subtitle = String(insight.subtitle || '').trim();
+  const hasSeparateSubtitle = Boolean(subtitle && subtitle !== title);
+
+  if (!title && !subtitle) {
+    return null;
+  }
+
   return (
     <LinearGradient
       colors={['#111111', '#B47B12']} // Darkish to gold-ish gradient based on image
@@ -21,39 +29,45 @@ export default function AnalyticsAIInsightCard({ insight }: AnalyticsAIInsightCa
     >
       <View style={styles.header}>
         <SparklesIcon size={moderateScale(16)} color="#FB923C" />
-        <Text style={styles.title}>{insight.title}</Text>
+        <Text style={styles.title}>AI Business Insight</Text>
       </View>
-      <Text style={styles.content}>
-        {insight.subtitle}
-      </Text>
+      <Text style={styles.content}>{title || subtitle}</Text>
+      {hasSeparateSubtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: scale(20),
-    borderRadius: scale(16),
-    marginBottom: verticalScale(24),
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(18),
+    borderRadius: scale(9),
+    marginBottom: verticalScale(18),
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: verticalScale(12),
+    marginBottom: verticalScale(10),
   },
   title: {
     color: '#FB923C',
     fontSize: moderateScale(14, 0.3),
     fontWeight: '800',
     marginLeft: scale(8),
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   content: {
     color: '#F9FAFB',
-    fontSize: moderateScale(15, 0.3),
-    lineHeight: moderateScale(22, 0.3),
+    fontSize: moderateScale(14, 0.3),
+    lineHeight: moderateScale(21, 0.3),
     fontWeight: '500',
+  },
+  subtitle: {
+    color: '#FDE68A',
+    fontSize: moderateScale(12, 0.3),
+    lineHeight: moderateScale(18, 0.3),
+    fontWeight: '500',
+    marginTop: verticalScale(8),
   },
   highlight: {
     fontWeight: '800',

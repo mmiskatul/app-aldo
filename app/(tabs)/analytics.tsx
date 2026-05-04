@@ -80,7 +80,7 @@ interface AnalyticsRevenueTrendResponse {
 }
 
 interface AnalyticsOverviewResponse {
-  insight_banner: InsightBanner;
+  insight_banner?: InsightBanner | null;
   revenue_total: number;
   revenue_change_percent: number;
   weekly_revenue: RevenuePoint[];
@@ -96,8 +96,7 @@ const ANALYTICS_CACHE_TTL_MS = 60 * 1000;
 
 const hasPeriodAnalyticsData = (
   period: PeriodKey,
-  data: {
-    businessInsight: InsightBanner | null;
+    data: {
     metricTilesByPeriod: Partial<Record<PeriodKey, MetricTile[]>>;
     revenueTrendByPeriod: Partial<Record<PeriodKey, AnalyticsRevenueTrendResponse>>;
     summaryStatsByPeriod: Partial<Record<PeriodKey, SummaryStat[]>>;
@@ -108,8 +107,7 @@ const hasPeriodAnalyticsData = (
   },
 ) =>
   Boolean(
-    data.businessInsight &&
-      data.metricTilesByPeriod[period] &&
+    data.metricTilesByPeriod[period] &&
       data.revenueTrendByPeriod[period] &&
       data.summaryStatsByPeriod[period] &&
       data.revenueComparisonByPeriod[period] &&
@@ -192,7 +190,9 @@ export default function AnalyticsScreen() {
       };
       const fetchedAt = Date.now();
 
-      setBusinessInsight(data.insight_banner);
+      if (data.insight_banner) {
+        setBusinessInsight(data.insight_banner);
+      }
       setMetricTilesByPeriod(nextMetricTilesByPeriod);
       setRevenueTrendByPeriod(nextRevenueTrendByPeriod);
       setSummaryStatsByPeriod(nextSummaryStatsByPeriod);
@@ -202,7 +202,7 @@ export default function AnalyticsScreen() {
       setSupplierAlertsByPeriod(nextSupplierAlertsByPeriod);
 
       setAnalyticsScreenCache({
-        businessInsight: data.insight_banner,
+        businessInsight: data.insight_banner ?? currentSnapshot.businessInsight,
         metricTilesByPeriod: nextMetricTilesByPeriod,
         revenueTrendByPeriod: nextRevenueTrendByPeriod,
         summaryStatsByPeriod: nextSummaryStatsByPeriod,
@@ -216,29 +216,68 @@ export default function AnalyticsScreen() {
     [currentSnapshot, setAnalyticsScreenCache],
   );
 
-  const fetchAnalyticsData = React.useCallback(
+  const fetchBusinessInsight = React.useCallback(
+    async (period: PeriodKey) => {
+      try {
+        const response = await apiClient.get<InsightBanner>('/api/v1/restaurant/analytics/business-insight', {
+          params: { period },
+        });
+        setBusinessInsight(response.data);
+        setAnalyticsScreenCache({
+          businessInsight: response.data,
+        });
+      } catch (error) {
+        logApiError('analytics.business-insight', error);
+      }
+    },
+    [setAnalyticsScreenCache],
+  );
+
+  const fetchAnalyticsScreenData = React.useCallback(
     async (period: PeriodKey, silent = false) => {
       if (!silent) {
         setLoading(true);
       }
       setError(null);
 
-      try {
-        const response = await apiClient.get<AnalyticsOverviewResponse>('/api/v1/restaurant/analytics/overview', {
-          params: { period },
-        });
-        applyAnalyticsOverview(period, response.data);
-      } catch (error) {
-        logApiError('analytics.overview', error);
+      const overviewRequest = apiClient.get<AnalyticsOverviewResponse>('/api/v1/restaurant/analytics/overview', {
+        params: { period, include_insight: false },
+      });
+      const insightRequest = apiClient.get<InsightBanner>('/api/v1/restaurant/analytics/business-insight', {
+        params: { period },
+      });
+
+      const [overviewResult, insightResult] = await Promise.all([
+        overviewRequest
+          .then((response) => ({ status: 'fulfilled' as const, response }))
+          .catch((error) => ({ status: 'rejected' as const, error })),
+        insightRequest
+          .then((response) => ({ status: 'fulfilled' as const, response }))
+          .catch((error) => ({ status: 'rejected' as const, error })),
+      ]);
+
+      if (overviewResult.status === 'fulfilled') {
+        applyAnalyticsOverview(period, overviewResult.response.data);
+      } else {
+        logApiError('analytics.overview', overviewResult.error);
         if (!silent || !hasCachedPeriodData) {
-          setError(getApiDisplayMessage(error, 'Unable to load analytics.'));
+          setError(getApiDisplayMessage(overviewResult.error, 'Unable to load analytics.'));
         }
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
       }
+
+      if (insightResult.status === 'fulfilled') {
+        setBusinessInsight(insightResult.response.data);
+        setAnalyticsScreenCache({
+          businessInsight: insightResult.response.data,
+        });
+      } else {
+        logApiError('analytics.business-insight', insightResult.error);
+      }
+
+      setLoading(false);
+      setRefreshing(false);
     },
-    [applyAnalyticsOverview, hasCachedPeriodData],
+    [applyAnalyticsOverview, hasCachedPeriodData, setAnalyticsScreenCache],
   );
 
   useCachedFocusRefresh({
@@ -246,15 +285,22 @@ export default function AnalyticsScreen() {
     fetchedAt: analyticsScreenCache.fetchedAt,
     ttlMs: ANALYTICS_CACHE_TTL_MS,
     loadOnEmpty: () => {
-      void fetchAnalyticsData(activePeriod, false);
+      void fetchAnalyticsScreenData(activePeriod, false);
     },
     refreshStale: () => {
-      void fetchAnalyticsData(activePeriod, true);
+      void fetchAnalyticsScreenData(activePeriod, true);
     },
   });
 
+  React.useEffect(() => {
+    if (hasCachedPeriodData && !businessInsight) {
+      void fetchBusinessInsight(activePeriod);
+    }
+  }, [activePeriod, businessInsight, fetchBusinessInsight, hasCachedPeriodData]);
+
   const localizeAnalyticsLabel = React.useCallback((label: string) => {
-    const normalizedLabel = label.trim().toLowerCase();
+    const safeLabel = String(label || '');
+    const normalizedLabel = safeLabel.trim().toLowerCase();
 
     switch (normalizedLabel) {
       case 'estimated profit':
@@ -294,7 +340,7 @@ export default function AnalyticsScreen() {
       case 'sun':
         return t('sun');
       default:
-        return label;
+        return safeLabel;
     }
   }, [t]);
 
@@ -384,8 +430,8 @@ export default function AnalyticsScreen() {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    void fetchAnalyticsData(activePeriod, false);
-  }, [activePeriod, fetchAnalyticsData]);
+    void fetchAnalyticsScreenData(activePeriod, false);
+  }, [activePeriod, fetchAnalyticsScreenData]);
 
   const handleExport = React.useCallback(async (format: 'pdf' | 'excel') => {
     const hasExportableData =
@@ -450,7 +496,7 @@ export default function AnalyticsScreen() {
           availablePeriods={['weekly', 'monthly']}
           onPeriodChange={handlePeriodChange}
           onExport={handleExport}
-          dropdownTop={verticalScale(130)}
+          dropdownTop={verticalScale(132)}
         />
 
         {loading ? (
@@ -482,7 +528,7 @@ export default function AnalyticsScreen() {
           <View style={styles.errorCard}>
             <Text style={styles.errorTitle}>Something went wrong</Text>
             <Text style={styles.errorSubtitle}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => void fetchAnalyticsData(activePeriod, false)}>
+            <TouchableOpacity style={styles.retryButton} onPress={() => void fetchAnalyticsScreenData(activePeriod, false)}>
               <Text style={styles.retryText}>Try Again</Text>
             </TouchableOpacity>
           </View>
@@ -525,8 +571,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   scrollContent: {
-    paddingHorizontal: scale(20),
-    paddingBottom: verticalScale(40),
+    paddingHorizontal: scale(16),
+    paddingTop: verticalScale(6),
+    paddingBottom: verticalScale(96),
   },
   sectionCard: {
     marginBottom: verticalScale(24),

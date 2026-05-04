@@ -49,16 +49,16 @@ export default function SupplierPriceAlerts({ alerts }: SupplierPriceAlertsProps
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: verticalScale(40),
+    marginBottom: verticalScale(24),
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: verticalScale(16),
+    marginBottom: verticalScale(12),
   },
   title: {
-    fontSize: moderateScale(16, 0.3),
+    fontSize: moderateScale(14, 0.3),
     fontWeight: '800',
     color: '#111827',
   },
@@ -71,13 +71,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#FFF1F2',
     borderRadius: scale(12),
-    padding: scale(12),
+    padding: scale(13),
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
   iconContainer: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: scale(10),
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
     backgroundColor: '#FFE4E6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -87,13 +89,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   alertTitle: {
-    fontSize: moderateScale(14, 0.3),
-    fontWeight: '700',
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: '800',
     color: '#111827',
     marginBottom: verticalScale(2),
   },
   impact: {
-    fontSize: moderateScale(11, 0.3),
+    fontSize: moderateScale(10, 0.3),
     color: '#6B7280',
     fontWeight: '500',
   },

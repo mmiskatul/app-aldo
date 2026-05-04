@@ -18,6 +18,7 @@ import apiClient from "../../../api/apiClient";
 import Method1Form, { Method1Data } from "../../../components/home/add-daily-data/Method1Form";
 import Method2Form, { Method2Data } from "../../../components/home/add-daily-data/Method2Form";
 import MethodSelector from "../../../components/home/add-daily-data/MethodSelector";
+import RevenueInputMethodsModal from "../../../components/home/add-daily-data/RevenueInputMethodsModal";
 import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
 import { useAppStore } from "../../../store/useAppStore";
 import { getApiErrorMessage } from "../../../utils/api";
@@ -65,6 +66,7 @@ export default function AddDailyDataScreen() {
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
   const [selectedMethod, setSelectedMethod] = useState<"method1" | "method2">("method1");
   const [isSaving, setIsSaving] = useState(false);
+  const [isMethodsModalVisible, setIsMethodsModalVisible] = useState(false);
 
   const [method1Data, setMethod1Data] = useState<Method1Data>({
     pos_payments: "",
@@ -83,6 +85,7 @@ export default function AddDailyDataScreen() {
     pos_payments: "",
     cash_payments: "",
     bank_transfer_payments: "",
+    expenses_in_cash: "",
     lunch_covers: "",
     dinner_covers: "",
     opening_cash: "",
@@ -132,6 +135,7 @@ export default function AddDailyDataScreen() {
       { label: "POS Payments", value: method2Data.pos_payments },
       { label: "Cash Payments", value: method2Data.cash_payments },
       { label: "Invoices Paid by Bank Transfer", value: method2Data.bank_transfer_payments },
+      { label: "Expenses in Cash", value: method2Data.expenses_in_cash },
       { label: "Lunch Covers", value: method2Data.lunch_covers, integer: true },
       { label: "Dinner Covers", value: method2Data.dinner_covers, integer: true },
       { label: "Opening Cash", value: method2Data.opening_cash },
@@ -172,6 +176,7 @@ export default function AddDailyDataScreen() {
                 pos_payments: parseNumberInput(method2Data.pos_payments),
                 cash_payments: parseNumberInput(method2Data.cash_payments),
                 bank_transfer_payments: parseNumberInput(method2Data.bank_transfer_payments),
+                expenses_in_cash: parseNumberInput(method2Data.expenses_in_cash),
                 lunch_covers: parseIntegerInput(method2Data.lunch_covers),
                 dinner_covers: parseIntegerInput(method2Data.dinner_covers),
                 opening_cash: parseNumberInput(method2Data.opening_cash),
@@ -218,9 +223,17 @@ export default function AddDailyDataScreen() {
           <MethodSelector selected={selectedMethod} onSelect={setSelectedMethod} />
 
           {selectedMethod === "method1" ? (
-            <Method1Form data={method1Data} onChange={handleMethod1Change} />
+            <Method1Form
+              data={method1Data}
+              onChange={handleMethod1Change}
+              onInfoPress={() => setIsMethodsModalVisible(true)}
+            />
           ) : (
-            <Method2Form data={method2Data} onChange={handleMethod2Change} />
+            <Method2Form
+              data={method2Data}
+              onChange={handleMethod2Change}
+              onInfoPress={() => setIsMethodsModalVisible(true)}
+            />
           )}
         </ScrollView>
 
@@ -237,6 +250,10 @@ export default function AddDailyDataScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <RevenueInputMethodsModal
+        visible={isMethodsModalVisible}
+        onClose={() => setIsMethodsModalVisible(false)}
+      />
     </View>
   );
 }
