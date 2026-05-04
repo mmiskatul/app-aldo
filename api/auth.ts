@@ -18,6 +18,7 @@ export interface AuthenticatedUser {
   subscription_started_at?: string | null;
   subscription_expires_at?: string | null;
   subscription_selection_required?: boolean;
+  onboarding_completed?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -25,4 +26,8 @@ export interface AuthenticatedUser {
 export const getCurrentUser = async (): Promise<AuthenticatedUser> => {
   const response = await apiClient.get<AuthenticatedUser>("/api/v1/auth/me");
   return response.data;
+};
+
+export const hasCompletedOnboarding = (user?: Pick<AuthenticatedUser, "onboarding_completed"> | null): boolean => {
+  return user?.onboarding_completed === true;
 };

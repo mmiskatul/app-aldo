@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../api/apiClient";
+import { hasCompletedOnboarding } from "../../api/auth";
 import Input from "../../components/ui/Input";
 import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
 import { getApiErrorMessage } from "../../utils/api";
@@ -61,6 +62,8 @@ export default function AuthLoginScreen() {
 
       if (getRestrictedAccessStatus(data.user) !== null) {
         router.replace("/(tabs)/settings/restricted-access" as any);
+      } else if (!hasCompletedOnboarding(data.user)) {
+        router.replace("/(auth)/setup" as any);
       } else {
         // Navigate to the tabs flow
         router.replace("/(tabs)/home" as any);

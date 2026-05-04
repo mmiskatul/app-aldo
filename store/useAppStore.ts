@@ -11,6 +11,7 @@ export interface User {
   role: string;
   restaurant_name?: string | null;
   account_status?: string | null;
+  onboarding_completed?: boolean;
   [key: string]: any; // Allow other fields from the API
 }
 

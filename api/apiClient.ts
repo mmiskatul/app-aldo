@@ -17,6 +17,7 @@ let isRefreshing = false;
 let failedQueue: any[] = [];
 let lastConnectionErrorShownAt = 0;
 let isRedirectingToSubscription = false;
+let isRedirectingToOnboarding = false;
 
 const CONNECTION_ERROR_THROTTLE_MS = 4000;
 
@@ -59,6 +60,17 @@ const redirectToSubscriptionSelection = () => {
   }, 1500);
 };
 
+const redirectToOnboarding = () => {
+  if (isRedirectingToOnboarding) {
+    return;
+  }
+  isRedirectingToOnboarding = true;
+  router.replace("/(auth)/setup" as any);
+  setTimeout(() => {
+    isRedirectingToOnboarding = false;
+  }, 1500);
+};
+
 // Request interceptor: Attach token
 apiClient.interceptors.request.use(
   (config) => {
@@ -87,6 +99,9 @@ apiClient.interceptors.response.use(
     const subscriptionErrorCode = error.response?.data?.error?.code;
     if (error.response?.status === 403 && subscriptionErrorCode === "subscription_required") {
       redirectToSubscriptionSelection();
+    }
+    if (error.response?.status === 403 && subscriptionErrorCode === "onboarding_required") {
+      redirectToOnboarding();
     }
 
     const originalRequest = error.config;

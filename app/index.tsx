@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { hasCompletedOnboarding } from "../api/auth";
 import { getRestrictedAccessStatus, useAppStore } from "../store/useAppStore";
 import LanguageModal from "../components/home/LanguageModal";
 import { useTranslation } from "../utils/i18n";
@@ -90,6 +91,9 @@ export default function OnboardingScreen() {
   if (user) {
     if (hasRestrictedAccess) {
       return <Redirect href="/(tabs)/settings/restricted-access" />;
+    }
+    if (!hasCompletedOnboarding(user)) {
+      return <Redirect href="/(auth)/setup" />;
     }
     return <Redirect href="/(tabs)/home" />;
   }

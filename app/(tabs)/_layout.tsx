@@ -10,7 +10,7 @@ import * as HugeiconsModule from "@hugeicons/react-native";
 import { Redirect, Tabs, useSegments } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
-import { getCurrentUser } from "../../api/auth";
+import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
 import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
 
 const hugeiconsAny = HugeiconsModule as any;
@@ -79,6 +79,10 @@ export default function TabLayout() {
 
   if (isRestrictedAccess && currentLeaf !== "help-center" && currentLeaf !== "restricted-access") {
     return <Redirect href="/(tabs)/settings/restricted-access" />;
+  }
+
+  if (!hasCompletedOnboarding(user)) {
+    return <Redirect href="/(auth)/setup" />;
   }
   
   // Conditionally hide tab bar on specific screens that are deep in stacks
