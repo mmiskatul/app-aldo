@@ -14,7 +14,7 @@ import { useRouter } from "expo-router";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
 import { Feather } from "@expo/vector-icons";
 import apiClient from "../../api/apiClient";
-import { getCurrentUser } from "../../api/auth";
+import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
 import Step1RestaurantInfo from "../../components/auth/restoAi/Step1RestaurantInfo";
 import Step2RestaurantDetails from "../../components/auth/restoAi/Step2RestaurantDetails";
 import Step3PhotoUpload from "../../components/auth/restoAi/Step3PhotoUpload";
@@ -120,6 +120,19 @@ const FALLBACK_FEATURE_COPY: Record<string, { titleKey: string; descriptionKey: 
   },
 };
 
+const DEFAULT_BUSINESS_GOAL = "Increase revenue";
+
+const parseBusinessGoals = (value?: string | null): string[] => {
+  if (!value?.trim()) {
+    return [DEFAULT_BUSINESS_GOAL];
+  }
+
+  return value
+    .split(",")
+    .map((goal) => goal.trim())
+    .filter(Boolean);
+};
+
 export default function SetupScreen() {
   const router = useRouter();
   const setProfile = useAppStore((state) => state.setProfile);
@@ -148,7 +161,7 @@ export default function SetupScreen() {
   const [exteriorPhoto, setExteriorPhoto] = useState<string | null>(null);
 
   // Step 4 State
-  const [businessGoal, setBusinessGoal] = useState("Increase revenue");
+  const [businessGoals, setBusinessGoals] = useState<string[]>([DEFAULT_BUSINESS_GOAL]);
 
   // Step 5 State
   const [biggestProblem, setBiggestProblem] = useState("");
@@ -164,6 +177,12 @@ export default function SetupScreen() {
           apiClient.get<OnboardingProfileResponse | null>("/api/v1/onboarding/profile"),
         ]);
         const onboarding = onboardingResponse.data;
+
+        if (hasCompletedOnboarding(user)) {
+          setUser(user, tokens);
+          router.replace("/(tabs)/home" as any);
+          return;
+        }
 
         setRestaurantName(onboarding?.restaurant_name || user.restaurant_name || "");
         setRestaurantType(onboarding?.restaurant_type || "");
@@ -186,7 +205,7 @@ export default function SetupScreen() {
         );
         setInteriorPhoto(onboarding?.interior_photo_url || null);
         setExteriorPhoto(onboarding?.exterior_photo_url || null);
-        setBusinessGoal(onboarding?.main_business_goal || "Increase revenue");
+        setBusinessGoals(parseBusinessGoals(onboarding?.main_business_goal));
         setBiggestProblem(onboarding?.biggest_problem || "");
         setImprovementGoal(onboarding?.improvement_focus || "");
 
@@ -251,6 +270,11 @@ export default function SetupScreen() {
       setStep(2);
       return;
     }
+    if (businessGoals.length === 0) {
+      showErrorMessage("Select at least one business goal before continuing.");
+      setStep(4);
+      return;
+    }
     if (!biggestProblem.trim() || !improvementGoal.trim()) {
       showErrorMessage("Complete the challenge section before finishing setup.");
       setStep(5);
@@ -273,7 +297,7 @@ export default function SetupScreen() {
       formData.append("city_location", city.trim());
       formData.append("number_of_seats", String(parsedSeats));
       formData.append("average_spend_per_customer", String(parsedAverageSpend));
-      formData.append("main_business_goal", businessGoal.trim());
+      formData.append("main_business_goal", businessGoals.join(", "));
       formData.append("biggest_problem", biggestProblem.trim());
       formData.append("improvement_focus", improvementGoal.trim());
       appendImageFile(formData, "profile_image", profilePhoto);
@@ -294,8 +318,8 @@ export default function SetupScreen() {
       ]);
       setUser(user, tokens);
       setProfile(profileResponse.data);
-      setStep(6);
       showSuccessMessage("Onboarding saved successfully.");
+      router.replace("/(tabs)/home" as any);
     } catch (error: any) {
       console.error("Error saving onboarding:", error?.response?.data || error?.message);
       showErrorMessage(getApiErrorMessage(error, "Could not save onboarding details."));
@@ -437,8 +461,8 @@ export default function SetupScreen() {
             )}
             {!loadingInitialData && step === 4 && (
               <Step4BusinessGoal
-                businessGoal={businessGoal}
-                setBusinessGoal={setBusinessGoal}
+                businessGoals={businessGoals}
+                setBusinessGoals={setBusinessGoals}
                 onNext={handleNext}
               />
             )}

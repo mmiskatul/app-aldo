@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
@@ -11,16 +12,25 @@ const BUSINESS_GOALS = [
 ];
 
 interface Step4Props {
-  businessGoal: string;
-  setBusinessGoal: (val: string) => void;
+  businessGoals: string[];
+  setBusinessGoals: (val: string[]) => void;
   onNext: () => void;
 }
 
 export default function Step4BusinessGoal({
-  businessGoal,
-  setBusinessGoal,
+  businessGoals,
+  setBusinessGoals,
   onNext,
 }: Step4Props) {
+  const toggleGoal = (goal: string) => {
+    if (businessGoals.includes(goal)) {
+      setBusinessGoals(businessGoals.filter((selectedGoal) => selectedGoal !== goal));
+      return;
+    }
+
+    setBusinessGoals([...businessGoals, goal]);
+  };
+
   return (
     <View style={styles.stepContainer}>
       <Text style={styles.title}>What is your main business goal?</Text>
@@ -31,7 +41,7 @@ export default function Step4BusinessGoal({
 
       <View style={styles.radioListContainer}>
         {BUSINESS_GOALS.map((goal, index) => {
-          const isSelected = businessGoal === goal;
+          const isSelected = businessGoals.includes(goal);
           return (
             <TouchableOpacity
               key={index}
@@ -39,7 +49,7 @@ export default function Step4BusinessGoal({
                 styles.radioRow,
                 isSelected ? styles.radioRowSelected : null,
               ]}
-              onPress={() => setBusinessGoal(goal)}
+              onPress={() => toggleGoal(goal)}
               activeOpacity={0.8}
             >
               <Text style={styles.radioText}>{goal}</Text>
@@ -49,7 +59,9 @@ export default function Step4BusinessGoal({
                   isSelected ? styles.radioOuterSelected : null,
                 ]}
               >
-                {isSelected && <View style={styles.radioInner} />}
+                {isSelected ? (
+                  <Feather name="check" size={moderateScale(14)} color="#FFFFFF" />
+                ) : null}
               </View>
             </TouchableOpacity>
           );
@@ -121,7 +133,7 @@ const styles = StyleSheet.create({
   radioOuter: {
     width: moderateScale(22),
     height: moderateScale(22),
-    borderRadius: moderateScale(11),
+    borderRadius: moderateScale(6),
     borderWidth: 2,
     borderColor: "#D1D5DB",
     alignItems: "center",
@@ -129,11 +141,6 @@ const styles = StyleSheet.create({
   },
   radioOuterSelected: {
     borderColor: "#FA8C4C",
-  },
-  radioInner: {
-    width: moderateScale(12),
-    height: moderateScale(12),
-    borderRadius: moderateScale(6),
     backgroundColor: "#FA8C4C",
   },
 });
