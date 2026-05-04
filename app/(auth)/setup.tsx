@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
   },
   progressBarSegment: {
     height: moderateScale(4),
-    width: scale(30),
+    width: scale(24),
     backgroundColor: "#FFEDD5",
     borderRadius: moderateScale(2),
   },

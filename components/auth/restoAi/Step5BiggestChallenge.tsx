@@ -55,7 +55,7 @@ export default function Step5BiggestChallenge({
       <View style={styles.spacer} />
 
       <TouchableOpacity style={styles.continueButton} onPress={onNext}>
-        <Text style={styles.continueButtonText}>Finish Setup</Text>
+        <Text style={styles.continueButtonText}>Continue</Text>
       </TouchableOpacity>
     </View>
   );
