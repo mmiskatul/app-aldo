@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -234,6 +234,26 @@ export default function EditProfileScreen() {
             onChangeNumberOfSeats={(text) => updateField('number_of_seats', text)}
           />
 
+          {(profile?.interior_photo_url || profile?.exterior_photo_url) ? (
+            <View style={styles.restaurantPhotosSection}>
+              <Text style={styles.sectionTitle}>{t('restaurant_photos')}</Text>
+              <View style={styles.restaurantPhotosRow}>
+                {profile?.interior_photo_url ? (
+                  <View style={styles.restaurantPhotoItem}>
+                    <Image source={{ uri: profile.interior_photo_url }} style={styles.restaurantPhoto} />
+                    <Text style={styles.restaurantPhotoLabel}>{t('interior_photo')}</Text>
+                  </View>
+                ) : null}
+                {profile?.exterior_photo_url ? (
+                  <View style={styles.restaurantPhotoItem}>
+                    <Image source={{ uri: profile.exterior_photo_url }} style={styles.restaurantPhoto} />
+                    <Text style={styles.restaurantPhotoLabel}>{t('exterior_photo')}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
+
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} disabled={loading}>
               <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
@@ -308,6 +328,35 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#F3F4F6',
     marginVertical: verticalScale(24),
+  },
+  sectionTitle: {
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: '800',
+    color: '#FA8C4C',
+    letterSpacing: 1,
+    marginBottom: verticalScale(14),
+  },
+  restaurantPhotosSection: {
+    marginTop: verticalScale(20),
+  },
+  restaurantPhotosRow: {
+    flexDirection: 'row',
+    gap: scale(12),
+  },
+  restaurantPhotoItem: {
+    flex: 1,
+  },
+  restaurantPhoto: {
+    width: '100%',
+    height: verticalScale(110),
+    borderRadius: scale(12),
+    backgroundColor: '#F3F4F6',
+  },
+  restaurantPhotoLabel: {
+    marginTop: verticalScale(8),
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: '700',
+    color: '#6B7280',
   },
   buttonContainer: {
     flexDirection: 'row',

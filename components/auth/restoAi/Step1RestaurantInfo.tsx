@@ -1,9 +1,13 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
+import * as ImagePicker from "expo-image-picker";
 import Input from "../../ui/Input";
+import ImagePickerModal from "../../ui/ImagePickerModal";
+import ProfilePlaceholderAvatar from "../../ui/ProfilePlaceholderAvatar";
 import TypeModal from "../../ui/TypeModal";
+import { showErrorMessage } from "../../../utils/feedback";
 import { useTranslation } from "../../../utils/i18n";
 
 const RESTAURANT_TYPES = [
@@ -16,6 +20,8 @@ const RESTAURANT_TYPES = [
 ];
 
 interface Step1Props {
+  profilePhoto: string | null;
+  setProfilePhoto: (val: string | null) => void;
   restaurantName: string;
   setRestaurantName: (val: string) => void;
   restaurantType: string;
@@ -24,6 +30,8 @@ interface Step1Props {
 }
 
 export default function Step1RestaurantInfo({
+  profilePhoto,
+  setProfilePhoto,
   restaurantName,
   setRestaurantName,
   restaurantType,
@@ -32,6 +40,7 @@ export default function Step1RestaurantInfo({
 }: Step1Props) {
   const { t } = useTranslation();
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [showImagePicker, setShowImagePicker] = useState(false);
   const restaurantTypeOptions = RESTAURANT_TYPES.map((value) => ({
     value,
     label: t(`restaurant_type_${value.toLowerCase().replace(/\s+/g, "_")}` as any),
@@ -39,12 +48,77 @@ export default function Step1RestaurantInfo({
   const selectedRestaurantTypeLabel =
     restaurantTypeOptions.find((option) => option.value === restaurantType)?.label || restaurantType;
 
+  const pickProfileImage = async (mode: "camera" | "gallery") => {
+    try {
+      let result;
+      if (mode === "camera") {
+        const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permissionResult.granted) {
+          showErrorMessage("You've refused to allow this app to access your camera!");
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      } else {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permissionResult.granted) {
+          showErrorMessage("You've refused to allow this app to access your photos!");
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      }
+
+      setShowImagePicker(false);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setProfilePhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.log("Error picking profile image:", error);
+      setShowImagePicker(false);
+    }
+  };
+
   return (
     <View style={styles.stepContainer}>
       <Text style={styles.title}>{t('onboarding_restaurant_title')}</Text>
       <Text style={styles.subtitle}>
         {t('onboarding_restaurant_subtitle')}
       </Text>
+
+      <View style={styles.profileImageSection}>
+        <View style={styles.imageWrapper}>
+          {profilePhoto ? (
+            <Image source={{ uri: profilePhoto }} style={styles.avatar} />
+          ) : (
+            <ProfilePlaceholderAvatar size={scale(100)} style={styles.avatar} />
+          )}
+          <TouchableOpacity
+            style={styles.cameraButton}
+            onPress={() => setShowImagePicker(true)}
+            accessibilityLabel="Change profile photo"
+          >
+            <Feather name="camera" size={moderateScale(14)} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+        {profilePhoto ? (
+          <TouchableOpacity
+            onPress={() => setProfilePhoto(null)}
+            style={styles.removeImageButton}
+            accessibilityLabel="Remove profile photo"
+          >
+            <Feather name="trash-2" size={moderateScale(16)} color="#EF4444" />
+          </TouchableOpacity>
+        ) : null}
+      </View>
 
       <Input
         label={t('restaurant_name')}
@@ -99,6 +173,13 @@ export default function Step1RestaurantInfo({
       <Text style={styles.bottomFooterText}>
         {t('onboarding_change_later')}
       </Text>
+
+      <ImagePickerModal
+        visible={showImagePicker}
+        onClose={() => setShowImagePicker(false)}
+        onCameraSelect={() => pickProfileImage("camera")}
+        onGallerySelect={() => pickProfileImage("gallery")}
+      />
     </View>
   );
 }
@@ -117,6 +198,45 @@ const styles = StyleSheet.create({
     color: "#4B5563",
     lineHeight: moderateScale(24, 0.3),
     marginBottom: verticalScale(30),
+  },
+  profileImageSection: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: verticalScale(24),
+  },
+  imageWrapper: {
+    position: "relative",
+    marginBottom: verticalScale(12),
+  },
+  avatar: {
+    width: scale(100),
+    height: scale(100),
+    borderRadius: scale(50),
+    borderWidth: 4,
+    borderColor: "#FFE4D1",
+  },
+  cameraButton: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#FA8C4C",
+    width: scale(32),
+    height: scale(32),
+    borderRadius: scale(16),
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: "#FFFFFF",
+  },
+  removeImageButton: {
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(17),
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
   spacer: { flex: 1, minHeight: verticalScale(30) },
   continueButton: {

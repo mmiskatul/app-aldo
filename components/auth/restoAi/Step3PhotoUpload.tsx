@@ -7,8 +7,6 @@ import ImagePickerModal from "../../ui/ImagePickerModal";
 import { showErrorMessage } from "../../../utils/feedback";
 
 interface Step3Props {
-  profilePhoto: string | null;
-  setProfilePhoto: (val: string | null) => void;
   interiorPhoto: string | null;
   setInteriorPhoto: (val: string | null) => void;
   exteriorPhoto: string | null;
@@ -17,8 +15,6 @@ interface Step3Props {
 }
 
 export default function Step3PhotoUpload({
-  profilePhoto,
-  setProfilePhoto,
   interiorPhoto,
   setInteriorPhoto,
   exteriorPhoto,
@@ -26,14 +22,13 @@ export default function Step3PhotoUpload({
   onNext,
 }: Step3Props) {
   const [showImagePicker, setShowImagePicker] = useState(false);
-  const [photoTarget, setPhotoTarget] = useState<"profile" | "interior" | "exterior" | null>(
+  const [photoTarget, setPhotoTarget] = useState<"interior" | "exterior" | null>(
     null
   );
 
   const pickImage = async (mode: "camera" | "gallery") => {
     try {
       let result;
-      const imageAspect: [number, number] = photoTarget === "profile" ? [1, 1] : [4, 3];
       if (mode === "camera") {
         const permissionResult =
           await ImagePicker.requestCameraPermissionsAsync();
@@ -44,7 +39,7 @@ export default function Step3PhotoUpload({
         result = await ImagePicker.launchCameraAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
-          aspect: imageAspect,
+          aspect: [4, 3],
           quality: 1,
         });
       } else {
@@ -57,7 +52,7 @@ export default function Step3PhotoUpload({
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
-          aspect: imageAspect,
+          aspect: [4, 3],
           quality: 1,
         });
       }
@@ -65,9 +60,7 @@ export default function Step3PhotoUpload({
       setShowImagePicker(false);
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        if (photoTarget === "profile") {
-          setProfilePhoto(result.assets[0].uri);
-        } else if (photoTarget === "interior") {
+        if (photoTarget === "interior") {
           setInteriorPhoto(result.assets[0].uri);
         } else if (photoTarget === "exterior") {
           setExteriorPhoto(result.assets[0].uri);
@@ -81,7 +74,7 @@ export default function Step3PhotoUpload({
     }
   };
 
-  const openPicker = (target: "profile" | "interior" | "exterior") => {
+  const openPicker = (target: "interior" | "exterior") => {
     setPhotoTarget(target);
     setShowImagePicker(true);
   };
@@ -90,37 +83,8 @@ export default function Step3PhotoUpload({
     <View style={styles.stepContainer}>
       <Text style={styles.title}>Upload Restaurant Photos</Text>
       <Text style={styles.subtitle}>
-        Add your profile picture and restaurant photos so Risto AI can personalize your account.
+        Photos help Risto AI better understand your restaurant environment and menu.
       </Text>
-
-      <Text style={styles.uploadSectionTitle}>Profile Picture</Text>
-      {profilePhoto ? (
-        <View style={styles.uploadedImageContainer}>
-          <Image source={{ uri: profilePhoto }} style={styles.uploadedImage} />
-          <TouchableOpacity
-            style={styles.changeImageButton}
-            onPress={() => openPicker("profile")}
-          >
-            <Feather name="edit-2" size={moderateScale(16)} color="#FFFFFF" />
-            <Text style={styles.changeImageText}>Change</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity
-          style={styles.uploadBox}
-          activeOpacity={0.8}
-          onPress={() => openPicker("profile")}
-        >
-          <MaterialCommunityIcons
-            name="account-circle-outline"
-            size={moderateScale(32)}
-            color="#FA8C4C"
-            style={{ marginBottom: verticalScale(10) }}
-          />
-          <Text style={styles.uploadMainText}>Tap to upload profile picture</Text>
-          <Text style={styles.uploadSubText}>Supports JPG, PNG</Text>
-        </TouchableOpacity>
-      )}
 
       <Text style={styles.uploadSectionTitle}>Interior Photo</Text>
       {interiorPhoto ? (
@@ -132,6 +96,13 @@ export default function Step3PhotoUpload({
           >
             <Feather name="edit-2" size={moderateScale(16)} color="#FFFFFF" />
             <Text style={styles.changeImageText}>Change</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.removeImageButton}
+            onPress={() => setInteriorPhoto(null)}
+            accessibilityLabel="Remove interior photo"
+          >
+            <Feather name="x" size={moderateScale(18)} color="#111827" />
           </TouchableOpacity>
         </View>
       ) : (
@@ -161,6 +132,13 @@ export default function Step3PhotoUpload({
           >
             <Feather name="edit-2" size={moderateScale(16)} color="#FFFFFF" />
             <Text style={styles.changeImageText}>Change</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.removeImageButton}
+            onPress={() => setExteriorPhoto(null)}
+            accessibilityLabel="Remove exterior photo"
+          >
+            <Feather name="x" size={moderateScale(18)} color="#111827" />
           </TouchableOpacity>
         </View>
       ) : (
@@ -286,5 +264,18 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12, 0.3),
     fontWeight: "600",
     marginLeft: scale(4),
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: verticalScale(10),
+    right: scale(10),
+    width: moderateScale(30),
+    height: moderateScale(30),
+    borderRadius: moderateScale(15),
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
 });

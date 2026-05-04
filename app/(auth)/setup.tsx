@@ -157,11 +157,6 @@ export default function SetupScreen() {
       setStep(2);
       return;
     }
-    if (!profilePhoto) {
-      showErrorMessage("Upload a profile picture before finishing setup.");
-      setStep(3);
-      return;
-    }
     if (!biggestProblem.trim() || !improvementGoal.trim()) {
       showErrorMessage("Complete the challenge section before finishing setup.");
       setStep(5);
@@ -302,6 +297,8 @@ export default function SetupScreen() {
           >
             {step === 1 && (
               <Step1RestaurantInfo
+                profilePhoto={profilePhoto}
+                setProfilePhoto={setProfilePhoto}
                 restaurantName={restaurantName}
                 setRestaurantName={setRestaurantName}
                 restaurantType={restaurantType}
@@ -322,8 +319,6 @@ export default function SetupScreen() {
             )}
             {step === 3 && (
               <Step3PhotoUpload
-                profilePhoto={profilePhoto}
-                setProfilePhoto={setProfilePhoto}
                 interiorPhoto={interiorPhoto}
                 setInteriorPhoto={setInteriorPhoto}
                 exteriorPhoto={exteriorPhoto}

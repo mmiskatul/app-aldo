@@ -47,6 +47,8 @@ export interface Profile {
   improvement_focus: string | null;
   preferred_language: string;
   profile_image_url: string | null;
+  interior_photo_url?: string | null;
+  exterior_photo_url?: string | null;
 }
 
 export interface Tokens {
