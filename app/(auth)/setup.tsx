@@ -20,6 +20,7 @@ import Step2RestaurantDetails from "../../components/auth/restoAi/Step2Restauran
 import Step3PhotoUpload from "../../components/auth/restoAi/Step3PhotoUpload";
 import Step4BusinessGoal from "../../components/auth/restoAi/Step4BusinessGoal";
 import Step5BiggestChallenge from "../../components/auth/restoAi/Step5BiggestChallenge";
+import StepFeatureExplanation from "../../components/auth/restoAi/StepFeatureExplanation";
 import Step6Success from "../../components/auth/restoAi/Step6Success";
 import { useAppStore } from "../../store/useAppStore";
 import { buildFileName, inferMimeType } from "../../utils/fileMetadata";
@@ -41,6 +42,84 @@ type OnboardingProfileResponse = {
   improvement_focus?: string | null;
 };
 
+type OnboardingFeatureScreen = {
+  key: string;
+  icon: string;
+  title: string;
+  description: string;
+  points: string[];
+};
+
+const FALLBACK_FEATURE_SCREENS: OnboardingFeatureScreen[] = [
+  {
+    key: "profit_tracking",
+    icon: "trending-up",
+    title: "",
+    description: "",
+    points: [],
+  },
+  {
+    key: "invoice_photo_upload",
+    icon: "camera",
+    title: "",
+    description: "",
+    points: [],
+  },
+  {
+    key: "inventory",
+    icon: "archive",
+    title: "",
+    description: "",
+    points: [],
+  },
+  {
+    key: "vat_management",
+    icon: "file-text",
+    title: "",
+    description: "",
+    points: [],
+  },
+];
+
+const FALLBACK_FEATURE_COPY: Record<string, { titleKey: string; descriptionKey: string; pointKeys: string[] }> = {
+  profit_tracking: {
+    titleKey: "intro_slide_profit_detail_title",
+    descriptionKey: "intro_slide_profit_detail_description",
+    pointKeys: [
+      "intro_slide_profit_detail_point_1",
+      "intro_slide_profit_detail_point_2",
+      "intro_slide_profit_detail_point_3",
+    ],
+  },
+  invoice_photo_upload: {
+    titleKey: "intro_slide_photo_upload_detail_title",
+    descriptionKey: "intro_slide_photo_upload_detail_description",
+    pointKeys: [
+      "intro_slide_photo_upload_detail_point_1",
+      "intro_slide_photo_upload_detail_point_2",
+      "intro_slide_photo_upload_detail_point_3",
+    ],
+  },
+  inventory: {
+    titleKey: "intro_slide_inventory_detail_title",
+    descriptionKey: "intro_slide_inventory_detail_description",
+    pointKeys: [
+      "intro_slide_inventory_detail_point_1",
+      "intro_slide_inventory_detail_point_2",
+      "intro_slide_inventory_detail_point_3",
+    ],
+  },
+  vat_management: {
+    titleKey: "intro_slide_vat_detail_title",
+    descriptionKey: "intro_slide_vat_detail_description",
+    pointKeys: [
+      "intro_slide_vat_detail_point_1",
+      "intro_slide_vat_detail_point_2",
+      "intro_slide_vat_detail_point_3",
+    ],
+  },
+};
+
 export default function SetupScreen() {
   const router = useRouter();
   const setProfile = useAppStore((state) => state.setProfile);
@@ -52,6 +131,7 @@ export default function SetupScreen() {
   const [loadingInitialData, setLoadingInitialData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const [featureScreens, setFeatureScreens] = useState<OnboardingFeatureScreen[]>(FALLBACK_FEATURE_SCREENS);
 
   // Step 1 State
   const [restaurantName, setRestaurantName] = useState("");
@@ -74,7 +154,7 @@ export default function SetupScreen() {
   const [biggestProblem, setBiggestProblem] = useState("");
   const [improvementGoal, setImprovementGoal] = useState("");
 
-  const totalSteps = 5;
+  const totalSteps = 9;
 
   useEffect(() => {
     const loadSetupData = async () => {
@@ -109,6 +189,18 @@ export default function SetupScreen() {
         setBusinessGoal(onboarding?.main_business_goal || "Increase revenue");
         setBiggestProblem(onboarding?.biggest_problem || "");
         setImprovementGoal(onboarding?.improvement_focus || "");
+
+        try {
+          const featureResponse = await apiClient.get<{ screens: OnboardingFeatureScreen[] }>(
+            "/api/v1/onboarding/feature-screens"
+          );
+          if (Array.isArray(featureResponse.data?.screens) && featureResponse.data.screens.length > 0) {
+            setFeatureScreens(featureResponse.data.screens);
+          }
+        } catch (featureError: any) {
+          console.log("Error loading onboarding feature screens:", featureError?.response?.data || featureError?.message);
+          setFeatureScreens(FALLBACK_FEATURE_SCREENS);
+        }
       } catch (error: any) {
         console.error("Error loading onboarding data:", error?.response?.data || error?.message);
       } finally {
@@ -211,11 +303,11 @@ export default function SetupScreen() {
   };
 
   const handleNext = () => {
-    if (step === 5) {
+    if (step === 9) {
       void submitOnboarding();
       return;
     }
-    if (step < 6) {
+    if (step < 10) {
       setStep(step + 1);
     }
   };
@@ -226,6 +318,25 @@ export default function SetupScreen() {
     } else {
       router.back();
     }
+  };
+
+  const renderFeatureStep = (screenIndex: number) => {
+    const screen = featureScreens[screenIndex] || FALLBACK_FEATURE_SCREENS[screenIndex];
+    const fallbackCopy = FALLBACK_FEATURE_COPY[screen.key];
+    return (
+      <StepFeatureExplanation
+        icon={(screen.icon || FALLBACK_FEATURE_SCREENS[screenIndex].icon) as any}
+        title={screen.title || undefined}
+        description={screen.description || undefined}
+        points={screen.points && screen.points.length > 0 ? screen.points : undefined}
+        titleKey={fallbackCopy?.titleKey}
+        descriptionKey={fallbackCopy?.descriptionKey}
+        pointKeys={fallbackCopy?.pointKeys}
+        onNext={handleNext}
+        isLast={screenIndex === 3}
+        loading={screenIndex === 3 && submitting}
+      />
+    );
   };
 
   const renderProgressBar = () => {
@@ -270,7 +381,7 @@ export default function SetupScreen() {
             <Feather name="chevron-down" size={moderateScale(15)} color="#4B5563" />
           </TouchableOpacity>
         </View>
-        {step < 6 && renderProgressBar()}
+        {step < 10 && renderProgressBar()}
       </View>
     );
   };
@@ -335,10 +446,22 @@ export default function SetupScreen() {
                 setBiggestProblem={setBiggestProblem}
                 improvementGoal={improvementGoal}
                 setImprovementGoal={setImprovementGoal}
-                onNext={submitting ? () => undefined : handleNext}
+                onNext={handleNext}
               />
             )}
             {!loadingInitialData && step === 6 && (
+              renderFeatureStep(0)
+            )}
+            {!loadingInitialData && step === 7 && (
+              renderFeatureStep(1)
+            )}
+            {!loadingInitialData && step === 8 && (
+              renderFeatureStep(2)
+            )}
+            {!loadingInitialData && step === 9 && (
+              renderFeatureStep(3)
+            )}
+            {!loadingInitialData && step === 10 && (
               <Step6Success />
             )}
           </ScrollView>

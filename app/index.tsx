@@ -29,38 +29,106 @@ const slides = [
     titleKey: "intro_slide_profit_title",
     descriptionKey: "intro_slide_profit_description",
     ImageComponent: ContainerSVG,
+    pointKeys: [
+      "intro_slide_profit_point_1",
+      "intro_slide_profit_point_2",
+      "intro_slide_profit_point_3",
+    ],
     showSkip: true,
   },
   {
     id: "2",
-    titleKey: "intro_slide_photo_upload_title",
-    descriptionKey: "intro_slide_photo_upload_description",
-    ImageComponent: BackgroundSVG,
+    titleKey: "intro_slide_profit_detail_title",
+    descriptionKey: "intro_slide_profit_detail_description",
+    ImageComponent: ContainerSVG,
+    pointKeys: [
+      "intro_slide_profit_detail_point_1",
+      "intro_slide_profit_detail_point_2",
+      "intro_slide_profit_detail_point_3",
+    ],
     showSkip: true,
   },
   {
     id: "3",
-    titleKey: "intro_slide_inventory_title",
-    descriptionKey: "intro_slide_inventory_description",
-    ImageComponent: ContainerSVG,
-    showSkip: false,
+    titleKey: "intro_slide_photo_upload_title",
+    descriptionKey: "intro_slide_photo_upload_description",
+    ImageComponent: BackgroundSVG,
+    pointKeys: [
+      "intro_slide_photo_upload_point_1",
+      "intro_slide_photo_upload_point_2",
+      "intro_slide_photo_upload_point_3",
+    ],
+    showSkip: true,
   },
   {
     id: "4",
-    titleKey: "intro_slide_vat_title",
-    descriptionKey: "intro_slide_vat_description",
+    titleKey: "intro_slide_photo_upload_detail_title",
+    descriptionKey: "intro_slide_photo_upload_detail_description",
     ImageComponent: BackgroundSVG,
+    pointKeys: [
+      "intro_slide_photo_upload_detail_point_1",
+      "intro_slide_photo_upload_detail_point_2",
+      "intro_slide_photo_upload_detail_point_3",
+    ],
     showSkip: false,
   },
   {
     id: "5",
+    titleKey: "intro_slide_inventory_title",
+    descriptionKey: "intro_slide_inventory_description",
+    ImageComponent: ContainerSVG,
+    pointKeys: [
+      "intro_slide_inventory_point_1",
+      "intro_slide_inventory_point_2",
+      "intro_slide_inventory_point_3",
+    ],
+    showSkip: false,
+  },
+  {
+    id: "6",
+    titleKey: "intro_slide_inventory_detail_title",
+    descriptionKey: "intro_slide_inventory_detail_description",
+    ImageComponent: ContainerSVG,
+    pointKeys: [
+      "intro_slide_inventory_detail_point_1",
+      "intro_slide_inventory_detail_point_2",
+      "intro_slide_inventory_detail_point_3",
+    ],
+    showSkip: false,
+  },
+  {
+    id: "7",
+    titleKey: "intro_slide_vat_title",
+    descriptionKey: "intro_slide_vat_description",
+    ImageComponent: BackgroundSVG,
+    pointKeys: [
+      "intro_slide_vat_point_1",
+      "intro_slide_vat_point_2",
+      "intro_slide_vat_point_3",
+    ],
+    showSkip: false,
+  },
+  {
+    id: "8",
+    titleKey: "intro_slide_vat_detail_title",
+    descriptionKey: "intro_slide_vat_detail_description",
+    ImageComponent: BackgroundSVG,
+    pointKeys: [
+      "intro_slide_vat_detail_point_1",
+      "intro_slide_vat_detail_point_2",
+      "intro_slide_vat_detail_point_3",
+    ],
+    showSkip: false,
+  },
+  {
+    id: "9",
     titleKey: "intro_slide_manage_title",
     descriptionKey: "intro_slide_manage_description",
     ImageComponent: ContainerSVG,
     showSkip: false,
   },
   {
-    id: "6",
+    id: "10",
     titleKey: "intro_slide_chat_title",
     descriptionKey: "intro_slide_chat_description",
     ImageComponent: AIChatSVG,
@@ -162,6 +230,18 @@ export default function OnboardingScreen() {
             <View style={styles.textContainer}>
               <Text style={styles.title}>{t(item.titleKey)}</Text>
               <Text style={styles.description}>{t(item.descriptionKey)}</Text>
+              {"pointKeys" in item && item.pointKeys ? (
+                <View style={styles.pointsContainer}>
+                  {item.pointKeys.map((pointKey: string) => (
+                    <View key={pointKey} style={styles.pointRow}>
+                      <View style={styles.pointIcon}>
+                        <Feather name="check" size={moderateScale(12)} color="#FA8C4C" />
+                      </View>
+                      <Text style={styles.pointText}>{t(pointKey as any)}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
           </View>
         )}
@@ -324,6 +404,32 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     textAlign: "center",
     lineHeight: moderateScale(24, 0.3),
+  },
+  pointsContainer: {
+    width: "100%",
+    marginTop: verticalScale(16),
+    gap: verticalScale(8),
+  },
+  pointRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  pointIcon: {
+    width: moderateScale(20),
+    height: moderateScale(20),
+    borderRadius: moderateScale(10),
+    backgroundColor: "#FFF0E5",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: scale(10),
+    marginTop: verticalScale(1),
+  },
+  pointText: {
+    flex: 1,
+    fontSize: moderateScale(13, 0.3),
+    lineHeight: moderateScale(20, 0.3),
+    fontWeight: "600",
+    color: "#374151",
   },
   bottomContainer: {
     paddingHorizontal: scale(24),
