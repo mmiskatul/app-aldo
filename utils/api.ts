@@ -100,6 +100,45 @@ const getResponseContentType = (error: any): string => {
   return String(error?.response?.headers?.["content-type"] || "").toLowerCase();
 };
 
+const formatValidationFieldName = (loc: unknown): string => {
+  const parts = Array.isArray(loc) ? loc : [];
+  const relevantParts = parts
+    .map((part) => String(part))
+    .filter((part) => !["body", "query", "path", "method_one", "method_two"].includes(part));
+  const field = relevantParts[relevantParts.length - 1] || "";
+
+  return field
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const getValidationErrors = (error: any): any[] => {
+  const wrappedErrors = error?.response?.data?.error?.details?.errors;
+  if (Array.isArray(wrappedErrors)) {
+    return wrappedErrors;
+  }
+
+  const detailErrors = error?.response?.data?.detail;
+  if (Array.isArray(detailErrors)) {
+    return detailErrors;
+  }
+
+  return [];
+};
+
+const getValidationErrorMessage = (error: any): string | null => {
+  const validationErrors = getValidationErrors(error);
+  if (validationErrors.length === 0) {
+    return null;
+  }
+
+  const firstError = validationErrors[0];
+  const fieldName = formatValidationFieldName(firstError?.loc);
+  const message = String(firstError?.msg || "Invalid value");
+
+  return fieldName ? `${fieldName}: ${message}` : message;
+};
+
 export const getApiErrorMessage = (
   error: any,
   fallback: string,
@@ -128,6 +167,11 @@ export const getApiErrorMessage = (
       error?.response?.data?.message ||
       fallback;
     return `${baseMessage}. Missing: ${missingFields.join(", ")}`;
+  }
+
+  const validationMessage = getValidationErrorMessage(error);
+  if (validationMessage) {
+    return validationMessage;
   }
 
   return (

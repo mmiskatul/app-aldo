@@ -20,17 +20,34 @@ import Method2Form, { Method2Data } from "../../../components/home/add-daily-dat
 import MethodSelector from "../../../components/home/add-daily-data/MethodSelector";
 import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
 import { useAppStore } from "../../../store/useAppStore";
+import { getApiErrorMessage } from "../../../utils/api";
 
 const parseNumberInput = (value: string) => {
-  const normalized = value.replace(/,/g, ".").replace(/[^0-9.]/g, "");
+  const normalized = value.trim().replace(/,/g, ".");
   const parsed = parseFloat(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
 const parseIntegerInput = (value: string) => {
-  const normalized = value.replace(/[^0-9]/g, "");
+  const normalized = value.trim();
   const parsed = parseInt(normalized, 10);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const isValidNumberInput = (value: string) => {
+  const normalized = value.trim().replace(/,/g, ".");
+  if (!normalized) {
+    return true;
+  }
+  return /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized);
+};
+
+const isValidIntegerInput = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return true;
+  }
+  return /^\d+$/.test(normalized);
 };
 
 const getLocalBusinessDate = () => {
@@ -55,6 +72,10 @@ export default function AddDailyDataScreen() {
     cash_in: "",
     cash_out: "",
     expenses_in_cash: "",
+    lunch_covers: "",
+    dinner_covers: "",
+    opening_cash: "",
+    closing_cash: "",
     notes: "",
   });
 
@@ -78,7 +99,53 @@ export default function AddDailyDataScreen() {
 
   const currentBusinessDate = getLocalBusinessDate();
 
+  const validateNumberFields = (
+    fields: Array<{ label: string; value: string; integer?: boolean }>,
+  ) => {
+    const invalidField = fields.find((field) =>
+      field.integer ? !isValidIntegerInput(field.value) : !isValidNumberInput(field.value),
+    );
+
+    if (!invalidField) {
+      return null;
+    }
+
+    return `${invalidField.label} must be a valid ${invalidField.integer ? "whole number" : "non-negative number"}.`;
+  };
+
+  const validateCurrentMethod = () => {
+    if (selectedMethod === "method1") {
+      return validateNumberFields([
+        { label: "POS Payments", value: method1Data.pos_payments },
+        { label: "Cash Withdrawals", value: method1Data.cash_withdrawals },
+        { label: "Cash In", value: method1Data.cash_in },
+        { label: "Cash Out", value: method1Data.cash_out },
+        { label: "Expenses in Cash", value: method1Data.expenses_in_cash },
+        { label: "Lunch Covers", value: method1Data.lunch_covers, integer: true },
+        { label: "Dinner Covers", value: method1Data.dinner_covers, integer: true },
+        { label: "Opening Cash", value: method1Data.opening_cash },
+        { label: "Closing Cash", value: method1Data.closing_cash },
+      ]);
+    }
+
+    return validateNumberFields([
+      { label: "POS Payments", value: method2Data.pos_payments },
+      { label: "Cash Payments", value: method2Data.cash_payments },
+      { label: "Invoices Paid by Bank Transfer", value: method2Data.bank_transfer_payments },
+      { label: "Lunch Covers", value: method2Data.lunch_covers, integer: true },
+      { label: "Dinner Covers", value: method2Data.dinner_covers, integer: true },
+      { label: "Opening Cash", value: method2Data.opening_cash },
+      { label: "Closing Cash", value: method2Data.closing_cash },
+    ]);
+  };
+
   const handleSave = async () => {
+    const validationMessage = validateCurrentMethod();
+    if (validationMessage) {
+      showErrorMessage(validationMessage);
+      return;
+    }
+
     setIsSaving(true);
     try {
       const payload = {
@@ -92,6 +159,10 @@ export default function AddDailyDataScreen() {
                 cash_in: parseNumberInput(method1Data.cash_in),
                 cash_out: parseNumberInput(method1Data.cash_out),
                 expenses_in_cash: parseNumberInput(method1Data.expenses_in_cash),
+                lunch_covers: parseIntegerInput(method1Data.lunch_covers),
+                dinner_covers: parseIntegerInput(method1Data.dinner_covers),
+                opening_cash: parseNumberInput(method1Data.opening_cash),
+                closing_cash: parseNumberInput(method1Data.closing_cash),
                 notes: method1Data.notes,
               },
             }
@@ -117,15 +188,11 @@ export default function AddDailyDataScreen() {
       showSuccessMessage("Daily data has been saved successfully.");
       router.back();
     } catch (error: any) {
-      const apiMessage =
-        error?.response?.data?.error?.message ||
-        error?.response?.data?.detail ||
-        error?.message;
       console.error(
         "Error saving manual entry:",
         error?.response?.data || error?.message || error,
       );
-      showErrorMessage(apiMessage || "Could not save. Please try again.");
+      showErrorMessage(getApiErrorMessage(error, "Could not save. Please try again."));
     } finally {
       setIsSaving(false);
     }
