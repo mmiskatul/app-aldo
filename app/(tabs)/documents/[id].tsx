@@ -29,7 +29,7 @@ const { StorageAccessFramework } = FileSystem;
 
 export default function DocumentDetailsScreen() {
   const { t } = useTranslation();
-  const { id } = useLocalSearchParams();
+  const { id, edit } = useLocalSearchParams();
   const navigation = useNavigation();
   const router = useRouter();
   const tokens = useAppStore((state) => state.tokens);
@@ -59,6 +59,10 @@ export default function DocumentDetailsScreen() {
   };
 
   const handleEdit = () => {
+    if (!data) {
+      return;
+    }
+
     const subtotal = (data.line_items || []).reduce(
       (sum: number, item: any) => sum + (item.total_price || 0),
       0,
@@ -80,6 +84,12 @@ export default function DocumentDetailsScreen() {
     });
     setIsEditing(true);
   };
+
+  useEffect(() => {
+    if (edit === "1" && data && !isEditing) {
+      handleEdit();
+    }
+  }, [data, edit, isEditing]);
 
   const handleCancel = () => {
     setIsEditing(false);

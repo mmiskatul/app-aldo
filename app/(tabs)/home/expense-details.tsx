@@ -15,6 +15,7 @@ import apiClient from '../../../api/apiClient';
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
 import { showDialog, showErrorMessage, showInfoMessage, showSuccessMessage } from '../../../utils/feedback';
+import { formatEuropeanDate } from '../../../utils/date';
 
 type ExpenseDetail = {
   id: string;
@@ -38,20 +39,7 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 2,
   })}`;
 
-const formatDate = (value?: string | null) => {
-  if (!value) {
-    return 'N/A';
-  }
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
+const formatDate = (value?: string | null) => formatEuropeanDate(value);
 
 const formatSource = (value?: string | null) => {
   if (!value) {

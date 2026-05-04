@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
+import DatePicker from "../../../components/ui/DatePicker";
 import DataHistoryList, {
   DataHistoryEntry,
   DataHistorySegment,
@@ -20,6 +21,7 @@ import apiClient from "../../../api/apiClient";
 import { showErrorMessage, showInfoMessage, showSuccessMessage } from "../../../utils/feedback";
 import { useTranslation } from "../../../utils/i18n";
 import { useAppStore } from "../../../store/useAppStore";
+import { formatApiDate, formatEuropeanDate } from "../../../utils/date";
 
 interface DailyDataListItem {
   id: string;
@@ -49,15 +51,7 @@ const formatCurrency = (value: number) =>
   }).format(Number.isFinite(value) ? value : 0);
 
 const formatBusinessDate = (value: string) => {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatEuropeanDate(value);
 };
 
 const labelForSegment = (segment: DataHistorySegment, value: string) => {
@@ -93,8 +87,17 @@ export default function DataManagementScreen() {
     typeof initialDateFetchedAt !== "number" && initialDateItems.length === 0,
   );
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedReferenceDate, setSelectedReferenceDate] = useState(new Date());
+  const selectedReferenceDateKey = useMemo(
+    () => formatApiDate(selectedReferenceDate),
+    [selectedReferenceDate],
+  );
 
-  const fetchDailyData = useCallback(async (segment: DataHistorySegment, silent = false) => {
+  const fetchDailyData = useCallback(async (
+    segment: DataHistorySegment,
+    silent = false,
+    referenceDateKey = selectedReferenceDateKey,
+  ) => {
     if (!silent) {
       setLoading(true);
     }
@@ -105,6 +108,7 @@ export default function DataManagementScreen() {
           page: 1,
           page_size: 60,
           view: segment,
+          reference_date: referenceDateKey,
         },
       });
       const nextItems = response.data.items || [];
@@ -138,25 +142,12 @@ export default function DataManagementScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [setDailyDataScreenCache]);
+  }, [selectedReferenceDateKey, setDailyDataScreenCache]);
 
   useEffect(() => {
-    const cachedItems = dailyDataScreenCache.itemsBySegment[selectedSegment] || [];
-    const cacheTimestamp = dailyDataScreenCache.fetchedAtBySegment[selectedSegment];
-    const hasCachedResult = typeof cacheTimestamp === "number";
-
-    if (hasCachedResult) {
-      setItems(cachedItems);
-      setLoading(false);
-      if (!isDailyDataCacheFresh(cacheTimestamp)) {
-        void fetchDailyData(selectedSegment, true);
-      }
-      return;
-    }
-
     setItems([]);
-    void fetchDailyData(selectedSegment);
-  }, [dailyDataScreenCache.fetchedAtBySegment, dailyDataScreenCache.itemsBySegment, fetchDailyData, selectedSegment]);
+    void fetchDailyData(selectedSegment, false, selectedReferenceDateKey);
+  }, [fetchDailyData, selectedReferenceDateKey, selectedSegment]);
 
   const handleDelete = useCallback(async (deleteTarget: string) => {
     const separatorIndex = deleteTarget.indexOf(":");
@@ -177,12 +168,12 @@ export default function DataManagementScreen() {
       clearHomeScreenCache();
       clearDailyDataScreenCache();
       setCashOverviewData(null);
-      void fetchDailyData(selectedSegment, true);
+      void fetchDailyData(selectedSegment, true, selectedReferenceDateKey);
     } catch (error: any) {
       console.error("Error deleting daily data collection:", error.response?.data || error.message);
       showErrorMessage(deleteMode === "record" ? "Failed to delete daily data record." : "Failed to delete collected data for this date.");
     }
-  }, [clearDailyDataScreenCache, clearHomeScreenCache, fetchDailyData, selectedSegment, setCashOverviewData]);
+  }, [clearDailyDataScreenCache, clearHomeScreenCache, fetchDailyData, selectedReferenceDateKey, selectedSegment, setCashOverviewData]);
 
   const metrics = useMemo(() => {
     const totalRevenue = items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0);
@@ -230,7 +221,7 @@ export default function DataManagementScreen() {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              void fetchDailyData(selectedSegment, true);
+              void fetchDailyData(selectedSegment, true, selectedReferenceDateKey);
             }}
             colors={["#FA8C4C"]}
           />
@@ -248,6 +239,12 @@ export default function DataManagementScreen() {
           profit={metrics.profit}
           covers={metrics.covers}
           averagePerCover={metrics.averagePerCover}
+        />
+        <DatePicker
+          label={selectedSegment === "date" ? "Day Date" : selectedSegment === "week" ? "Week Date" : "Month Date"}
+          value={selectedReferenceDate}
+          onChange={setSelectedReferenceDate}
+          leftIcon={<Feather name="calendar" size={moderateScale(18)} color="#6B7280" />}
         />
         <DataHistoryList
           items={historyItems}

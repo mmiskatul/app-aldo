@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { formatEuropeanDate } from '../../../utils/date';
 
 interface ExpenseItem {
   id: string;
@@ -83,7 +84,7 @@ export default function RecentTransactions({ items = [] }: RecentTransactionsPro
             </View>
             <View style={styles.subRow}>
               <Text style={styles.subtitle} numberOfLines={1}>
-                {tx.notes || tx.category} | {tx.expense_date}
+                {tx.notes || tx.category} | {formatEuropeanDate(tx.expense_date)}
               </Text>
               <Text style={styles.typeText}>{resolveTransactionType(tx)}</Text>
             </View>

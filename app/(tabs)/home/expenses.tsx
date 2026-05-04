@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -11,9 +11,11 @@ import {
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
+import DatePicker from "../../../components/ui/DatePicker";
 import { useFocusEffect } from "@react-navigation/native";
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore";
+import { formatApiDate } from "../../../utils/date";
 
 import ExpenseDistribution from "../../../components/home/expenses/ExpenseDistribution";
 import QuickSummary from "../../../components/home/expenses/QuickSummary";
@@ -28,15 +30,24 @@ export default function ExpensesScreen() {
   const [loading, setLoading] = useState(!expensesScreenCache.data);
   const [refreshing, setRefreshing] = useState(false);
   const [expenseData, setExpenseData] = useState<any>(expensesScreenCache.data);
+  const [selectedReferenceDate, setSelectedReferenceDate] = useState(new Date());
+  const selectedReferenceDateKey = useMemo(
+    () => formatApiDate(selectedReferenceDate),
+    [selectedReferenceDate],
+  );
 
   const filters = ["Today", "This Week", "This Month", "This Year"];
 
-  const fetchExpenses = async (silent = false) => {
+  const fetchExpenses = useCallback(async (silent = false, referenceDateKey = selectedReferenceDateKey) => {
     try {
       if (!silent) {
         setLoading(true);
       }
-      const response = await apiClient.get("/api/v1/restaurant/expenses");
+      const response = await apiClient.get("/api/v1/restaurant/expenses", {
+        params: {
+          reference_date: referenceDateKey,
+        },
+      });
       setExpenseData(response.data);
       setExpensesScreenCache({
         data: response.data,
@@ -48,21 +59,21 @@ export default function ExpensesScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedReferenceDateKey, setExpensesScreenCache]);
 
   useFocusEffect(
     useCallback(() => {
       if (!expensesScreenCache.data) {
-        void fetchExpenses(false);
+        void fetchExpenses(false, selectedReferenceDateKey);
         return;
       }
-      void fetchExpenses(true);
-    }, [expensesScreenCache.data])
+      void fetchExpenses(true, selectedReferenceDateKey);
+    }, [expensesScreenCache.data, fetchExpenses, selectedReferenceDateKey])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    void fetchExpenses(false);
+    void fetchExpenses(false, selectedReferenceDateKey);
   };
 
   const getActiveData = () => {
@@ -101,6 +112,13 @@ export default function ExpensesScreen() {
           <Feather name="plus" size={moderateScale(20)} color="#FFFFFF" style={{ marginRight: scale(8) }} />
           <Text style={styles.addExpenseButtonText}>Add Expense</Text>
         </TouchableOpacity>
+
+        <DatePicker
+          label="Expense Date"
+          value={selectedReferenceDate}
+          onChange={setSelectedReferenceDate}
+          leftIcon={<Feather name="calendar" size={moderateScale(18)} color="#6B7280" />}
+        />
 
         <ScrollView 
           horizontal 

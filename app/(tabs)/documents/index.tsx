@@ -1,4 +1,3 @@
-import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -6,6 +5,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import apiClient from "../../../api/apiClient";
 import AIExtractionBanner from "../../../components/documents/AIExtractionBanner";
+import DocumentsHeader from "../../../components/documents/DocumentsHeader";
 import RecentDocumentsList from "../../../components/documents/RecentDocumentsList";
 import Header from "../../../components/ui/Header";
 import { useAppStore } from "../../../store/useAppStore";
@@ -22,6 +22,10 @@ export default function DocumentsScreen() {
   const [loading, setLoading] = useState(!hasFetchedDocuments);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateSort, setDateSort] = useState<"newest" | "oldest">("newest");
+  const [supplierFilterIndex, setSupplierFilterIndex] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<"all" | "processed" | "pending">("all");
 
   const fetchDocuments = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -74,20 +78,102 @@ export default function DocumentsScreen() {
     router.push("/(tabs)/documents/upload-invoice");
   }, [router]);
 
+  const supplierOptions = useMemo(() => {
+    const names = documentsScreenCache.documents
+      .map((item) => item.counterparty_name || item.supplier_name)
+      .filter((name): name is string => typeof name === "string" && name.trim().length > 0);
+
+    return ["Supplier", ...Array.from(new Set(names.map((name) => name.trim())))];
+  }, [documentsScreenCache.documents]);
+
+  const supplierLabel = supplierOptions[supplierFilterIndex] || "Supplier";
+  const statusLabel =
+    statusFilter === "processed" ? "Processed" : statusFilter === "pending" ? "Pending" : "Status";
+  const dateLabel = dateSort === "newest" ? "Date" : "Oldest";
+
+  const filteredDocuments = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const selectedSupplier = supplierLabel === "Supplier" ? null : supplierLabel.toLowerCase();
+
+    const getSearchText = (item: any) =>
+      [
+        item.counterparty_name,
+        item.supplier_name,
+        item.document_number,
+        item.invoice_number,
+        item.document_date,
+        item.invoice_date,
+        item.status,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+    const getSortDate = (item: any) => {
+      const rawDate = item.document_date || item.invoice_date || item.upload_date || item.created_at;
+      const parsed = rawDate ? Date.parse(String(rawDate)) : 0;
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    return [...documentsScreenCache.documents]
+      .filter((item) => {
+        if (query && !getSearchText(item).includes(query)) {
+          return false;
+        }
+
+        if (selectedSupplier) {
+          const itemSupplier = String(item.counterparty_name || item.supplier_name || "").toLowerCase();
+          if (itemSupplier !== selectedSupplier) {
+            return false;
+          }
+        }
+
+        if (statusFilter === "processed" && item.status !== "processed") {
+          return false;
+        }
+
+        if (statusFilter === "pending" && item.status === "processed") {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const direction = dateSort === "newest" ? -1 : 1;
+        return (getSortDate(a) - getSortDate(b)) * direction;
+      });
+  }, [dateSort, documentsScreenCache.documents, searchQuery, statusFilter, supplierLabel]);
+
+  const handleSupplierPress = useCallback(() => {
+    setSupplierFilterIndex((current) => (current + 1) % Math.max(supplierOptions.length, 1));
+  }, [supplierOptions.length]);
+
+  const handleStatusPress = useCallback(() => {
+    setStatusFilter((current) => {
+      if (current === "all") {
+        return "processed";
+      }
+      if (current === "processed") {
+        return "pending";
+      }
+      return "all";
+    });
+  }, []);
+
   const headerContent = useMemo(
     () => (
       <>
-        <View style={styles.actionRowContainer}>
-          <TouchableOpacity style={styles.uploadBtn} onPress={openUploadInvoice}>
-            <Feather
-              name="file-plus"
-              size={moderateScale(14)}
-              color="#FFFFFF"
-              style={styles.uploadIcon}
-            />
-            <Text style={styles.uploadBtnText}>{t("upload_invoice")}</Text>
-          </TouchableOpacity>
-        </View>
+        <DocumentsHeader
+          searchQuery={searchQuery}
+          dateLabel={dateLabel}
+          supplierLabel={supplierLabel}
+          statusLabel={statusLabel}
+          onSearchChange={setSearchQuery}
+          onDatePress={() => setDateSort((current) => (current === "newest" ? "oldest" : "newest"))}
+          onSupplierPress={handleSupplierPress}
+          onStatusPress={handleStatusPress}
+          onUploadPress={openUploadInvoice}
+        />
 
         <AIExtractionBanner
           title={documentsScreenCache.bannerData.title || "AI Data Extraction Active"}
@@ -101,8 +187,13 @@ export default function DocumentsScreen() {
     [
       documentsScreenCache.bannerData.subtitle,
       documentsScreenCache.bannerData.title,
+      dateLabel,
+      handleStatusPress,
+      handleSupplierPress,
       openUploadInvoice,
-      t,
+      searchQuery,
+      statusLabel,
+      supplierLabel,
     ],
   );
 
@@ -137,7 +228,7 @@ export default function DocumentsScreen() {
     <View style={styles.container}>
       <Header title={t("documents_title")} showBell={true} />
       <RecentDocumentsList
-        documents={documentsScreenCache.documents}
+        documents={filteredDocuments}
         loading={loading}
         headerContent={headerContent}
         emptyContent={emptyContent}
@@ -151,26 +242,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-  },
-  actionRowContainer: {
-    paddingHorizontal: scale(20),
-    marginBottom: verticalScale(20),
-  },
-  uploadBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FA8C4C",
-    paddingVertical: verticalScale(12),
-    borderRadius: scale(12),
-  },
-  uploadIcon: {
-    marginRight: scale(6),
-  },
-  uploadBtnText: {
-    fontSize: moderateScale(14, 0.3),
-    fontWeight: "700",
-    color: "#FFFFFF",
   },
   errorCard: {
     marginHorizontal: scale(20),
