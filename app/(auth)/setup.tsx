@@ -62,8 +62,7 @@ export default function SetupScreen() {
   const [averageSpend, setAverageSpend] = useState("");
 
   // Step 3 State
-  const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
-  const [exteriorPhoto, setExteriorPhoto] = useState<string | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
 
   // Step 4 State
   const [businessGoal, setBusinessGoal] = useState("Increase revenue");
@@ -96,8 +95,12 @@ export default function SetupScreen() {
             ? String(onboarding.average_spend_per_customer)
             : ""
         );
-        setInteriorPhoto(onboarding?.interior_photo_url || null);
-        setExteriorPhoto(onboarding?.exterior_photo_url || null);
+        setProfilePhoto(
+          onboarding?.interior_photo_url ||
+            user.profile_image_url ||
+            user.avatar_url ||
+            null
+        );
         setBusinessGoal(onboarding?.main_business_goal || "Increase revenue");
         setBiggestProblem(onboarding?.biggest_problem || "");
         setImprovementGoal(onboarding?.improvement_focus || "");
@@ -143,6 +146,11 @@ export default function SetupScreen() {
       setStep(2);
       return;
     }
+    if (!profilePhoto) {
+      showErrorMessage("Upload a profile picture before finishing setup.");
+      setStep(3);
+      return;
+    }
     if (!biggestProblem.trim() || !improvementGoal.trim()) {
       showErrorMessage("Complete the challenge section before finishing setup.");
       setStep(5);
@@ -168,8 +176,7 @@ export default function SetupScreen() {
       formData.append("main_business_goal", businessGoal.trim());
       formData.append("biggest_problem", biggestProblem.trim());
       formData.append("improvement_focus", improvementGoal.trim());
-      appendImageFile(formData, "interior_photo", interiorPhoto);
-      appendImageFile(formData, "exterior_photo", exteriorPhoto);
+      appendImageFile(formData, "interior_photo", profilePhoto);
 
       await apiClient.post("/api/v1/onboarding/profile", formData, {
         headers: {
@@ -302,10 +309,8 @@ export default function SetupScreen() {
             )}
             {step === 3 && (
               <Step3PhotoUpload
-                interiorPhoto={interiorPhoto}
-                setInteriorPhoto={setInteriorPhoto}
-                exteriorPhoto={exteriorPhoto}
-                setExteriorPhoto={setExteriorPhoto}
+                profilePhoto={profilePhoto}
+                setProfilePhoto={setProfilePhoto}
                 onNext={handleNext}
               />
             )}

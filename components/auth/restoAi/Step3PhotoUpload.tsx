@@ -7,24 +7,17 @@ import ImagePickerModal from "../../ui/ImagePickerModal";
 import { showErrorMessage } from "../../../utils/feedback";
 
 interface Step3Props {
-  interiorPhoto: string | null;
-  setInteriorPhoto: (val: string | null) => void;
-  exteriorPhoto: string | null;
-  setExteriorPhoto: (val: string | null) => void;
+  profilePhoto: string | null;
+  setProfilePhoto: (val: string | null) => void;
   onNext: () => void;
 }
 
 export default function Step3PhotoUpload({
-  interiorPhoto,
-  setInteriorPhoto,
-  exteriorPhoto,
-  setExteriorPhoto,
+  profilePhoto,
+  setProfilePhoto,
   onNext,
 }: Step3Props) {
   const [showImagePicker, setShowImagePicker] = useState(false);
-  const [photoTarget, setPhotoTarget] = useState<"interior" | "exterior" | null>(
-    null
-  );
 
   const pickImage = async (mode: "camera" | "gallery") => {
     try {
@@ -39,14 +32,20 @@ export default function Step3PhotoUpload({
         result = await ImagePicker.launchCameraAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
-          aspect: [4, 3],
+          aspect: [1, 1],
           quality: 1,
         });
       } else {
+        const permissionResult =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permissionResult.granted === false) {
+          showErrorMessage("You've refused to allow this app to access your photos!");
+          return;
+        }
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
-          aspect: [4, 3],
+          aspect: [1, 1],
           quality: 1,
         });
       }
@@ -54,36 +53,28 @@ export default function Step3PhotoUpload({
       setShowImagePicker(false);
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        if (photoTarget === "interior") {
-          setInteriorPhoto(result.assets[0].uri);
-        } else if (photoTarget === "exterior") {
-          setExteriorPhoto(result.assets[0].uri);
-        }
+        setProfilePhoto(result.assets[0].uri);
       }
-      setPhotoTarget(null);
     } catch (error) {
       console.log("Error picking image:", error);
       setShowImagePicker(false);
-      setPhotoTarget(null);
     }
   };
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.title}>Upload Restaurant Photos</Text>
+      <Text style={styles.title}>Upload Profile Picture</Text>
       <Text style={styles.subtitle}>
-        Photos help Risto AI better understand your restaurant environment and
-        menu.
+        Add a clear profile picture for your restaurant account.
       </Text>
 
-      <Text style={styles.uploadSectionTitle}>Interior Photo</Text>
-      {interiorPhoto ? (
+      <Text style={styles.uploadSectionTitle}>Profile Picture</Text>
+      {profilePhoto ? (
         <View style={styles.uploadedImageContainer}>
-          <Image source={{ uri: interiorPhoto }} style={styles.uploadedImage} />
+          <Image source={{ uri: profilePhoto }} style={styles.uploadedImage} />
           <TouchableOpacity
             style={styles.changeImageButton}
             onPress={() => {
-              setPhotoTarget("interior");
               setShowImagePicker(true);
             }}
           >
@@ -96,55 +87,17 @@ export default function Step3PhotoUpload({
           style={styles.uploadBox}
           activeOpacity={0.8}
           onPress={() => {
-            setPhotoTarget("interior");
             setShowImagePicker(true);
           }}
         >
           <MaterialCommunityIcons
-            name="storefront-outline"
+            name="account-circle-outline"
             size={moderateScale(32)}
             color="#FA8C4C"
             style={{ marginBottom: verticalScale(10) }}
           />
-          <Text style={styles.uploadMainText}>Tap to upload interior view</Text>
+          <Text style={styles.uploadMainText}>Tap to upload profile picture</Text>
           <Text style={styles.uploadSubText}>Supports JPG, PNG</Text>
-        </TouchableOpacity>
-      )}
-
-      <Text style={styles.uploadSectionTitle}>Exterior Photo</Text>
-      {exteriorPhoto ? (
-        <View style={styles.uploadedImageContainer}>
-          <Image source={{ uri: exteriorPhoto }} style={styles.uploadedImage} />
-          <TouchableOpacity
-            style={styles.changeImageButton}
-            onPress={() => {
-              setPhotoTarget("exterior");
-              setShowImagePicker(true);
-            }}
-          >
-            <Feather name="edit-2" size={moderateScale(16)} color="#FFFFFF" />
-            <Text style={styles.changeImageText}>Change</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity
-          style={styles.uploadBox}
-          activeOpacity={0.8}
-          onPress={() => {
-            setPhotoTarget("exterior");
-            setShowImagePicker(true);
-          }}
-        >
-          <MaterialCommunityIcons
-            name="office-building-outline"
-            size={moderateScale(32)}
-            color="#FA8C4C"
-            style={{ marginBottom: verticalScale(10) }}
-          />
-          <Text style={styles.uploadMainText}>Tap to upload exterior view</Text>
-          <Text style={styles.uploadSubText}>
-            Required for entrance identification
-          </Text>
         </TouchableOpacity>
       )}
 
@@ -158,7 +111,6 @@ export default function Step3PhotoUpload({
         visible={showImagePicker}
         onClose={() => {
           setShowImagePicker(false);
-          setPhotoTarget(null);
         }}
         onCameraSelect={() => pickImage("camera")}
         onGallerySelect={() => pickImage("gallery")}

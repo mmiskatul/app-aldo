@@ -55,6 +55,17 @@ export const registerForPushNotificationsAsync = async (): Promise<string | null
     return null;
   }
 
-  const tokenResponse = await Notifications.getExpoPushTokenAsync({ projectId });
-  return tokenResponse.data || null;
+  try {
+    const tokenResponse = await Notifications.getExpoPushTokenAsync({ projectId });
+    return tokenResponse.data || null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (
+      Platform.OS === 'android' &&
+      message.includes('Default FirebaseApp is not initialized')
+    ) {
+      return null;
+    }
+    throw error;
+  }
 };

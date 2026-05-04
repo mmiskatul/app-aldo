@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 
+import { hasCompletedOnboarding } from '../../api/auth';
 import { registerPushDevice } from '../../api/settings';
 import { useAppStore } from '../../store/useAppStore';
 import {
@@ -27,7 +28,17 @@ export default function PushNotificationRegistrar() {
   const lastRegisteredTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!tokens?.access_token || !user?.id) {
+    const isRestaurantUser =
+      user?.role === 'restaurant_owner' ||
+      user?.role === 'manager' ||
+      user?.role === 'staff';
+
+    if (
+      !tokens?.access_token ||
+      !user?.id ||
+      !isRestaurantUser ||
+      !hasCompletedOnboarding(user)
+    ) {
       lastRegisteredTokenRef.current = null;
       return;
     }
@@ -69,7 +80,7 @@ export default function PushNotificationRegistrar() {
     return () => {
       isActive = false;
     };
-  }, [tokens?.access_token, user?.id]);
+  }, [tokens?.access_token, user?.id, user?.role, user?.onboarding_completed]);
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(() => {
