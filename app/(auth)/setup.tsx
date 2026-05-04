@@ -283,19 +283,15 @@ export default function SetupScreen() {
       >
         <View style={styles.container}>
           {renderHeader()}
-          {loadingInitialData ? (
-            <View style={styles.loadingState}>
-              <ActivityIndicator size="large" color="#FA8C4C" />
-            </View>
-          ) : (
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
+            pointerEvents={loadingInitialData || submitting ? "none" : "auto"}
           >
-            {step === 1 && (
+            {!loadingInitialData && step === 1 && (
               <Step1RestaurantInfo
                 profilePhoto={profilePhoto}
                 setProfilePhoto={setProfilePhoto}
@@ -306,7 +302,7 @@ export default function SetupScreen() {
                 onNext={handleNext}
               />
             )}
-            {step === 2 && (
+            {!loadingInitialData && step === 2 && (
               <Step2RestaurantDetails
                 city={city}
                 setCity={setCity}
@@ -317,7 +313,7 @@ export default function SetupScreen() {
                 onNext={handleNext}
               />
             )}
-            {step === 3 && (
+            {!loadingInitialData && step === 3 && (
               <Step3PhotoUpload
                 interiorPhoto={interiorPhoto}
                 setInteriorPhoto={setInteriorPhoto}
@@ -326,14 +322,14 @@ export default function SetupScreen() {
                 onNext={handleNext}
               />
             )}
-            {step === 4 && (
+            {!loadingInitialData && step === 4 && (
               <Step4BusinessGoal
                 businessGoal={businessGoal}
                 setBusinessGoal={setBusinessGoal}
                 onNext={handleNext}
               />
             )}
-            {step === 5 && (
+            {!loadingInitialData && step === 5 && (
               <Step5BiggestChallenge
                 biggestProblem={biggestProblem}
                 setBiggestProblem={setBiggestProblem}
@@ -342,11 +338,10 @@ export default function SetupScreen() {
                 onNext={submitting ? () => undefined : handleNext}
               />
             )}
-            {step === 6 && (
+            {!loadingInitialData && step === 6 && (
               <Step6Success />
             )}
           </ScrollView>
-          )}
         </View>
         <LanguageModal
           visible={isLangMenuOpen}
@@ -357,6 +352,16 @@ export default function SetupScreen() {
             setIsLangMenuOpen(false);
           }}
         />
+        {loadingInitialData || submitting ? (
+          <View style={styles.loadingOverlay} pointerEvents="auto">
+            <View style={styles.loadingContent}>
+              <ActivityIndicator size="large" color="#FA8C4C" />
+              <Text style={styles.loadingText}>
+                {loadingInitialData ? "Loading setup..." : "Saving setup..."}
+              </Text>
+            </View>
+          </View>
+        ) : null}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -370,10 +375,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingState: {
-    flex: 1,
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.58)",
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 1000,
+    elevation: 1000,
+  },
+  loadingContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: scale(180),
+    paddingHorizontal: scale(20),
+  },
+  loadingText: {
+    marginTop: verticalScale(14),
+    fontSize: moderateScale(20, 0.3),
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   headerTopArea: {
     paddingHorizontal: scale(20),
