@@ -33,6 +33,7 @@ type OnboardingProfileResponse = {
   city_location?: string | null;
   number_of_seats?: number | null;
   average_spend_per_customer?: number | null;
+  profile_image_url?: string | null;
   interior_photo_url?: string | null;
   exterior_photo_url?: string | null;
   main_business_goal?: string | null;
@@ -63,6 +64,8 @@ export default function SetupScreen() {
 
   // Step 3 State
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [interiorPhoto, setInteriorPhoto] = useState<string | null>(null);
+  const [exteriorPhoto, setExteriorPhoto] = useState<string | null>(null);
 
   // Step 4 State
   const [businessGoal, setBusinessGoal] = useState("Increase revenue");
@@ -96,11 +99,13 @@ export default function SetupScreen() {
             : ""
         );
         setProfilePhoto(
-          onboarding?.interior_photo_url ||
+          onboarding?.profile_image_url ||
             user.profile_image_url ||
             user.avatar_url ||
             null
         );
+        setInteriorPhoto(onboarding?.interior_photo_url || null);
+        setExteriorPhoto(onboarding?.exterior_photo_url || null);
         setBusinessGoal(onboarding?.main_business_goal || "Increase revenue");
         setBiggestProblem(onboarding?.biggest_problem || "");
         setImprovementGoal(onboarding?.improvement_focus || "");
@@ -114,12 +119,18 @@ export default function SetupScreen() {
     void loadSetupData();
   }, []);
 
-  const appendImageFile = (formData: FormData, fieldName: "interior_photo" | "exterior_photo", uri: string | null) => {
+  const appendImageFile = (
+    formData: FormData,
+    fieldName: "profile_image" | "interior_photo" | "exterior_photo",
+    uri: string | null,
+  ) => {
     if (!uri) {
       return;
     }
     if (/^https?:\/\//i.test(uri)) {
-      formData.append(`${fieldName}_url`, uri);
+      const urlFieldName =
+        fieldName === "profile_image" ? "profile_image_url" : `${fieldName}_url`;
+      formData.append(urlFieldName, uri);
       return;
     }
     const mimeType = inferMimeType(uri);
@@ -176,7 +187,9 @@ export default function SetupScreen() {
       formData.append("main_business_goal", businessGoal.trim());
       formData.append("biggest_problem", biggestProblem.trim());
       formData.append("improvement_focus", improvementGoal.trim());
-      appendImageFile(formData, "interior_photo", profilePhoto);
+      appendImageFile(formData, "profile_image", profilePhoto);
+      appendImageFile(formData, "interior_photo", interiorPhoto);
+      appendImageFile(formData, "exterior_photo", exteriorPhoto);
 
       await apiClient.post("/api/v1/onboarding/profile", formData, {
         headers: {
@@ -311,6 +324,10 @@ export default function SetupScreen() {
               <Step3PhotoUpload
                 profilePhoto={profilePhoto}
                 setProfilePhoto={setProfilePhoto}
+                interiorPhoto={interiorPhoto}
+                setInteriorPhoto={setInteriorPhoto}
+                exteriorPhoto={exteriorPhoto}
+                setExteriorPhoto={setExteriorPhoto}
                 onNext={handleNext}
               />
             )}
