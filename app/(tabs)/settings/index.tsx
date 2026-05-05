@@ -34,6 +34,7 @@ export default function SettingsScreen() {
   const profile = useAppStore((state) => state.profile);
   const profileFetchedAt = useAppStore((state) => state.profileFetchedAt);
   const setProfile = useAppStore((state) => state.setProfile);
+  const handledNoticeKeyRef = React.useRef<string | null>(null);
 
   const handleLogout = React.useCallback(async () => {
     try {
@@ -77,6 +78,10 @@ export default function SettingsScreen() {
     if (notice !== 'profile-updated' || !noticeKey) {
       return;
     }
+    if (handledNoticeKeyRef.current === noticeKey) {
+      return;
+    }
+    handledNoticeKeyRef.current = noticeKey;
 
     showSuccessMessage(t('profile_updated_successfully'));
   }, [notice, noticeKey, t]);
