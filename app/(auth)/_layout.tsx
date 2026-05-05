@@ -1,6 +1,34 @@
-import { Stack } from "expo-router";
+import { Redirect, Stack, useSegments } from "expo-router";
+import { hasCompletedOnboarding } from "../../api/auth";
+import { getRestrictedAccessStatus, hasActiveSubscription, useAppStore } from "../../store/useAppStore";
 
 export default function AuthLayout() {
+  const segments = useSegments();
+  const hasHydrated = useAppStore((state) => state.hasHydrated);
+  const user = useAppStore((state) => state.user);
+  const tokens = useAppStore((state) => state.tokens);
+  const currentLeaf = (segments as string[])[1];
+  const isAuthSession = Boolean(user && tokens?.access_token);
+
+  if (!hasHydrated) {
+    return null;
+  }
+
+  if (isAuthSession) {
+    if (getRestrictedAccessStatus(user) !== null) {
+      return <Redirect href="/(tabs)/settings/restricted-access" />;
+    }
+    if (!hasActiveSubscription(user) && currentLeaf !== "subscription") {
+      return <Redirect href="/(auth)/subscription" />;
+    }
+    if (hasActiveSubscription(user) && !hasCompletedOnboarding(user) && currentLeaf !== "setup") {
+      return <Redirect href="/(auth)/setup" />;
+    }
+    if (hasActiveSubscription(user) && hasCompletedOnboarding(user) && currentLeaf !== "subscription") {
+      return <Redirect href="/(tabs)/home" />;
+    }
+  }
+
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />

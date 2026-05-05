@@ -3,8 +3,6 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
-import * as Haptics from 'expo-haptics';
 import { useAppStore } from '../../../store/useAppStore';
 import apiClient from '../../../api/apiClient';
 import { getCurrentUser } from '../../../api/auth';
@@ -19,8 +17,6 @@ import ProfileImageEdit, { ProfileImageFile } from '../../../components/settings
 import FormInput from '../../../components/settings/edit-profile/FormInput';
 import RestaurantDetailsForm from '../../../components/settings/edit-profile/RestaurantDetailsForm';
 
-const SAVE_SUCCESS_SOUND = require('../../../assets/sounds/save-success.wav');
-
 export default function EditProfileScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -32,7 +28,7 @@ export default function EditProfileScreen() {
   const setUser = useAppStore((state) => state.setUser);
   const tokens = useAppStore((state) => state.tokens);
   const [loading, setLoading] = useState(false);
-  const [savePhase, setSavePhase] = useState<'idle' | 'saving' | 'success'>('idle');
+  const [savePhase, setSavePhase] = useState<'idle' | 'saving'>('idle');
   const [loadingDots, setLoadingDots] = useState(1);
 
   const [formData, setFormData] = useState({
@@ -71,34 +67,6 @@ export default function EditProfileScreen() {
 
     return () => clearInterval(intervalId);
   }, [savePhase]);
-
-  const playSuccessCue = async () => {
-    try {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
-      console.log('Haptic feedback failed:', error);
-    }
-
-    try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-      });
-      const { sound } = await Audio.Sound.createAsync(SAVE_SUCCESS_SOUND, {
-        shouldPlay: true,
-        volume: 0.55,
-      });
-
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (!status.isLoaded || !status.didJustFinish) {
-          return;
-        }
-        void sound.unloadAsync();
-      });
-    } catch (error) {
-      console.log('Success audio failed:', error);
-    }
-  };
 
   const handleRemovePhoto = () => {
     Alert.alert(
@@ -161,14 +129,9 @@ export default function EditProfileScreen() {
       const refreshedUser = await getCurrentUser();
       setUser(refreshedUser, tokens);
 
-      setSavePhase('success');
-      await playSuccessCue();
-      await new Promise((resolve) => setTimeout(resolve, 850));
       router.replace({
         pathname: '/(tabs)/settings',
         params: {
-          notice: 'profile-updated',
-          noticeKey: Date.now().toString(),
           ...(settingsOrigin ? { origin: settingsOrigin } : {}),
         },
       } as any);
@@ -271,19 +234,10 @@ export default function EditProfileScreen() {
 
       {loading ? (
         <View style={styles.loadingOverlay} pointerEvents="auto">
-          {savePhase === 'success' ? (
-            <View style={styles.statusBlock}>
-              <View style={styles.successIconWrap}>
-                <Feather name="check" size={moderateScale(34)} color="#FFFFFF" />
-              </View>
-              <Text style={styles.loadingTitle}>Updated</Text>
-            </View>
-          ) : (
-            <View style={styles.statusBlock}>
-              <ActivityIndicator color="#FA8C4C" size="large" />
-              <Text style={styles.loadingTitle}>{`Updating${'.'.repeat(loadingDots)}`}</Text>
-            </View>
-          )}
+          <View style={styles.statusBlock}>
+            <ActivityIndicator color="#FA8C4C" size="large" />
+            <Text style={styles.loadingTitle}>{`Updating${'.'.repeat(loadingDots)}`}</Text>
+          </View>
         </View>
       ) : null}
     </View>
@@ -412,18 +366,5 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(20, 0.3),
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-  successIconWrap: {
-    width: scale(76),
-    height: scale(76),
-    borderRadius: scale(38),
-    backgroundColor: '#16A34A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#16A34A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 20,
-    elevation: 14,
   },
 });

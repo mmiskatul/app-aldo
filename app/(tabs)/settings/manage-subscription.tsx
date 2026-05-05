@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import Header from '../../../components/ui/Header';
@@ -14,6 +15,7 @@ import {
   getUserSubscriptionPlans,
   selectUserSubscriptionPlan,
 } from '../../../api/settings';
+import { useAppStore } from '../../../store/useAppStore';
 import { showDialog, showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 
 const formatBillingCycle = (billingCycle: BillingCycle | null) => {
@@ -41,12 +43,18 @@ const formatDate = (value: string | null) => {
 };
 
 export default function ManageSubscriptionScreen() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [activatingPlanId, setActivatingPlanId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('1_month');
   const [plans, setPlans] = useState<UserSubscriptionPlan[]>([]);
   const [subscription, setSubscription] = useState<RestaurantSubscriptionSettings | null>(null);
+  const user = useAppStore((state) => state.user);
+  const tokens = useAppStore((state) => state.tokens);
+  const setUser = useAppStore((state) => state.setUser);
+  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
+  const clearAnalyticsScreenCache = useAppStore((state) => state.clearAnalyticsScreenCache);
 
   const loadSubscriptionData = React.useCallback(async () => {
     setLoading(true);
@@ -81,7 +89,7 @@ export default function ManageSubscriptionScreen() {
     ['active', 'trial'].includes(String(subscription?.status || ''))
   );
 
-  const currentPlan = plans.find((plan) => plan.is_current);
+  const currentPlan = hasActiveSubscription ? plans.find((plan) => plan.is_current) : undefined;
   const currentPlanPrice = subscription?.billing_cycle === '1_year'
     ? currentPlan?.annual_price ?? 0
     : currentPlan?.monthly_price ?? 0;
@@ -96,7 +104,7 @@ export default function ManageSubscriptionScreen() {
     try {
       const response = await selectUserSubscriptionPlan(billingCycle, false, plan.id);
       showSuccessMessage(response.message || 'Plan activated successfully.');
-      await loadSubscriptionData();
+      router.replace('/(auth)/subscription' as any);
     } catch (error: any) {
       showErrorMessage(error?.message || 'Unable to activate plan.');
     } finally {
@@ -109,7 +117,34 @@ export default function ManageSubscriptionScreen() {
     try {
       const response = await cancelUserSubscription();
       showSuccessMessage(response.message || 'Subscription canceled successfully.');
-      await loadSubscriptionData();
+      setSubscription((current) => ({
+        selection_required: response.subscription.selection_required,
+        plan_name: response.subscription.plan_name,
+        billing_cycle: response.subscription.billing_cycle,
+        status: response.subscription.status,
+        started_at: response.subscription.started_at,
+        expires_at: response.subscription.expires_at,
+        plans_endpoint: current?.plans_endpoint || '/api/v1/subscriptions/user/plans',
+        checkout_endpoint: current?.checkout_endpoint || '/api/v1/subscriptions/user/checkout-session',
+        customer_portal_endpoint: current?.customer_portal_endpoint || '/api/v1/subscriptions/user/customer-portal',
+      }));
+      if (user) {
+        setUser(
+          {
+            ...user,
+            subscription_plan_name: response.subscription.plan_name,
+            subscription_plan: response.subscription.plan_name,
+            subscription_status: response.subscription.status,
+            subscription_started_at: response.subscription.started_at,
+            subscription_expires_at: response.subscription.expires_at,
+            subscription_selection_required: response.subscription.selection_required,
+          },
+          tokens
+        );
+      }
+      clearHomeScreenCache();
+      clearAnalyticsScreenCache();
+      router.replace('/(auth)/subscription' as any);
     } catch (error: any) {
       showErrorMessage(error?.message || 'Unable to cancel subscription.');
     } finally {
@@ -266,7 +301,7 @@ export default function ManageSubscriptionScreen() {
               )}
             </View>
 
-            {subscription?.plan_name ? (
+            {hasActiveSubscription ? (
               <View style={styles.card}>
                 <Text style={styles.sectionEyebrow}>Subscription Actions</Text>
                 <Text style={styles.helperText}>

@@ -60,6 +60,24 @@ const redirectToSubscriptionSelection = () => {
   }, 1500);
 };
 
+const markLocalSubscriptionRequired = () => {
+  const { user, tokens, setUser, clearHomeScreenCache, clearAnalyticsScreenCache } = useAppStore.getState();
+  if (!user) {
+    return;
+  }
+
+  setUser(
+    {
+      ...user,
+      subscription_status: "canceled",
+      subscription_selection_required: true,
+    },
+    tokens
+  );
+  clearHomeScreenCache();
+  clearAnalyticsScreenCache();
+};
+
 const redirectToOnboarding = () => {
   if (isRedirectingToOnboarding) {
     return;
@@ -97,15 +115,11 @@ apiClient.interceptors.response.use(
     }
 
     const subscriptionErrorCode = error.response?.data?.error?.code;
-    const currentUser = useAppStore.getState().user;
-    const hasLocalActiveSubscription =
-      Boolean(currentUser?.subscription_plan_name) &&
-      ["active", "trial"].includes(String(currentUser?.subscription_status || ""));
     if (
       error.response?.status === 403 &&
-      subscriptionErrorCode === "subscription_required" &&
-      !hasLocalActiveSubscription
+      subscriptionErrorCode === "subscription_required"
     ) {
+      markLocalSubscriptionRequired();
       redirectToSubscriptionSelection();
     }
     if (error.response?.status === 403 && subscriptionErrorCode === "onboarding_required") {

@@ -32,6 +32,16 @@ export const getRestrictedAccessStatus = (user: User | null): "restricted" | "su
   return null;
 };
 
+export const hasActiveSubscription = (user: User | null): boolean => {
+  if (!user) {
+    return false;
+  }
+  return (
+    Boolean(user.subscription_plan_name) &&
+    ["active", "trial"].includes(String(user.subscription_status || ""))
+  );
+};
+
 export interface Profile {
   full_name: string;
   email: string;

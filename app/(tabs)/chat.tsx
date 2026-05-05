@@ -10,7 +10,7 @@ import {
 import { verticalScale } from "react-native-size-matters";
 import { io, Socket } from "socket.io-client";
 import apiClient from "../../api/apiClient";
-import ChatInput from "../../components/chat/ChatInput";
+import ChatInput from "../../components/chat/ChatInput/index";
 import ChatMessage from "../../components/chat/ChatMessage";
 import QuickPrompts from "../../components/chat/QuickPrompts";
 import Header from "../../components/ui/Header";

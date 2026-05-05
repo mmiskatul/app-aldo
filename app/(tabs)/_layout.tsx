@@ -11,7 +11,7 @@ import { Redirect, Tabs, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
-import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
+import { getRestrictedAccessStatus, hasActiveSubscription, useAppStore } from "../../store/useAppStore";
 
 const hugeiconsAny = HugeiconsModule as any;
 const HugeiconsIcon = hugeiconsAny.HugeiconsIcon || hugeiconsAny.default?.HugeiconsIcon || hugeiconsAny;
@@ -80,6 +80,10 @@ export default function TabLayout() {
 
   if (isRestrictedAccess && currentLeaf !== "help-center" && currentLeaf !== "restricted-access") {
     return <Redirect href="/(tabs)/settings/restricted-access" />;
+  }
+
+  if (!hasActiveSubscription(user)) {
+    return <Redirect href="/(auth)/subscription" />;
   }
 
   if (!hasCompletedOnboarding(user)) {

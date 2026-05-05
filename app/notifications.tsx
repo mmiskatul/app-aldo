@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import {
@@ -23,7 +23,8 @@ import {
 import apiClient from "../api/apiClient";
 import Header from "../components/ui/Header";
 import { ListRouteSkeleton } from "../components/ui/RouteSkeletons";
-import { useAppStore } from "../store/useAppStore";
+import { hasActiveSubscription, useAppStore } from "../store/useAppStore";
+import { hasCompletedOnboarding } from "../api/auth";
 import { getApiDisplayMessage, logApiError } from "../utils/apiErrors";
 import { API_REQUEST_TIMEOUT_MS } from "../utils/api";
 
@@ -155,6 +156,8 @@ function NotificationCard({
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const user = useAppStore((state) => state.user);
+  const tokens = useAppStore((state) => state.tokens);
   const notificationsScreenCache = useAppStore((state) => state.notificationsScreenCache);
   const homeRecentActivity = useAppStore((state) => state.homeScreenCache.recentActivity);
   const setNotificationsScreenCache = useAppStore((state) => state.setNotificationsScreenCache);
@@ -207,6 +210,10 @@ export default function NotificationsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (!user || !tokens?.access_token || !hasActiveSubscription(user) || !hasCompletedOnboarding(user)) {
+        return;
+      }
+
       const hasCache = notifications.length > 0;
       const isFresh =
         typeof notificationsScreenCache.fetchedAt === "number" &&
@@ -220,8 +227,20 @@ export default function NotificationsScreen() {
       if (!isFresh) {
         void fetchNotifications(true);
       }
-    }, [fetchNotifications, notifications.length, notificationsScreenCache.fetchedAt])
+    }, [fetchNotifications, notifications.length, notificationsScreenCache.fetchedAt, tokens?.access_token, user])
   );
+
+  if (!user || !tokens?.access_token) {
+    return <Redirect href="/(auth)" />;
+  }
+
+  if (!hasActiveSubscription(user)) {
+    return <Redirect href="/(auth)/subscription" />;
+  }
+
+  if (!hasCompletedOnboarding(user)) {
+    return <Redirect href="/(auth)/setup" />;
+  }
 
   const onRefresh = () => {
     setRefreshing(true);

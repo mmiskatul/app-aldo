@@ -20,6 +20,7 @@ import { useAppStore } from '../../../store/useAppStore';
 import { useCachedFocusRefresh } from '../../../hooks/useCachedFocusRefresh';
 import { getApiDisplayMessage, logApiError } from '../../../utils/apiErrors';
 import { isCacheFresh } from '../../../utils/cache';
+import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 import { useTranslation } from '../../../utils/i18n';
 
 import { FilterChips } from '../../../components/inventory/Inventory/FilterChips';
@@ -146,8 +147,6 @@ export default function InventoryScreen() {
   const [valueLoading, setValueLoading] = useState(!hasCachedInventory);
   const [loading, setLoading] = useState(!hasCachedInventory);
   const [refreshing, setRefreshing] = useState(false);
-  const [bannerMessage, setBannerMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
   const lastHandledRefreshTokenRef = useRef(inventoryRefreshToken);
 
   const fetchInventory = useCallback(async (query: string, options?: { withRefresh?: boolean; silent?: boolean }) => {
@@ -162,9 +161,6 @@ export default function InventoryScreen() {
     }
 
     try {
-      if (!silent) {
-        setErrorMessage('');
-      }
       const response = await apiClient.get<InventoryListResponse>('/api/v1/restaurant/inventory', {
         params: {
           page: 1,
@@ -211,7 +207,7 @@ export default function InventoryScreen() {
     } catch (error: any) {
       logApiError('inventory.list', error);
       if (!silent || !hasCachedInventory || query.trim().length > 0) {
-        setErrorMessage(getApiDisplayMessage(error, 'Unable to load inventory items.'));
+        showErrorMessage(getApiDisplayMessage(error, 'Unable to load inventory items.'), 'Load failed');
       }
     } finally {
       setLoading(false);
@@ -273,9 +269,8 @@ export default function InventoryScreen() {
       return;
     }
 
-    setBannerMessage(nextMessage);
-    const timeoutId = setTimeout(() => setBannerMessage(''), 3000);
-    return () => clearTimeout(timeoutId);
+    showSuccessMessage(nextMessage);
+    return undefined;
   }, [notice, noticeKey]);
 
   const toggleFilters = () => {
@@ -309,20 +304,6 @@ export default function InventoryScreen() {
       </View>
 
       {showFilters ? <FilterChips /> : null}
-
-      {bannerMessage ? (
-        <View style={styles.banner}>
-          <Feather name="check-circle" size={moderateScale(16)} color="#166534" />
-          <Text style={styles.bannerText}>{bannerMessage}</Text>
-        </View>
-      ) : null}
-
-      {errorMessage ? (
-        <View style={styles.errorBanner}>
-          <Feather name="alert-circle" size={moderateScale(16)} color="#991B1B" />
-          <Text style={styles.errorBannerText}>{errorMessage}</Text>
-        </View>
-      ) : null}
 
       <ScrollView
         style={styles.scroll}
@@ -426,44 +407,6 @@ const styles = StyleSheet.create({
   filterBtnActive: {
     backgroundColor: '#FFF4EE',
     borderColor: '#FA8C4C',
-  },
-  banner: {
-    marginHorizontal: scale(20),
-    marginBottom: verticalScale(12),
-    borderRadius: scale(12),
-    backgroundColor: '#DCFCE7',
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(12),
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(8),
-  },
-  bannerText: {
-    flex: 1,
-    color: '#166534',
-    fontSize: moderateScale(13),
-    fontWeight: '600',
-  },
-  errorBanner: {
-    marginHorizontal: scale(20),
-    marginBottom: verticalScale(12),
-    borderRadius: scale(12),
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(12),
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: scale(8),
-  },
-  errorBannerText: {
-    flex: 1,
-    color: '#991B1B',
-    fontSize: moderateScale(13),
-    fontWeight: '600',
   },
   scroll: { flex: 1 },
   titleWrap: {

@@ -21,7 +21,7 @@ export const showAppMessage = ({
   title,
   message,
   type = "info",
-  durationMs = 3200,
+  durationMs = 3000,
 }: ShowAppMessagePayload) => {
   if (currentHandler) {
     currentHandler({
