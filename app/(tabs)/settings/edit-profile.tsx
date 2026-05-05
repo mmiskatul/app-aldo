@@ -8,7 +8,7 @@ import apiClient from '../../../api/apiClient';
 import { getCurrentUser } from '../../../api/auth';
 import { getApiDisplayMessage, logApiError } from '../../../utils/apiErrors';
 import { useTranslation } from '../../../utils/i18n';
-import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
+import { showErrorMessage } from '../../../utils/feedback';
 import { normalizeOrigin } from '../../../utils/settingsNavigation';
 
 // Components
@@ -133,6 +133,8 @@ export default function EditProfileScreen() {
         pathname: '/(tabs)/settings',
         params: {
           ...(settingsOrigin ? { origin: settingsOrigin } : {}),
+          notice: 'profile-updated',
+          noticeKey: String(Date.now()),
         },
       } as any);
     } catch (error: any) {

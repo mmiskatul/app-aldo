@@ -12,7 +12,7 @@ import Header from '../../../components/ui/Header';
 import { useCachedFocusRefresh } from '../../../hooks/useCachedFocusRefresh';
 import { useAppStore } from '../../../store/useAppStore';
 import { getApiDisplayMessage, logApiError } from '../../../utils/apiErrors';
-import { showErrorMessage } from '../../../utils/feedback';
+import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 import { useTranslation } from '../../../utils/i18n';
 import apiClient from '../../../api/apiClient';
 import { unregisterPushDevice } from '../../../api/settings';
@@ -24,7 +24,11 @@ const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { origin } = useLocalSearchParams<{ origin?: string | string[] }>();
+  const { origin, notice, noticeKey } = useLocalSearchParams<{
+    origin?: string | string[];
+    notice?: string;
+    noticeKey?: string;
+  }>();
   const settingsOrigin = normalizeOrigin(origin);
   const logout = useAppStore((state) => state.logout);
   const profile = useAppStore((state) => state.profile);
@@ -68,6 +72,14 @@ export default function SettingsScreen() {
       void fetchProfile(true);
     },
   });
+
+  React.useEffect(() => {
+    if (notice !== 'profile-updated' || !noticeKey) {
+      return;
+    }
+
+    showSuccessMessage(t('profile_updated_successfully'));
+  }, [notice, noticeKey, t]);
 
   return (
     <View style={styles.safeArea}>
