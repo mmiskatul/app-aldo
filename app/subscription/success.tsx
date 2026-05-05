@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
-import { getCurrentUser } from "../../api/auth";
+import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
 import { useAppStore } from "../../store/useAppStore";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 
@@ -13,6 +13,7 @@ export default function SubscriptionSuccessScreen() {
   const tokens = useAppStore((state) => state.tokens);
   const setUser = useAppStore((state) => state.setUser);
   const [loading, setLoading] = useState(true);
+  const [onboardingComplete, setOnboardingComplete] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -24,6 +25,7 @@ export default function SubscriptionSuccessScreen() {
           return;
         }
         setUser(user, tokens);
+        setOnboardingComplete(hasCompletedOnboarding(user));
         showSuccessMessage("Subscription updated successfully.");
       } catch (error: any) {
         if (!isMounted) {
@@ -61,9 +63,9 @@ export default function SubscriptionSuccessScreen() {
           <>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => router.replace("/(tabs)/settings/manage-subscription" as any)}
+              onPress={() => router.replace((onboardingComplete ? "/(tabs)/settings/manage-subscription" : "/(auth)/setup") as any)}
             >
-              <Text style={styles.primaryButtonText}>View Subscription</Text>
+              <Text style={styles.primaryButtonText}>{onboardingComplete ? "View Subscription" : "Continue Setup"}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.secondaryButton}

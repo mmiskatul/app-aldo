@@ -135,7 +135,6 @@ const parseBusinessGoals = (value?: string | null): string[] => {
 
 export default function SetupScreen() {
   const router = useRouter();
-  const setProfile = useAppStore((state) => state.setProfile);
   const setUser = useAppStore((state) => state.setUser);
   const tokens = useAppStore((state) => state.tokens);
   const appLanguage = useAppStore((state) => state.appLanguage);
@@ -312,14 +311,14 @@ export default function SetupScreen() {
         transformRequest: (data) => data,
       });
 
-      const [user, profileResponse] = await Promise.all([
-        getCurrentUser(),
-        apiClient.get("/api/v1/restaurant/settings/profile"),
-      ]);
+      const user = await getCurrentUser();
       setUser(user, tokens);
-      setProfile(profileResponse.data);
       showSuccessMessage("Onboarding saved successfully.");
-      router.replace("/(tabs)/home" as any);
+      if (user.subscription_plan_name && !["canceled", "expired", "suspended"].includes(String(user.subscription_status || ""))) {
+        router.replace("/(tabs)/home" as any);
+      } else {
+        router.replace("/(auth)/subscription" as any);
+      }
     } catch (error: any) {
       console.error("Error saving onboarding:", error?.response?.data || error?.message);
       showErrorMessage(getApiErrorMessage(error, "Could not save onboarding details."));

@@ -97,7 +97,15 @@ apiClient.interceptors.response.use(
     }
 
     const subscriptionErrorCode = error.response?.data?.error?.code;
-    if (error.response?.status === 403 && subscriptionErrorCode === "subscription_required") {
+    const currentUser = useAppStore.getState().user;
+    const hasLocalActiveSubscription =
+      Boolean(currentUser?.subscription_plan_name) &&
+      ["active", "trial"].includes(String(currentUser?.subscription_status || ""));
+    if (
+      error.response?.status === 403 &&
+      subscriptionErrorCode === "subscription_required" &&
+      !hasLocalActiveSubscription
+    ) {
       redirectToSubscriptionSelection();
     }
     if (error.response?.status === 403 && subscriptionErrorCode === "onboarding_required") {

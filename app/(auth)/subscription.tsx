@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
@@ -13,12 +13,20 @@ import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
 
+type CurrentSubscriptionState = {
+  selection_required: boolean;
+  plan_name: string | null;
+  billing_cycle: BillingCycle | null;
+  status: string | null;
+};
+
 export default function SubscriptionScreen() {
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("1_month");
   const [plans, setPlans] = useState<UserSubscriptionPlan[]>([]);
+  const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscriptionState | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [submittingPlanId, setSubmittingPlanId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -26,6 +34,7 @@ export default function SubscriptionScreen() {
       try {
         const response = await getUserSubscriptionPlans();
         setPlans(response.plans);
+        setCurrentSubscription(response.current_subscription);
       } catch (error: any) {
         showErrorMessage(
           error?.response?.data?.message || error?.message || "Please try again.",
@@ -39,20 +48,24 @@ export default function SubscriptionScreen() {
     void loadPlans();
   }, []);
 
-  const selectedPlan = useMemo<UserSubscriptionPlan | null>(() => {
-    if (plans.length === 0) return null;
-    return plans.find((plan) => plan.is_best_plan) ?? plans[0];
-  }, [plans]);
+  const hasActiveSubscription =
+    currentSubscription?.selection_required === false &&
+    ["active", "trial"].includes(String(currentSubscription?.status || ""));
 
-  const handleContinue = async () => {
-    if (!selectedPlan) {
-      showErrorMessage("No subscription plan is available right now.");
+  const isCurrentPlanForCycle = (plan: UserSubscriptionPlan) => (
+    Boolean(plan.is_current) &&
+    currentSubscription?.billing_cycle === billingCycle &&
+    ["active", "trial"].includes(String(currentSubscription?.status || ""))
+  );
+
+  const handleSelectPlan = async (plan: UserSubscriptionPlan) => {
+    if (isCurrentPlanForCycle(plan)) {
       return;
     }
 
-    setSubmitting(true);
+    setSubmittingPlanId(plan.id);
     try {
-      await selectUserSubscriptionPlan(billingCycle, false, selectedPlan.id);
+      await selectUserSubscriptionPlan(billingCycle, false, plan.id);
       showSuccessMessage("Subscription activated successfully.");
       router.push("/(auth)/setup");
     } catch (error: any) {
@@ -60,12 +73,77 @@ export default function SubscriptionScreen() {
         error?.response?.data?.message || error?.message || "Unable to activate subscription.",
       );
     } finally {
-      setSubmitting(false);
+      setSubmittingPlanId(null);
     }
   };
 
-  const features = selectedPlan?.features ?? [];
-  const price = billingCycle === "1_year" ? selectedPlan?.annual_price ?? 0 : selectedPlan?.monthly_price ?? 0;
+  const renderPlanCard = (plan: UserSubscriptionPlan) => {
+    const features = plan.features ?? [];
+    const price = billingCycle === "1_year" ? plan.annual_price ?? 0 : plan.monthly_price ?? 0;
+    const currentForCycle = isCurrentPlanForCycle(plan);
+    const submitting = submittingPlanId === plan.id;
+
+    return (
+      <View key={plan.id} style={[styles.cardContainer, currentForCycle && styles.currentCardContainer]}>
+        {plan.is_best_plan && !currentForCycle ? (
+          <LinearGradient
+            colors={["#160c03", "#c78b1e"]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.ribbonContainer}
+          >
+            <Text style={styles.ribbonText}>BEST VALUE</Text>
+          </LinearGradient>
+        ) : null}
+
+        {currentForCycle ? (
+          <View style={styles.currentBadge}>
+            <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.planTitle}>{plan.name || "Subscription Plan"}</Text>
+
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceAmount}>€{price}</Text>
+          <Text style={styles.pricePeriod}>
+            {billingCycle === "1_month" ? " / month" : " / year"}
+          </Text>
+        </View>
+
+        <Text style={styles.trialText}>
+          {plan.trial_days > 0 ? `${plan.trial_days}-day free trial included` : "Paid plan"}
+        </Text>
+
+        <View style={styles.featuresContainer}>
+          {features.map((feature) => (
+            <View key={feature} style={styles.featureRow}>
+              <MaterialCommunityIcons
+                name="check-decagram-outline"
+                size={moderateScale(20)}
+                color="#D97706"
+              />
+              <Text style={styles.featureText}>{feature}</Text>
+            </View>
+          ))}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.startButton, currentForCycle && styles.currentButton]}
+          onPress={() => { void handleSelectPlan(plan); }}
+          disabled={currentForCycle || submittingPlanId !== null}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={[styles.startButtonText, currentForCycle && styles.currentButtonText]}>
+              {currentForCycle ? "Current Plan" : hasActiveSubscription ? "Switch Plan" : "Continue Setup"}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -104,52 +182,20 @@ export default function SubscriptionScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.cardContainer}>
-              {selectedPlan?.is_best_plan ? (
-                <LinearGradient
-                  colors={["#160c03", "#c78b1e"]}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.ribbonContainer}
-                >
-                  <Text style={styles.ribbonText}>BEST VALUE</Text>
-                </LinearGradient>
-              ) : null}
-
-              <Text style={styles.planTitle}>{selectedPlan?.name || "Subscription Plan"}</Text>
-
-              <View style={styles.priceContainer}>
-                <Text style={styles.priceAmount}>€{price}</Text>
-                <Text style={styles.pricePeriod}>
-                  {billingCycle === "1_month" ? " / month" : " / year"}
-                </Text>
+            {plans.length > 0 ? plans.map(renderPlanCard) : (
+              <View style={styles.emptyPlansContainer}>
+                <Text style={styles.footerCancelText}>No subscription plan is available right now.</Text>
               </View>
+            )}
 
-              <Text style={styles.trialText}>
-                {selectedPlan ? `${selectedPlan.trial_days}-day free trial included` : "Plan data is not available."}
-              </Text>
-
-              <View style={styles.featuresContainer}>
-                {features.map((feature) => (
-                  <View key={feature} style={styles.featureRow}>
-                    <MaterialCommunityIcons
-                      name="check-decagram-outline"
-                      size={moderateScale(20)}
-                      color="#D97706"
-                    />
-                    <Text style={styles.featureText}>{feature}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <TouchableOpacity style={styles.startButton} onPress={() => { void handleContinue(); }} disabled={submitting}>
-                {submitting ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.startButtonText}>Continue Setup</Text>
-                )}
+            {hasActiveSubscription ? (
+              <TouchableOpacity
+                style={styles.secondaryContinueButton}
+                onPress={() => router.push("/(auth)/setup" as any)}
+              >
+                <Text style={styles.secondaryContinueText}>Continue Setup</Text>
               </TouchableOpacity>
-            </View>
+            ) : null}
           </>
         )}
 
@@ -236,6 +282,10 @@ const styles = StyleSheet.create({
     elevation: 5,
     marginBottom: verticalScale(30),
   },
+  currentCardContainer: {
+    borderColor: "#16A34A",
+    shadowColor: "#16A34A",
+  },
   ribbonContainer: {
     position: "absolute",
     top: -2,
@@ -250,6 +300,20 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(11, 0.3),
     fontWeight: "800",
     letterSpacing: 1.5,
+  },
+  currentBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#DCFCE7",
+    borderRadius: scale(999),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(5),
+    marginBottom: verticalScale(12),
+  },
+  currentBadgeText: {
+    color: "#166534",
+    fontSize: moderateScale(11, 0.3),
+    fontWeight: "800",
+    letterSpacing: 0.8,
   },
   planTitle: {
     fontSize: moderateScale(22, 0.3),
@@ -293,6 +357,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 0.3),
     color: "#4B5563",
     fontWeight: "500",
+    flex: 1,
   },
   startButton: {
     backgroundColor: "#FA8C4C",
@@ -301,10 +366,37 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  currentButton: {
+    backgroundColor: "#E5E7EB",
+  },
   startButtonText: {
     color: "#FFFFFF",
     fontWeight: "700",
     fontSize: moderateScale(16, 0.3),
+  },
+  currentButtonText: {
+    color: "#374151",
+  },
+  emptyPlansContainer: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: scale(14),
+    padding: scale(18),
+    marginBottom: verticalScale(24),
+  },
+  secondaryContinueButton: {
+    height: verticalScale(52),
+    borderRadius: scale(14),
+    borderWidth: 1,
+    borderColor: "#FA8C4C",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: verticalScale(24),
+  },
+  secondaryContinueText: {
+    color: "#FA8C4C",
+    fontSize: moderateScale(15, 0.3),
+    fontWeight: "800",
   },
   footerContainer: {
     alignItems: "center",

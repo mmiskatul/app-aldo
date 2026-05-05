@@ -36,6 +36,7 @@ export interface UserSubscriptionPlan {
   trial_days: number;
   features: string[];
   is_best_plan: boolean;
+  is_current?: boolean;
 }
 
 export interface UserSubscriptionPlanListResponse {
