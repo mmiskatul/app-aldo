@@ -81,6 +81,12 @@ export default function ManageSubscriptionScreen() {
     ['active', 'trial'].includes(String(subscription?.status || ''))
   );
 
+  const currentPlan = plans.find((plan) => plan.is_current);
+  const currentPlanPrice = subscription?.billing_cycle === '1_year'
+    ? currentPlan?.annual_price ?? 0
+    : currentPlan?.monthly_price ?? 0;
+  const switchablePlans = plans.filter((plan) => !isCurrentPlanForCycle(plan));
+
   const handleActivatePlan = async (plan: UserSubscriptionPlan) => {
     if (isCurrentPlanForCycle(plan)) {
       return;
@@ -132,11 +138,6 @@ export default function ManageSubscriptionScreen() {
         <View style={styles.planHeaderRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.planName}>{plan.name || 'Subscription Plan'}</Text>
-            {currentForCycle ? (
-              <View style={styles.currentBadge}>
-                <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
-              </View>
-            ) : null}
           </View>
           {plan.is_best_plan && !currentForCycle ? (
             <View style={styles.bestBadge}>
@@ -203,6 +204,19 @@ export default function ManageSubscriptionScreen() {
               </View>
 
               <View style={styles.infoGrid}>
+                {currentPlan ? (
+                  <View style={styles.currentPlanSummary}>
+                    <View style={styles.currentBadge}>
+                      <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
+                    </View>
+                    <View style={styles.priceRowCompact}>
+                      <Text style={styles.priceAmountCompact}>€{currentPlanPrice}</Text>
+                      <Text style={styles.pricePeriod}>
+                        {subscription?.billing_cycle === '1_year' ? ' / year' : ' / month'}
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>Status</Text>
                   <Text style={styles.infoValue}>{formatStatus(subscription?.status ?? null)}</Text>
@@ -223,9 +237,9 @@ export default function ManageSubscriptionScreen() {
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.sectionEyebrow}>Subscription Plans</Text>
+              <Text style={styles.sectionEyebrow}>Switch Plan</Text>
               <Text style={styles.helperText}>
-                Select a plan to activate it immediately. No payment module is connected yet.
+                Choose a different plan or billing cycle. No payment module is connected yet.
               </Text>
 
               <View style={styles.toggleContainer}>
@@ -247,8 +261,8 @@ export default function ManageSubscriptionScreen() {
                 </TouchableOpacity>
               </View>
 
-              {plans.length > 0 ? plans.map(renderPlanCard) : (
-                <Text style={styles.helperText}>No subscription plan is available right now.</Text>
+              {switchablePlans.length > 0 ? switchablePlans.map(renderPlanCard) : (
+                <Text style={styles.helperText}>No other plan is available for this billing cycle.</Text>
               )}
             </View>
 
@@ -343,6 +357,12 @@ const styles = StyleSheet.create({
     borderColor: '#16A34A',
     backgroundColor: '#F0FDF4',
   },
+  currentPlanSummary: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E7EB',
+    paddingTop: verticalScale(12),
+    paddingBottom: verticalScale(10),
+  },
   planHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -433,8 +453,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginBottom: verticalScale(16),
   },
+  priceRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginTop: verticalScale(8),
+  },
   priceAmount: {
     fontSize: moderateScale(32, 0.3),
+    fontWeight: '800',
+    color: '#111827',
+  },
+  priceAmountCompact: {
+    fontSize: moderateScale(28, 0.3),
     fontWeight: '800',
     color: '#111827',
   },
