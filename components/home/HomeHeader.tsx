@@ -8,7 +8,6 @@ import LanguageModal from "./LanguageModal";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../utils/i18n";
 import ProfilePlaceholderAvatar from "../ui/ProfilePlaceholderAvatar";
-import { buildSettingsHref } from "../../utils/settingsNavigation";
 
 interface HomeHeaderProps {
   greetingName?: string;
@@ -69,7 +68,10 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
       <View style={styles.rightSection}>
         <TouchableOpacity
           style={styles.iconButton}
-          onPress={() => router.push(buildSettingsHref('/(tabs)/settings/notifications', '/(tabs)/home'))}
+          onPress={() => router.push({
+            pathname: "/notifications",
+            params: { origin: "/(tabs)/home" },
+          } as any)}
           activeOpacity={0.7}
         >
           <BellIcon size={moderateScale(20)} color="#111827" />

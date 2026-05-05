@@ -95,6 +95,14 @@ export default function HomeLayout() {
           animation: "slide_from_right",
         }}
       />
+      <Stack.Screen
+        name="recent-activity"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
     </Stack>
   );
 }

@@ -665,6 +665,7 @@ export default function TabsIndex() {
           activities={recentActivity ?? undefined}
           loading={(shellLoading || recentActivityLoading) && recentActivity === null}
           onNavigate={navigateFromHome}
+          onSeeAll={() => navigateFromHome("/(tabs)/home/recent-activity")}
         />
       </ScrollView>
     </View>

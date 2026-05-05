@@ -56,7 +56,7 @@ export default function Header({
   const resolvedNotificationHref =
     notificationHref ??
     ({
-      pathname: '/(tabs)/settings/notifications',
+      pathname: '/notifications',
       params: { origin: pathname },
     } as unknown as Href<string>);
 

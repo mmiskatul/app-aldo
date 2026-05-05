@@ -84,7 +84,7 @@ export default function PushNotificationRegistrar() {
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(() => {
-      router.push('/(tabs)/settings/notifications' as any);
+      router.push('/notifications' as any);
     });
 
     return () => {

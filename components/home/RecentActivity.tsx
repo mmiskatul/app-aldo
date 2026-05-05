@@ -63,6 +63,9 @@ interface RecentActivityProps {
   activities?: any[];
   loading?: boolean;
   onNavigate?: (route: string) => void;
+  onSeeAll?: () => void;
+  showHeader?: boolean;
+  bottomSpacing?: number;
 }
 
 const resolveActivityRoute = (activity: any) => {
@@ -95,7 +98,14 @@ const resolveActivityRoute = (activity: any) => {
   }
 };
 
-export default function RecentActivity({ activities: apiActivities, loading = false, onNavigate }: RecentActivityProps) {
+export default function RecentActivity({
+  activities: apiActivities,
+  loading = false,
+  onNavigate,
+  onSeeAll,
+  showHeader = true,
+  bottomSpacing,
+}: RecentActivityProps) {
   const { t } = useTranslation();
 
   const getIconForType = (type?: string) => {
@@ -142,11 +152,19 @@ export default function RecentActivity({ activities: apiActivities, loading = fa
   const skeletonRows = [0, 1, 2];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.sectionTitle}>{t('recent_activity')}</Text>
-        <Text style={styles.seeAllText}>{t('see_all')}</Text>
-      </View>
+    <View style={[styles.container, bottomSpacing !== undefined && { marginBottom: bottomSpacing }]}>
+      {showHeader && (
+        <View style={styles.header}>
+          <Text style={styles.sectionTitle}>{t('recent_activity')}</Text>
+          {onSeeAll ? (
+            <TouchableOpacity activeOpacity={0.7} onPress={onSeeAll} hitSlop={styles.seeAllHitSlop}>
+              <Text style={styles.seeAllText}>{t('see_all')}</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.seeAllText}>{t('see_all')}</Text>
+          )}
+        </View>
+      )}
 
       <View style={styles.cardContainer}>
         {loading ? (
@@ -199,6 +217,12 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12, 0.3),
     fontWeight: '600',
     color: '#FA8C4C',
+  },
+  seeAllHitSlop: {
+    top: 10,
+    right: 10,
+    bottom: 10,
+    left: 10,
   },
   cardContainer: {
     backgroundColor: '#FFFFFF',

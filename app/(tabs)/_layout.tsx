@@ -7,7 +7,7 @@ import {
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import * as HugeiconsModule from "@hugeicons/react-native";
-import { Redirect, Tabs, useSegments } from "expo-router";
+import { Redirect, Tabs, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
@@ -17,6 +17,7 @@ const hugeiconsAny = HugeiconsModule as any;
 const HugeiconsIcon = hugeiconsAny.HugeiconsIcon || hugeiconsAny.default?.HugeiconsIcon || hugeiconsAny;
 
 export default function TabLayout() {
+  const router = useRouter();
   const segments = useSegments();
   const hasHydrated = useAppStore((state) => state.hasHydrated);
   const user = useAppStore((state) => state.user);
@@ -194,6 +195,12 @@ export default function TabLayout() {
               color={color}
             />
           ),
+        }}
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace("/(tabs)/settings" as any);
+          },
         }}
       />
     </Tabs>
