@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Header from "../../../components/ui/Header";
 import apiClient from "../../../api/apiClient";
 
@@ -61,6 +62,7 @@ const getLocalBusinessDate = () => {
 
 export default function AddDailyDataScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
@@ -214,6 +216,7 @@ export default function AddDailyDataScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.pageTitle}>Add Daily Business Data</Text>
           <Text style={styles.pageSubtitle}>
@@ -237,14 +240,21 @@ export default function AddDailyDataScreen() {
           )}
         </ScrollView>
 
-        <View style={styles.bottomFooter}>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isSaving}>
+        <View style={[styles.bottomFooter, { paddingBottom: Math.max(insets.bottom, verticalScale(16)) }]}>
+          <TouchableOpacity
+            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={isSaving}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Confirm daily data"
+          >
             {isSaving ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Feather name="save" size={moderateScale(18)} color="#FFFFFF" style={styles.saveIcon} />
-                <Text style={styles.saveButtonText}>Save Daily Data</Text>
+                <Feather name="check-circle" size={moderateScale(20)} color="#FFFFFF" style={styles.saveIcon} />
+                <Text style={styles.saveButtonText}>Confirm Daily Data</Text>
               </>
             )}
           </TouchableOpacity>
@@ -305,6 +315,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: scale(20),
     paddingTop: verticalScale(16),
+    paddingBottom: verticalScale(28),
   },
   pageTitle: {
     fontSize: moderateScale(22, 0.3),
@@ -319,23 +330,32 @@ const styles = StyleSheet.create({
     lineHeight: moderateScale(20),
   },
   bottomFooter: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(20),
+    paddingTop: verticalScale(14),
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
+    borderTopColor: "#E5E7EB",
+    shadowColor: "#111827",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 12,
   },
   saveButton: {
     flexDirection: "row",
     backgroundColor: "#FA8C4C",
-    borderRadius: scale(12),
-    paddingVertical: verticalScale(14),
+    borderRadius: scale(14),
+    minHeight: verticalScale(58),
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#FA8C4C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  saveButtonDisabled: {
+    opacity: 0.75,
   },
   saveIcon: {
     marginRight: scale(8),
