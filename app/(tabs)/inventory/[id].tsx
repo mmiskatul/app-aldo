@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import apiClient from '../../../api/apiClient';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
@@ -77,6 +77,7 @@ export default function ItemDetailScreen() {
   const [item, setItem] = useState<InventoryDetailResponse | null>(initialItem);
   const [loading, setLoading] = useState(!initialItem);
   const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fetchItem = useCallback(async () => {
@@ -148,10 +149,30 @@ export default function ItemDetailScreen() {
         },
       });
     } catch (error: any) {
-      showApiError('inventory.delete', error, t('unable_to_delete_item'), t('delete_failed'));
+      const status = Number(error?.response?.status || 0);
+      if (status === 404 || status === 405) {
+        console.error('[inventory.delete]', error?.response?.data || error?.message || error);
+        showErrorMessage(
+          'Inventory delete is not available on the current API deployment. Please deploy the latest backend and try again.',
+          t('delete_failed'),
+        );
+      } else {
+        showApiError('inventory.delete', error, t('unable_to_delete_item'), t('delete_failed'));
+      }
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleRequestDelete = () => {
+    setDeleteConfirmVisible(true);
+  };
+
+  const handleCancelDelete = () => {
+    if (deleting) {
+      return;
+    }
+    setDeleteConfirmVisible(false);
   };
 
   if (loading || !itemId) {
@@ -224,16 +245,55 @@ export default function ItemDetailScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.secondaryBtn, { borderColor: '#FEE2E2' }]}
-            onPress={() => void handleDelete()}
+            onPress={handleRequestDelete}
             disabled={deleting}
           >
             <Feather name="trash-2" size={moderateScale(16)} color="#DC2626" />
             <Text style={[styles.secondaryBtnText, { color: '#DC2626' }]}>
-              {deleting ? t('deleting') : t('delete')}
+              {t('delete')}
             </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={deleteConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelDelete}
+      >
+        <View style={styles.modalBackdrop}>
+          {deleting ? (
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          ) : (
+            <View style={styles.confirmModal}>
+              <View style={styles.confirmIconWrap}>
+                <Feather name="trash-2" size={moderateScale(22)} color="#DC2626" />
+              </View>
+              <Text style={styles.confirmTitle}>Delete inventory item?</Text>
+              <Text style={styles.confirmMessage}>
+                This item will be permanently deleted from your inventory.
+              </Text>
+              <View style={styles.confirmActions}>
+                <TouchableOpacity
+                  style={[styles.confirmActionButton, styles.cancelButton]}
+                  onPress={handleCancelDelete}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.confirmActionButton, styles.deleteButton]}
+                  onPress={() => void handleDelete()}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -320,5 +380,73 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: moderateScale(13, 0.3),
     fontWeight: '700',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 24, 39, 0.58)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: scale(24),
+  },
+  confirmModal: {
+    width: '100%',
+    maxWidth: scale(340),
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(18),
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(22),
+    paddingBottom: verticalScale(18),
+    alignItems: 'center',
+  },
+  confirmIconWrap: {
+    width: moderateScale(52),
+    height: moderateScale(52),
+    borderRadius: moderateScale(26),
+    backgroundColor: '#FEF2F2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: verticalScale(14),
+  },
+  confirmTitle: {
+    fontSize: moderateScale(18, 0.3),
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: verticalScale(8),
+    textAlign: 'center',
+  },
+  confirmMessage: {
+    fontSize: moderateScale(13, 0.3),
+    lineHeight: moderateScale(19),
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: verticalScale(20),
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: scale(10),
+  },
+  confirmActionButton: {
+    flex: 1,
+    minHeight: verticalScale(46),
+    borderRadius: scale(12),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+  },
+  cancelButtonText: {
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: '700',
+    color: '#374151',
+  },
+  deleteButton: {
+    backgroundColor: '#DC2626',
+  },
+  deleteButtonText: {
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

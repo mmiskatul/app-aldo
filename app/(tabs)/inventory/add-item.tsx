@@ -260,17 +260,16 @@ export default function AddInventoryItemScreen() {
 
         <View style={styles.footer}>
           <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnDisabled]} onPress={() => void handleSave()} disabled={saving}>
-            {saving ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Feather name="save" size={moderateScale(18)} color="#FFFFFF" />
-                <Text style={styles.saveBtnText}>{t('save_item')}</Text>
-              </>
-            )}
+            <Feather name="save" size={moderateScale(18)} color="#FFFFFF" />
+            <Text style={styles.saveBtnText}>{t('save_item')}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      {saving ? (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color="#FFFFFF" />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -332,4 +331,11 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   saveBtnText: { color: '#FFFFFF', fontSize: moderateScale(15), fontWeight: '600' },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 50,
+    backgroundColor: 'rgba(0, 0, 0, 0.58)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

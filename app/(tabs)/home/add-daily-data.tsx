@@ -264,6 +264,11 @@ export default function AddDailyDataScreen() {
         visible={isMethodsModalVisible}
         onClose={() => setIsMethodsModalVisible(false)}
       />
+      {isSaving ? (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color="#FFFFFF" />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -364,5 +369,12 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: moderateScale(16, 0.3),
     fontWeight: "700",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 50,
+    backgroundColor: "rgba(0, 0, 0, 0.58)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

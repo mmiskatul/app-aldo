@@ -2,6 +2,8 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -87,6 +89,8 @@ export default function DataManagementScreen() {
     typeof initialDateFetchedAt !== "number" && initialDateItems.length === 0,
   );
   const [refreshing, setRefreshing] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedReferenceDate, setSelectedReferenceDate] = useState(new Date());
   const selectedReferenceDateKey = useMemo(
     () => formatApiDate(selectedReferenceDate),
@@ -149,11 +153,41 @@ export default function DataManagementScreen() {
     void fetchDailyData(selectedSegment, false, selectedReferenceDateKey);
   }, [fetchDailyData, selectedReferenceDateKey, selectedSegment]);
 
-  const handleDelete = useCallback(async (deleteTarget: string) => {
-    const separatorIndex = deleteTarget.indexOf(":");
-    const deleteMode = separatorIndex > -1 ? deleteTarget.slice(0, separatorIndex) : "date";
-    const deleteId = separatorIndex > -1 ? deleteTarget.slice(separatorIndex + 1) : deleteTarget;
+  const parseDeleteTarget = useCallback((target: string) => {
+    const separatorIndex = target.indexOf(":");
+    const deleteMode = separatorIndex > -1 ? target.slice(0, separatorIndex) : "date";
+    const deleteId = separatorIndex > -1 ? target.slice(separatorIndex + 1) : target;
 
+    return {
+      deleteMode: deleteMode === "record" ? "record" : "date",
+      deleteId,
+    };
+  }, []);
+
+  const requestedDelete = useMemo(
+    () => (deleteTarget ? parseDeleteTarget(deleteTarget) : null),
+    [deleteTarget, parseDeleteTarget],
+  );
+
+  const handleDeleteRequest = useCallback((target: string) => {
+    setDeleteTarget(target);
+  }, []);
+
+  const handleCancelDelete = useCallback(() => {
+    if (isDeleting) {
+      return;
+    }
+    setDeleteTarget(null);
+  }, [isDeleting]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteTarget || isDeleting) {
+      return;
+    }
+
+    const { deleteMode, deleteId } = parseDeleteTarget(deleteTarget);
+
+    setIsDeleting(true);
     try {
       showInfoMessage(deleteMode === "record" ? "Deleting daily data record..." : "Deleting collected data for this date...");
       if (deleteMode === "record") {
@@ -165,6 +199,7 @@ export default function DataManagementScreen() {
         });
         showSuccessMessage("Collected data deleted for this date.");
       }
+      setDeleteTarget(null);
       clearHomeScreenCache();
       clearDailyDataScreenCache();
       setCashOverviewData(null);
@@ -172,8 +207,10 @@ export default function DataManagementScreen() {
     } catch (error: any) {
       console.error("Error deleting daily data collection:", error.response?.data || error.message);
       showErrorMessage(deleteMode === "record" ? "Failed to delete daily data record." : "Failed to delete collected data for this date.");
+    } finally {
+      setIsDeleting(false);
     }
-  }, [clearDailyDataScreenCache, clearHomeScreenCache, fetchDailyData, selectedReferenceDateKey, selectedSegment, setCashOverviewData]);
+  }, [clearDailyDataScreenCache, clearHomeScreenCache, deleteTarget, fetchDailyData, isDeleting, parseDeleteTarget, selectedReferenceDateKey, selectedSegment, setCashOverviewData]);
 
   const metrics = useMemo(() => {
     const totalRevenue = items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0);
@@ -251,7 +288,7 @@ export default function DataManagementScreen() {
           loading={loading}
           selectedSegment={selectedSegment}
           onSegmentChange={setSelectedSegment}
-          onDelete={handleDelete}
+          onDelete={handleDeleteRequest}
           onDeleteUnavailable={() => showInfoMessage("Only date cards can be deleted from this dashboard.")}
         />
       </ScrollView>
@@ -270,6 +307,47 @@ export default function DataManagementScreen() {
           <Text style={styles.fabText}>Add Data</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={Boolean(deleteTarget)}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelDelete}
+      >
+        <View style={styles.modalBackdrop}>
+          {isDeleting ? (
+            <ActivityIndicator size="large" color="#FFFFFF" />
+          ) : (
+            <View style={styles.confirmModal}>
+              <View style={styles.confirmIconWrap}>
+                <Feather name="trash-2" size={moderateScale(22)} color="#DC2626" />
+              </View>
+              <Text style={styles.confirmTitle}>Delete daily data?</Text>
+              <Text style={styles.confirmMessage}>
+                {requestedDelete?.deleteMode === "record"
+                  ? "This daily data record will be permanently deleted."
+                  : "All collected daily data for this date will be permanently deleted."}
+              </Text>
+              <View style={styles.confirmActions}>
+                <TouchableOpacity
+                  style={[styles.confirmActionButton, styles.cancelButton]}
+                  onPress={handleCancelDelete}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.confirmActionButton, styles.deleteButton]}
+                  onPress={handleConfirmDelete}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -314,6 +392,74 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   fabText: {
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(17, 24, 39, 0.58)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: scale(24),
+  },
+  confirmModal: {
+    width: "100%",
+    maxWidth: scale(340),
+    backgroundColor: "#FFFFFF",
+    borderRadius: scale(18),
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(22),
+    paddingBottom: verticalScale(18),
+    alignItems: "center",
+  },
+  confirmIconWrap: {
+    width: moderateScale(52),
+    height: moderateScale(52),
+    borderRadius: moderateScale(26),
+    backgroundColor: "#FEF2F2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: verticalScale(14),
+  },
+  confirmTitle: {
+    fontSize: moderateScale(18, 0.3),
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: verticalScale(8),
+    textAlign: "center",
+  },
+  confirmMessage: {
+    fontSize: moderateScale(13, 0.3),
+    lineHeight: moderateScale(19),
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: verticalScale(20),
+  },
+  confirmActions: {
+    flexDirection: "row",
+    width: "100%",
+    gap: scale(10),
+  },
+  confirmActionButton: {
+    flex: 1,
+    minHeight: verticalScale(46),
+    borderRadius: scale(12),
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#F3F4F6",
+  },
+  cancelButtonText: {
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: "700",
+    color: "#374151",
+  },
+  deleteButton: {
+    backgroundColor: "#DC2626",
+  },
+  deleteButtonText: {
     fontSize: moderateScale(14, 0.3),
     fontWeight: "700",
     color: "#FFFFFF",
