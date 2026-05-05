@@ -16,8 +16,7 @@
         "backgroundColor": "#FFFFFF"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.aldo.app",
-      "googleServicesFile": "./google-services.json"
+      "package": "com.aldo.app"
     },
     "web": {
       "output": "static",
