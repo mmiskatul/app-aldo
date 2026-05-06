@@ -83,7 +83,11 @@ export default function AuthSignupScreen() {
       console.log("Signup API Response:", data);
       setPendingRegistration(normalizedPayload);
 
-      showSuccessMessage(data.message || t("account_created_successfully"));
+      showSuccessMessage(
+        data.debug_verification_code
+          ? `Verification code: ${data.debug_verification_code}`
+          : data.message || t("account_created_successfully")
+      );
       router.push("/(auth)/verify" as any);
       
     } catch (error: any) {

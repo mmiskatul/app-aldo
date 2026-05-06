@@ -53,7 +53,11 @@ export default function VerifyIdentityScreen() {
         email,
       });
       console.log("Resend API Response:", response.data);
-      showSuccessMessage(response.data?.message || "Verification code resent to your email.");
+      showSuccessMessage(
+        response.data?.debug_verification_code
+          ? `Verification code: ${response.data.debug_verification_code}`
+          : response.data?.message || "Verification code resent to your email."
+      );
       setCode(["", "", "", ""]);
       return true;
     } catch (error: any) {
