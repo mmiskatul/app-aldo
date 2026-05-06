@@ -19,7 +19,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../api/apiClient";
 import { useAppStore } from "../../store/useAppStore";
 import { showErrorMessage } from "../../utils/feedback";
-import { useTranslation } from "../../utils/i18n";
+import { normalizeAppLanguage, useTranslation } from "../../utils/i18n";
 
 interface ChatInputProps {
   onSend?: (text: string, file?: any) => void;
@@ -188,7 +188,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
 
   const transcribeRecording = async (uri: string) => {
     const formData = new FormData();
-    formData.append("language", appLanguage);
+    formData.append("language", normalizeAppLanguage(appLanguage));
     formData.append("file", {
       uri,
       name: getVoiceFileName(uri),

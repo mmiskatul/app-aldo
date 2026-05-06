@@ -20,7 +20,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { getApiBaseUrl } from "../../utils/api";
 import { getApiDisplayMessage, logApiError, showApiError } from "../../utils/apiErrors";
 import { isCacheFresh } from "../../utils/cache";
-import { useTranslation } from "../../utils/i18n";
+import { normalizeAppLanguage, useTranslation } from "../../utils/i18n";
 import { resolveLocalizedText } from "../../utils/localizedContent";
 
 const CHAT_REALTIME_ENV = process.env.EXPO_PUBLIC_CHAT_REALTIME?.trim().toLowerCase();
@@ -215,6 +215,7 @@ export default function ChatScreen() {
 
   const handleSendMessage = async (text: string, file?: any) => {
     if (!text.trim() && !file) return;
+    const chatLanguage = normalizeAppLanguage(appLanguage);
 
     // Add locally to seem snappy while waiting for backend emit
     const optimisticMessage = {
@@ -242,7 +243,7 @@ export default function ChatScreen() {
       try {
         const formData = new FormData();
         formData.append("message", text.trim());
-        formData.append("language", appLanguage);
+        formData.append("language", chatLanguage);
         
         // Append the file properly for React Native FormData
         formData.append("file", {
@@ -284,7 +285,7 @@ export default function ChatScreen() {
       if (socketRef.current?.connected) {
         socketRef.current.emit("chat:message", {
           message: text.trim(),
-          language: appLanguage,
+          language: chatLanguage,
           attachment_source: null,
         });
         return;
@@ -293,7 +294,7 @@ export default function ChatScreen() {
       try {
         const response = await apiClient.post("/api/v1/restaurant/chat/messages", {
           message: text.trim(),
-          language: appLanguage,
+          language: chatLanguage,
         });
         setIsAiTyping(false);
         setMessages(response.data.messages || []);
