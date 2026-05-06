@@ -138,16 +138,21 @@ export default function VerifyIdentityScreen() {
                 onPress={handleConfirm}
                 disabled={isLoading}
               >
-                {isLoading ? (
-                  <ActivityIndicator color={"#FFFFFF"} />
-                ) : (
-                  <Text style={styles.confirmButtonText}>Confirm</Text>
-                )}
+                <Text style={styles.confirmButtonText}>Confirm</Text>
               </TouchableOpacity>
             </View>
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
+
+      {isLoading ? (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          <View style={styles.loadingContent}>
+            <ActivityIndicator size="large" color="#FA8C4C" />
+            <Text style={styles.loadingText}>Verifying...</Text>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -211,5 +216,25 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 0.3),
     color: "#4B5563",
     fontWeight: "500",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.58)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+    elevation: 1000,
+  },
+  loadingContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: scale(180),
+    paddingHorizontal: scale(20),
+  },
+  loadingText: {
+    marginTop: verticalScale(14),
+    fontSize: moderateScale(20, 0.3),
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

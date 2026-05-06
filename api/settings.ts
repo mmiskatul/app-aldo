@@ -4,6 +4,7 @@ export type BillingCycle = '1_month' | '1_year';
 export type SubscriptionStatus =
   | 'active'
   | 'trial'
+  | 'unsubscribed'
   | 'suspended'
   | 'expired'
   | 'canceled';

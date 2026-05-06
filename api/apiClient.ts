@@ -87,16 +87,19 @@ const redirectToSubscriptionSelection = () => {
   }, 1500);
 };
 
-const markLocalSubscriptionRequired = () => {
+const markLocalSubscriptionRequired = (error: any) => {
   const { user, tokens, setUser, clearHomeScreenCache, clearAnalyticsScreenCache } = useAppStore.getState();
   if (!user) {
     return;
   }
+  const details = error?.response?.data?.error?.details || {};
 
   setUser(
     {
       ...user,
-      subscription_status: "canceled",
+      subscription_plan_name: details.subscription_plan_name ?? user.subscription_plan_name ?? null,
+      subscription_plan: details.subscription_plan ?? user.subscription_plan ?? null,
+      subscription_status: details.subscription_status ?? user.subscription_status ?? "canceled",
       subscription_selection_required: true,
     },
     tokens
@@ -146,7 +149,7 @@ apiClient.interceptors.response.use(
       error.response?.status === 403 &&
       subscriptionErrorCode === "subscription_required"
     ) {
-      markLocalSubscriptionRequired();
+      markLocalSubscriptionRequired(error);
       redirectToSubscriptionSelection();
     }
     if (error.response?.status === 403 && subscriptionErrorCode === "onboarding_required") {

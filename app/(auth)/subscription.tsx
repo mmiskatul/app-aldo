@@ -6,8 +6,10 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
+import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
 import { BillingCycle, UserSubscriptionPlan, getUserSubscriptionPlans, selectUserSubscriptionPlan } from "../../api/settings";
 import { ListRouteSkeleton } from "../../components/ui/RouteSkeletons";
+import { useAppStore } from "../../store/useAppStore";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 
 // @ts-ignore
@@ -27,6 +29,8 @@ export default function SubscriptionScreen() {
   const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscriptionState | null>(null);
   const [loading, setLoading] = useState(true);
   const [submittingPlanId, setSubmittingPlanId] = useState<string | null>(null);
+  const tokens = useAppStore((state) => state.tokens);
+  const setUser = useAppStore((state) => state.setUser);
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -65,9 +69,12 @@ export default function SubscriptionScreen() {
 
     setSubmittingPlanId(plan.id);
     try {
-      await selectUserSubscriptionPlan(billingCycle, false, plan.id);
+      const response = await selectUserSubscriptionPlan(billingCycle, false, plan.id);
+      setCurrentSubscription(response.subscription);
+      const refreshedUser = await getCurrentUser();
+      setUser(refreshedUser, tokens);
       showSuccessMessage("Subscription activated successfully.");
-      router.push("/(auth)/setup");
+      router.replace((hasCompletedOnboarding(refreshedUser) ? "/(tabs)/home" : "/(auth)/setup") as any);
     } catch (error: any) {
       showErrorMessage(
         error?.response?.data?.message || error?.message || "Unable to activate subscription.",

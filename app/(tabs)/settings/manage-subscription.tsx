@@ -6,6 +6,9 @@ import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import Header from '../../../components/ui/Header';
 import {
+  getCurrentUser,
+} from '../../../api/auth';
+import {
   BillingCycle,
   RestaurantSubscriptionSettings,
   SubscriptionStatus,
@@ -104,7 +107,9 @@ export default function ManageSubscriptionScreen() {
     try {
       const response = await selectUserSubscriptionPlan(billingCycle, false, plan.id);
       showSuccessMessage(response.message || 'Plan activated successfully.');
-      router.replace('/(auth)/subscription' as any);
+      const refreshedUser = await getCurrentUser();
+      setUser(refreshedUser, tokens);
+      await loadSubscriptionData();
     } catch (error: any) {
       showErrorMessage(error?.message || 'Unable to activate plan.');
     } finally {
@@ -133,7 +138,7 @@ export default function ManageSubscriptionScreen() {
           {
             ...user,
             subscription_plan_name: response.subscription.plan_name,
-            subscription_plan: response.subscription.plan_name,
+            subscription_plan: response.subscription.billing_cycle,
             subscription_status: response.subscription.status,
             subscription_started_at: response.subscription.started_at,
             subscription_expires_at: response.subscription.expires_at,

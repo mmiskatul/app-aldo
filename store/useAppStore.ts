@@ -36,6 +36,9 @@ export const hasActiveSubscription = (user: User | null): boolean => {
   if (!user) {
     return false;
   }
+  if (user.subscription_selection_required === true) {
+    return false;
+  }
   return (
     Boolean(user.subscription_plan_name) &&
     ["active", "trial"].includes(String(user.subscription_status || ""))
