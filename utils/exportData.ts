@@ -531,6 +531,156 @@ const pdfStyles = `
     line-height: 1.15;
     color: #ffffff;
   }
+  .analytics-pdf-body {
+    padding: 8px;
+    background: #ffffff;
+  }
+  .analytics-report {
+    border-radius: 8px;
+    page-break-inside: avoid;
+  }
+  .analytics-report .hero {
+    padding: 10px 14px 8px;
+  }
+  .analytics-report .eyebrow {
+    margin-bottom: 3px;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+  }
+  .analytics-report h1 {
+    font-size: 18px;
+    line-height: 1.1;
+  }
+  .analytics-report .hero-grid {
+    margin-top: 4px;
+  }
+  .analytics-report .hero-subtitle {
+    display: none;
+  }
+  .analytics-report .hero-meta {
+    width: 190px;
+  }
+  .analytics-report .meta-chip {
+    padding: 4px 7px;
+    margin-left: 4px;
+    margin-bottom: 3px;
+    font-size: 8px;
+  }
+  .analytics-report .content {
+    padding: 8px 14px 10px;
+  }
+  .analytics-report .section + .section {
+    margin-top: 6px;
+  }
+  .analytics-report .section-title {
+    margin-bottom: 3px;
+    font-size: 11px;
+    line-height: 1.15;
+  }
+  .analytics-report .section-copy {
+    display: none;
+  }
+  .analytics-report .highlight {
+    padding: 7px 9px;
+    border-radius: 8px;
+  }
+  .analytics-report .highlight-title {
+    margin-bottom: 3px;
+    font-size: 8px;
+    letter-spacing: 0.05em;
+  }
+  .analytics-report .highlight-heading {
+    margin-bottom: 2px;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  .analytics-report .highlight-copy {
+    font-size: 9px;
+    line-height: 1.25;
+  }
+  .analytics-report .provider-chip {
+    padding: 2px 5px;
+    margin-left: 4px;
+    font-size: 7px;
+  }
+  .compact-metrics {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 5px;
+    margin: 0 -5px;
+  }
+  .compact-metrics td {
+    width: 33.333%;
+    padding: 0;
+    vertical-align: top;
+  }
+  .compact-card {
+    min-height: 48px;
+    padding: 7px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-alt);
+  }
+  .compact-card .metric-label {
+    font-size: 7px;
+    line-height: 1.15;
+  }
+  .compact-card .metric-value {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 1.1;
+  }
+  .compact-card .metric-note {
+    margin-top: 3px;
+    font-size: 7px;
+    line-height: 1.15;
+  }
+  .analytics-report table.data-table {
+    border-radius: 7px;
+  }
+  .analytics-report .data-table thead th {
+    padding: 4px 6px;
+    font-size: 7px;
+    letter-spacing: 0.02em;
+  }
+  .analytics-report .data-table tbody td {
+    padding: 4px 6px;
+    font-size: 8px;
+    line-height: 1.18;
+  }
+  .analytics-report .app-promo {
+    margin-top: 6px;
+    padding: 6px 8px;
+    border-radius: 8px;
+  }
+  .analytics-report .app-name {
+    font-size: 11px;
+    margin-bottom: 1px;
+  }
+  .analytics-report .app-promo-text {
+    font-size: 7px;
+    line-height: 1.2;
+  }
+  .analytics-report .store-badge {
+    min-width: 90px;
+    padding: 4px 6px;
+    margin-left: 4px;
+    border-radius: 6px;
+  }
+  .analytics-report .store-icon,
+  .analytics-report .store-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+  .analytics-report .store-icon {
+    margin-right: 4px;
+  }
+  .analytics-report .store-label {
+    font-size: 5px;
+  }
+  .analytics-report .store-name {
+    font-size: 8px;
+  }
 `;
 
 const renderMetricCards = (
@@ -558,6 +708,32 @@ const renderMetricCards = (
   }
 
   return `<table class="summary-grid"><tbody>${rows.join('')}</tbody></table>`;
+};
+
+const renderCompactMetricCards = (
+  metrics: { label: string; value: string; note: string; toneClass: string }[],
+) => {
+  const rows: string[] = [];
+  for (let index = 0; index < metrics.length; index += 3) {
+    const group = metrics.slice(index, index + 3);
+    const cells = group
+      .map(
+        (metric) => `
+          <td>
+            <div class="compact-card ${metric.toneClass}">
+              <div class="metric-label">${escapeHtml(metric.label)}</div>
+              <div class="metric-value">${escapeHtml(metric.value)}</div>
+              <div class="metric-note">${escapeHtml(metric.note)}</div>
+            </div>
+          </td>
+        `,
+      )
+      .join('');
+    const filler = '<td></td>'.repeat(3 - group.length);
+    rows.push(`<tr>${cells}${filler}</tr>`);
+  }
+
+  return `<table class="compact-metrics"><tbody>${rows.join('')}</tbody></table>`;
 };
 
 const renderTable = ({
@@ -944,8 +1120,8 @@ export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps)
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <style>${pdfStyles}</style>
       </head>
-      <body>
-        <div class="report-shell">
+      <body class="analytics-pdf-body">
+        <div class="report-shell analytics-report">
           <div class="hero">
             <div class="eyebrow">Aldo Analytics</div>
             <div class="hero-grid">
@@ -971,7 +1147,7 @@ export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps)
             <div class="section">
               <div class="section-title">Headline Metrics</div>
               <div class="section-copy">A top-level view of the most important indicators in the analytics dashboard.</div>
-              ${renderMetricCards(summaryCards)}
+              ${renderCompactMetricCards(summaryCards)}
             </div>
 
             <div class="section">
