@@ -31,7 +31,12 @@ const WAVEFORM_IDLE_LEVEL = 0.08;
 const getVoiceFileName = (uri: string) => {
   const fallback = `voice-message-${Date.now()}.m4a`;
   const name = uri.split("/").pop();
-  return name?.includes(".") ? name : fallback;
+  if (!name?.includes(".")) {
+    return fallback;
+  }
+
+  const extension = name.split(".").pop()?.toLowerCase();
+  return extension === "m4a" ? name : fallback;
 };
 
 const getVoiceErrorMessage = (error: any) => {
@@ -167,7 +172,12 @@ export default function ChatInput({ onSend }: ChatInputProps) {
       type: "audio/m4a",
     } as any);
 
-    const response = await apiClient.post("/api/v1/restaurant/chat/voice-transcription", formData);
+    const response = await apiClient.post("/api/v1/restaurant/chat/voice-transcription", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      timeout: 60_000,
+    });
     return String(response.data?.text || "").trim();
   };
 

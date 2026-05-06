@@ -33,20 +33,33 @@ export default function ViewInsightScreen() {
   const [data, setData] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    const fetchInsight = async () => {
-      setLoading(true);
-      try {
-        const response = await apiClient.get('/api/v1/restaurant/insights');
+  const fetchInsight = React.useCallback(async (isMounted: () => boolean) => {
+    setLoading(true);
+    try {
+      const response = await apiClient.get('/api/v1/restaurant/insights', {
+        params: { _: Date.now() },
+      });
+      if (isMounted()) {
         setData(response.data);
-      } catch (error) {
-        console.error("Failed to fetch insights:", error);
-      } finally {
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch insights:", error?.response?.data || error?.message);
+    } finally {
+      if (isMounted()) {
         setLoading(false);
       }
-    };
-    fetchInsight();
+    }
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let isActive = true;
+      void fetchInsight(() => isActive);
+      return () => {
+        isActive = false;
+      };
+    }, [fetchInsight]),
+  );
 
   const localizedInsightData = React.useMemo(() => {
     if (!data) {
