@@ -34,6 +34,17 @@ const getVoiceFileName = (uri: string) => {
   return name?.includes(".") ? name : fallback;
 };
 
+const getVoiceErrorMessage = (error: any) => {
+  const apiMessage =
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.message ||
+    error?.response?.data?.detail;
+  if (apiMessage) {
+    return String(apiMessage);
+  }
+  return error?.message || "Could not transcribe voice message.";
+};
+
 export default function ChatInput({ onSend }: ChatInputProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -156,11 +167,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
       type: "audio/m4a",
     } as any);
 
-    const response = await apiClient.post("/api/v1/restaurant/chat/voice-transcription", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await apiClient.post("/api/v1/restaurant/chat/voice-transcription", formData);
     return String(response.data?.text || "").trim();
   };
 
@@ -193,7 +200,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
         setSelectedFile(null);
       }
     } catch (error: any) {
-      showErrorMessage(error?.message || "Could not transcribe voice message.", "Voice Input");
+      showErrorMessage(getVoiceErrorMessage(error), "Voice Input");
     } finally {
       setIsTranscribing(false);
       await Audio.setAudioModeAsync({

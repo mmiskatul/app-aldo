@@ -8,9 +8,16 @@
     "scheme": "aldo",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "RistoAI uses the microphone to convert your voice into chat messages."
+      }
     },
     "android": {
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/android-adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
@@ -24,6 +31,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "RistoAI uses the microphone to convert your voice into chat messages."
+        }
+      ],
       "expo-notifications",
       [
         "expo-localization",
