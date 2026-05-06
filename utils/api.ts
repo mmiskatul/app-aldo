@@ -1,7 +1,6 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-const DEFAULT_API_URL = "http://127.0.0.1:8000";
 export const API_REQUEST_TIMEOUT_MS = 15_000;
 
 const LOCAL_HOSTS = new Set(["0.0.0.0", "127.0.0.1", "localhost"]);
@@ -53,7 +52,7 @@ const getConfiguredApiUrl = (): string => {
       ""
   ).trim();
 
-  return expoExtraApiUrl || DEFAULT_API_URL;
+  return expoExtraApiUrl;
 };
 
 export const getApiBaseUrl = (): string => {

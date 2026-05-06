@@ -194,7 +194,7 @@ apiClient.interceptors.response.use(
 
       if (!refreshToken) {
         processQueue(error, null);
-        useAppStore.getState().logout();
+        clearStaleSession();
         isRefreshing = false;
         return Promise.reject(error);
       }
@@ -214,7 +214,7 @@ apiClient.interceptors.response.use(
       } catch (refreshError: any) {
         console.log("[apiClient] Refresh failed:", refreshError.response?.data || refreshError.message);
         processQueue(refreshError, null);
-        useAppStore.getState().logout();
+        clearStaleSession();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

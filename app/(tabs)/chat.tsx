@@ -43,7 +43,7 @@ const supportsRealtimeChat = (apiUrl: string): boolean => {
   }
 
   const hostname = getHostname(apiUrl);
-  return hostname !== "risto-ai.vercel.app" && !hostname.endsWith(".vercel.app");
+  return Boolean(hostname) && !hostname.endsWith(".vercel.app");
 };
 
 export default function ChatScreen() {

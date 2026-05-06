@@ -24,7 +24,7 @@ import StepFeatureExplanation from "../../components/auth/restoAi/StepFeatureExp
 import Step6Success from "../../components/auth/restoAi/Step6Success";
 import { useAppStore } from "../../store/useAppStore";
 import { buildFileName, inferMimeType } from "../../utils/fileMetadata";
-import { getApiErrorMessage } from "../../utils/api";
+import { getApiBaseUrl, getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 import LanguageModal from "../../components/home/LanguageModal";
 
@@ -142,6 +142,15 @@ const imageUrlFieldByUploadField: Record<OnboardingImageField, OnboardingImageUr
   exterior_photo: "exterior_photo_url",
 };
 
+const getRequestDebugUrl = (error: any): string => {
+  const baseUrl = String(error?.config?.baseURL || getApiBaseUrl()).replace(/\/+$/, "");
+  const requestUrl = String(error?.config?.url || "");
+  if (/^https?:\/\//i.test(requestUrl)) {
+    return requestUrl;
+  }
+  return `${baseUrl}${requestUrl.startsWith("/") ? "" : "/"}${requestUrl}`;
+};
+
 export default function SetupScreen() {
   const router = useRouter();
   const setUser = useAppStore((state) => state.setUser);
@@ -178,13 +187,27 @@ export default function SetupScreen() {
   const totalSteps = 9;
 
   useEffect(() => {
+    if (!tokens?.access_token) {
+      setLoadingInitialData(false);
+      router.replace("/(auth)" as any);
+      return;
+    }
+
+    let isMounted = true;
+
     const loadSetupData = async () => {
       try {
-        const [user, onboardingResponse] = await Promise.all([
-          getCurrentUser(),
-          apiClient.get<OnboardingProfileResponse | null>("/api/v1/onboarding/profile"),
-        ]);
-        const onboarding = onboardingResponse.data;
+        const user = await getCurrentUser();
+        if (!isMounted) {
+          return;
+        }
+        let onboarding: OnboardingProfileResponse | null = null;
+        try {
+          const onboardingResponse = await apiClient.get<OnboardingProfileResponse | null>("/api/v1/onboarding/profile");
+          onboarding = onboardingResponse.data;
+        } catch (onboardingError: any) {
+          console.log("Optional onboarding profile load failed:", onboardingError?.response?.data || onboardingError?.message);
+        }
 
         if (hasCompletedOnboarding(user)) {
           setUser(user, tokens);
@@ -231,14 +254,22 @@ export default function SetupScreen() {
           setFeatureScreens(FALLBACK_FEATURE_SCREENS);
         }
       } catch (error: any) {
-        console.error("Error loading onboarding data:", error?.response?.data || error?.message);
+        if (error?.response?.status !== 401) {
+          console.error("Error loading onboarding data:", error?.response?.data || error?.message);
+        }
       } finally {
-        setLoadingInitialData(false);
+        if (isMounted) {
+          setLoadingInitialData(false);
+        }
       }
     };
 
     void loadSetupData();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router, setUser, tokens]);
 
   const uploadOnboardingImage = async (
     fieldName: OnboardingImageField,
@@ -274,6 +305,10 @@ export default function SetupScreen() {
   };
 
   const submitOnboarding = async () => {
+    if (submitting) {
+      return;
+    }
+
     if (!restaurantName.trim()) {
       showErrorMessage("Restaurant name is required.");
       setStep(1);
@@ -344,7 +379,12 @@ export default function SetupScreen() {
         router.replace("/(auth)/subscription" as any);
       }
     } catch (error: any) {
-      console.error("Error saving onboarding:", error?.response?.data || error?.message);
+      console.error("Error saving onboarding:", {
+        url: getRequestDebugUrl(error),
+        code: error?.code,
+        message: error?.message,
+        response: error?.response?.data,
+      });
       showErrorMessage(getApiErrorMessage(error, "Could not save onboarding details."));
     } finally {
       setSubmitting(false);
@@ -365,7 +405,11 @@ export default function SetupScreen() {
     if (step > 1) {
       setStep(step - 1);
     } else {
-      router.back();
+      if ((router as any).canGoBack?.()) {
+        router.back();
+      } else {
+        router.replace("/(auth)" as any);
+      }
     }
   };
 

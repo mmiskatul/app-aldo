@@ -63,7 +63,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "https://risto-ai.vercel.app",
+      "apiUrl": "",
       "router": {
         "origin": false
       },
