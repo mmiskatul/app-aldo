@@ -8,15 +8,15 @@ export default function CoversCard() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Feather name="users" size={moderateScale(16)} color="#111827" style={styles.icon} />
-        <Text style={styles.title}>Covers</Text>
+        <Text style={styles.title}>Coperti</Text>
       </View>
       
       <View style={styles.row}>
-        <Text style={styles.label}>Lunch</Text>
+        <Text style={styles.label}>Lunch Coperti</Text>
         <Text style={styles.value}>45</Text>
       </View>
       <View style={styles.row}>
-        <Text style={styles.label}>Dinner</Text>
+        <Text style={styles.label}>Dinner Coperti</Text>
         <Text style={styles.value}>60</Text>
       </View>
       

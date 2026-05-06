@@ -126,8 +126,8 @@ export default function AddDailyDataScreen() {
         { label: "Cash In", value: method1Data.cash_in },
         { label: "Cash Out", value: method1Data.cash_out },
         { label: "Expenses in Cash", value: method1Data.expenses_in_cash },
-        { label: "Lunch Covers", value: method1Data.lunch_covers, integer: true },
-        { label: "Dinner Covers", value: method1Data.dinner_covers, integer: true },
+        { label: "Lunch Coperti", value: method1Data.lunch_covers, integer: true },
+        { label: "Dinner Coperti", value: method1Data.dinner_covers, integer: true },
         { label: "Opening Cash", value: method1Data.opening_cash },
         { label: "Closing Cash", value: method1Data.closing_cash },
       ]);
@@ -138,8 +138,8 @@ export default function AddDailyDataScreen() {
       { label: "Cash Payments", value: method2Data.cash_payments },
       { label: "Invoices Paid by Bank Transfer", value: method2Data.bank_transfer_payments },
       { label: "Expenses in Cash", value: method2Data.expenses_in_cash },
-      { label: "Lunch Covers", value: method2Data.lunch_covers, integer: true },
-      { label: "Dinner Covers", value: method2Data.dinner_covers, integer: true },
+      { label: "Lunch Coperti", value: method2Data.lunch_covers, integer: true },
+      { label: "Dinner Coperti", value: method2Data.dinner_covers, integer: true },
       { label: "Opening Cash", value: method2Data.opening_cash },
       { label: "Closing Cash", value: method2Data.closing_cash },
     ]);

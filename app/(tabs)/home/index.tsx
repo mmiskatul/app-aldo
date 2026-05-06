@@ -73,9 +73,30 @@ interface HomeSectionMetricResponse {
   items: MetricCard[];
 }
 
-interface HomeSectionCashResponse {
-  period: "weekly" | "monthly";
-  items: CashItem[];
+interface CashOverviewPeriod {
+  summary: {
+    total_collected: number;
+    pos_payments: number;
+    cash_available: number;
+    bank_deposits?: number;
+    bank_deposits_total: number;
+    withdrawals_total: number;
+  };
+  status: {
+    total_collected: string;
+    cash_available: string;
+    pos_payments: string;
+    withdrawals: string;
+    bank_deposits: string;
+  };
+  recent_deposits: any[];
+}
+
+interface CashOverviewResponse {
+  active_period: string;
+  periods: {
+    [key: string]: CashOverviewPeriod;
+  };
 }
 
 interface HomeSectionRevenueResponse {
@@ -120,6 +141,41 @@ interface HomeOverviewResponse {
 }
 
 type PeriodKey = "weekly" | "monthly";
+
+const cashOverviewPeriodKey = (period: PeriodKey) => period === "weekly" ? "this_week" : "this_month";
+
+const cashOverviewToHomeItems = (overview: CashOverviewResponse, period: PeriodKey): CashItem[] => {
+  const summary = overview.periods[cashOverviewPeriodKey(period)]?.summary;
+
+  if (!summary) {
+    return [];
+  }
+
+  const cashDeposit = Number(summary.bank_deposits ?? summary.bank_deposits_total ?? 0);
+
+  return [
+    {
+      label: "Total Collection",
+      amount: Number(summary.total_collected ?? 0),
+      subtitle: "Available cash plus cash deposits",
+    },
+    {
+      label: "POS Payments",
+      amount: Number(summary.pos_payments ?? 0),
+      subtitle: "Card and POS settlements",
+    },
+    {
+      label: "Available Cash",
+      amount: Number(summary.cash_available ?? 0),
+      subtitle: "Cash remaining after expenses and withdrawals",
+    },
+    {
+      label: "Cash Deposit",
+      amount: cashDeposit,
+      subtitle: "Bank transfers and recorded deposits",
+    },
+  ];
+};
 
 const REVENUE_TRIGGER_Y = 260;
 const INSIGHT_TRIGGER_Y = 520;
@@ -241,10 +297,6 @@ export default function TabsIndex() {
       weekly: data.weekly.metrics,
       monthly: data.monthly.metrics,
     };
-    const nextCashByPeriod = {
-      weekly: data.weekly.cash_management,
-      monthly: data.monthly.cash_management,
-    };
     const nextRevenueByPeriod = {
       weekly: data.weekly.revenue,
       monthly: data.monthly.revenue,
@@ -260,7 +312,6 @@ export default function TabsIndex() {
 
     setShellData(nextShellData);
     setMetricsByPeriod(nextMetricsByPeriod);
-    setCashByPeriod(nextCashByPeriod);
     setRevenueByPeriod(nextRevenueByPeriod);
     setVatBalance(data[period].vat_balance);
     if (data.recent_activity?.length) {
@@ -273,7 +324,6 @@ export default function TabsIndex() {
     setHomeScreenCache({
       shellData: nextShellData,
       metricsByPeriod: nextMetricsByPeriod,
-      cashByPeriod: nextCashByPeriod,
       revenueByPeriod: nextRevenueByPeriod,
       vatBalance: data[period].vat_balance,
       fetchedAt: Date.now(),
@@ -296,7 +346,7 @@ export default function TabsIndex() {
       params: {
         period,
         include_metrics: true,
-        include_cash_management: true,
+        include_cash_management: false,
         include_revenue: true,
         include_featured_insight: includeFeaturedInsight,
         include_recent_activity: false,
@@ -329,12 +379,12 @@ export default function TabsIndex() {
   const fetchCashSection = useCallback(async (period: PeriodKey) => {
     setCashLoading(true);
     try {
-      const response = await apiClient.get<HomeSectionCashResponse>("/api/v1/restaurant/home/cash-management", {
-        params: { period },
-      });
+      const response = await apiClient.get<CashOverviewResponse>("/api/v1/restaurant/cash/overview");
+      setCashOverviewData(response.data);
+      const items = cashOverviewToHomeItems(response.data, period);
       let nextCashByPeriod: Partial<Record<PeriodKey, CashItem[]>> | null = null;
       setCashByPeriod((current) => {
-        nextCashByPeriod = { ...current, [period]: response.data.items };
+        nextCashByPeriod = { ...current, [period]: items };
         return nextCashByPeriod;
       });
       if (nextCashByPeriod) {
@@ -345,7 +395,7 @@ export default function TabsIndex() {
     } finally {
       setCashLoading(false);
     }
-  }, [setHomeScreenCache]);
+  }, [setCashOverviewData, setHomeScreenCache]);
 
   const fetchVatSection = useCallback(async () => {
     setVatLoading(true);

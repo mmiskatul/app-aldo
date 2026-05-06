@@ -127,13 +127,13 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
             color="#FA8C4C"
             style={styles.sectionIcon}
           />
-          <Text style={styles.sectionTitle}>Customer Covers</Text>
+          <Text style={styles.sectionTitle}>Coperti</Text>
         </View>
       </View>
 
       <View style={styles.row}>
         <View style={[styles.inputGroup, { flex: 1, marginRight: scale(8) }]}>
-          <Text style={styles.label}>Lunch Covers</Text>
+          <Text style={styles.label}>Lunch Coperti</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={[styles.input, { paddingLeft: scale(16) }]}
@@ -146,7 +146,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
           </View>
         </View>
         <View style={[styles.inputGroup, { flex: 1, marginLeft: scale(8) }]}>
-          <Text style={styles.label}>Dinner Covers</Text>
+          <Text style={styles.label}>Dinner Coperti</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={[styles.input, { paddingLeft: scale(16) }]}

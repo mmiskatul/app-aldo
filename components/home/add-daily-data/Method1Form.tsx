@@ -97,19 +97,19 @@ export default function Method1Form({ data, onChange, onInfoPress }: Props) {
       <View style={[styles.sectionHeader, { marginTop: verticalScale(16) }]}>
         <View style={styles.titleRow}>
           <Feather name="users" size={moderateScale(18)} color="#FA8C4C" style={styles.sectionIcon} />
-          <Text style={styles.sectionTitleLarge}>Customer Covers</Text>
+          <Text style={styles.sectionTitleLarge}>Coperti</Text>
         </View>
       </View>
 
       <View style={styles.row}>
         <View style={[styles.inputGroup, { flex: 1, marginRight: scale(8) }]}>
-          <Text style={styles.label}>Lunch Covers</Text>
+          <Text style={styles.label}>Lunch Coperti</Text>
           <View style={styles.inputContainer}>
             <TextInput style={[styles.input, { paddingLeft: scale(16) }]} placeholder="0" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.lunch_covers} onChangeText={(val) => onChange('lunch_covers', val)} />
           </View>
         </View>
         <View style={[styles.inputGroup, { flex: 1, marginLeft: scale(8) }]}>
-          <Text style={styles.label}>Dinner Covers</Text>
+          <Text style={styles.label}>Dinner Coperti</Text>
           <View style={styles.inputContainer}>
             <TextInput style={[styles.input, { paddingLeft: scale(16) }]} placeholder="0" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.dinner_covers} onChangeText={(val) => onChange('dinner_covers', val)} />
           </View>

@@ -75,7 +75,7 @@ export default function DataMetrics({
 
       <View style={styles.splitRow}>
         <View style={styles.splitCard}>
-          <Text style={styles.cardTitleSmall}>Total Covers</Text>
+          <Text style={styles.cardTitleSmall}>Total Coperti</Text>
           <Text style={styles.amountTextSmall}>{covers}</Text>
         </View>
 
