@@ -5,7 +5,7 @@ import * as Notifications from 'expo-notifications';
 
 import { hasCompletedOnboarding } from '../../api/auth';
 import { registerPushDevice } from '../../api/settings';
-import { useAppStore } from '../../store/useAppStore';
+import { hasActiveSubscription, useAppStore } from '../../store/useAppStore';
 import {
   getPushDeviceId,
   registerForPushNotificationsAsync,
@@ -20,6 +20,10 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+const getApiErrorCode = (error: any): string => {
+  return String(error?.response?.data?.error?.code || error?.response?.data?.code || '').toLowerCase();
+};
 
 export default function PushNotificationRegistrar() {
   const router = useRouter();
@@ -37,6 +41,7 @@ export default function PushNotificationRegistrar() {
       !tokens?.access_token ||
       !user?.id ||
       !isRestaurantUser ||
+      !hasActiveSubscription(user) ||
       !hasCompletedOnboarding(user)
     ) {
       lastRegisteredTokenRef.current = null;
@@ -70,8 +75,13 @@ export default function PushNotificationRegistrar() {
           device_name: Platform.OS,
         });
         lastRegisteredTokenRef.current = expoPushToken;
-      } catch (error) {
-        console.log('[push] registration skipped:', error);
+      } catch (error: any) {
+        const code = getApiErrorCode(error);
+        if (error?.response?.status === 403 && (code === 'subscription_required' || code === 'onboarding_required')) {
+          lastRegisteredTokenRef.current = null;
+          return;
+        }
+        console.log('[push] registration skipped:', error?.message || error);
       }
     };
 
@@ -80,7 +90,15 @@ export default function PushNotificationRegistrar() {
     return () => {
       isActive = false;
     };
-  }, [tokens?.access_token, user?.id, user?.role, user?.onboarding_completed]);
+  }, [
+    tokens?.access_token,
+    user?.id,
+    user?.role,
+    user?.onboarding_completed,
+    user?.subscription_plan_name,
+    user?.subscription_status,
+    user?.subscription_selection_required,
+  ]);
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(() => {
