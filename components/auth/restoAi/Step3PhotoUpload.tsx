@@ -40,7 +40,7 @@ export default function Step3PhotoUpload({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
           aspect: [4, 3],
-          quality: 1,
+          quality: 0.6,
         });
       } else {
         const permissionResult =
@@ -53,7 +53,7 @@ export default function Step3PhotoUpload({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsEditing: true,
           aspect: [4, 3],
-          quality: 1,
+          quality: 0.6,
         });
       }
 

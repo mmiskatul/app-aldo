@@ -133,6 +133,15 @@ const parseBusinessGoals = (value?: string | null): string[] => {
     .filter(Boolean);
 };
 
+type OnboardingImageField = "profile_image" | "interior_photo" | "exterior_photo";
+type OnboardingImageUrlField = "profile_image_url" | "interior_photo_url" | "exterior_photo_url";
+
+const imageUrlFieldByUploadField: Record<OnboardingImageField, OnboardingImageUrlField> = {
+  profile_image: "profile_image_url",
+  interior_photo: "interior_photo_url",
+  exterior_photo: "exterior_photo_url",
+};
+
 export default function SetupScreen() {
   const router = useRouter();
   const setUser = useAppStore((state) => state.setUser);
@@ -231,26 +240,37 @@ export default function SetupScreen() {
     void loadSetupData();
   }, []);
 
-  const appendImageFile = (
-    formData: FormData,
-    fieldName: "profile_image" | "interior_photo" | "exterior_photo",
-    uri: string | null,
-  ) => {
-    if (!uri) {
-      return;
-    }
-    if (/^https?:\/\//i.test(uri)) {
-      const urlFieldName =
-        fieldName === "profile_image" ? "profile_image_url" : `${fieldName}_url`;
-      formData.append(urlFieldName, uri);
-      return;
-    }
-    const mimeType = inferMimeType(uri);
-    formData.append(fieldName, {
+  const uploadOnboardingImage = async (
+    fieldName: OnboardingImageField,
+    uri: string,
+  ): Promise<[OnboardingImageUrlField, string]> => {
+    const inferredMimeType = inferMimeType(uri);
+    const mimeType = inferredMimeType.startsWith("image/") ? inferredMimeType : "image/jpeg";
+    const imageFormData = new FormData();
+    imageFormData.append("file", {
       uri,
       name: buildFileName(null, uri, fieldName, mimeType),
       type: mimeType,
     } as any);
+
+    const response = await apiClient.post("/api/v1/upload/image", imageFormData, {
+      timeout: 60_000,
+    });
+    return [imageUrlFieldByUploadField[fieldName], String(response.data?.url || "")];
+  };
+
+  const resolveImageUrlField = async (
+    fieldName: OnboardingImageField,
+    uri: string | null,
+  ): Promise<[OnboardingImageUrlField, string] | null> => {
+    if (!uri) {
+      return null;
+    }
+    const urlFieldName = imageUrlFieldByUploadField[fieldName];
+    if (/^https?:\/\//i.test(uri)) {
+      return [urlFieldName, uri];
+    }
+    return uploadOnboardingImage(fieldName, uri);
   };
 
   const submitOnboarding = async () => {
@@ -290,6 +310,14 @@ export default function SetupScreen() {
 
     setSubmitting(true);
     try {
+      const imageUrlEntries = (
+        await Promise.all([
+          resolveImageUrlField("profile_image", profilePhoto),
+          resolveImageUrlField("interior_photo", interiorPhoto),
+          resolveImageUrlField("exterior_photo", exteriorPhoto),
+        ])
+      ).filter((entry): entry is [OnboardingImageUrlField, string] => Boolean(entry?.[1]));
+
       const formData = new FormData();
       formData.append("restaurant_name", restaurantName.trim());
       formData.append("restaurant_type", restaurantType.trim());
@@ -299,16 +327,12 @@ export default function SetupScreen() {
       formData.append("main_business_goal", businessGoals.join(", "));
       formData.append("biggest_problem", biggestProblem.trim());
       formData.append("improvement_focus", improvementGoal.trim());
-      appendImageFile(formData, "profile_image", profilePhoto);
-      appendImageFile(formData, "interior_photo", interiorPhoto);
-      appendImageFile(formData, "exterior_photo", exteriorPhoto);
+      imageUrlEntries.forEach(([fieldName, url]) => {
+        formData.append(fieldName, url);
+      });
 
       await apiClient.post("/api/v1/onboarding/profile", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Accept: "application/json",
-        },
-        transformRequest: (data) => data,
+        timeout: 30_000,
       });
 
       const user = await getCurrentUser();
