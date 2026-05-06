@@ -591,11 +591,12 @@ export default function TabsIndex() {
     router.push(route as any);
   }, [router]);
 
-  const handleCashCardPress = useCallback((keyName: "total_collected" | "cash_available" | "cash_deposit") => {
+  const handleCashCardPress = useCallback((keyName: "total_collected" | "pos_payments" | "cash_available" | "cash_deposit") => {
     switch (keyName) {
       case "cash_deposit":
         navigateFromHome("/(tabs)/home/add-bank-deposit");
         return;
+      case "pos_payments":
       case "total_collected":
       case "cash_available":
       default:

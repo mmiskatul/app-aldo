@@ -107,12 +107,14 @@ export interface CashOverviewData {
       summary: {
         total_collected: number;
         cash_available: number;
+        pos_payments: number;
         withdrawals_total: number;
         bank_deposits_total: number;
       };
       status: {
         total_collected: string;
         cash_available: string;
+        pos_payments: string;
         withdrawals: string;
         bank_deposits: string;
       };

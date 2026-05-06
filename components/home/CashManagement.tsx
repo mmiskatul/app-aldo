@@ -6,11 +6,11 @@ import { useTranslation } from '../../utils/i18n';
 import Skeleton from '../ui/Skeleton';
 
 interface CashItemProps {
-  keyName: 'total_collected' | 'cash_available' | 'cash_deposit';
+  keyName: 'total_collected' | 'pos_payments' | 'cash_available' | 'cash_deposit';
   title: string;
   value: string;
   IconComponent: any;
-  onPress?: (keyName: 'total_collected' | 'cash_available' | 'cash_deposit') => void;
+  onPress?: (keyName: 'total_collected' | 'pos_payments' | 'cash_available' | 'cash_deposit') => void;
 }
 
 const CashItem = ({ keyName, title, value, IconComponent, onPress }: CashItemProps) => {
@@ -40,7 +40,7 @@ interface CashManagementProps {
     subtitle: string;
   }[];
   loading?: boolean;
-  onItemPress?: (keyName: 'total_collected' | 'cash_available' | 'cash_deposit') => void;
+  onItemPress?: (keyName: 'total_collected' | 'pos_payments' | 'cash_available' | 'cash_deposit') => void;
 }
 
 export default function CashManagement({ cashData, loading = false, onItemPress }: CashManagementProps) {
@@ -52,7 +52,11 @@ export default function CashManagement({ cashData, loading = false, onItemPress 
       case 'total collected':
       case 'total cash collected':
         return t('total_collected');
+      case 'pos payment':
+      case 'pos payments':
+        return t('pos_payments');
       case 'cash available':
+      case 'available cash':
         return t('cash_available');
       case 'cash deposit':
       case 'cash deposited':
@@ -62,13 +66,17 @@ export default function CashManagement({ cashData, loading = false, onItemPress 
     }
   };
 
-  const getCashKey = (label: string): 'total_collected' | 'cash_available' | 'cash_deposit' => {
+  const getCashKey = (label: string): 'total_collected' | 'pos_payments' | 'cash_available' | 'cash_deposit' => {
     switch (label.trim().toLowerCase()) {
       case 'total collection':
       case 'total collected':
       case 'total cash collected':
         return 'total_collected';
+      case 'pos payment':
+      case 'pos payments':
+        return 'pos_payments';
       case 'cash available':
+      case 'available cash':
         return 'cash_available';
       case 'cash deposit':
       case 'cash deposited':
@@ -83,7 +91,11 @@ export default function CashManagement({ cashData, loading = false, onItemPress 
       case 'total collection':
       case 'total cash collected':
         return CreditCardIcon;
+      case 'pos payment':
+      case 'pos payments':
+        return CreditCardIcon;
       case 'cash available':
+      case 'available cash':
         return BanknotesIcon;
       case 'cash deposit':
       case 'cash deposited':
@@ -106,11 +118,12 @@ export default function CashManagement({ cashData, loading = false, onItemPress 
         }))
       : [
           { keyName: 'total_collected' as const, title: t('total_collected'), value: '\u20AC0.00', IconComponent: CreditCardIcon },
+          { keyName: 'pos_payments' as const, title: t('pos_payments'), value: '\u20AC0.00', IconComponent: CreditCardIcon },
           { keyName: 'cash_available' as const, title: t('cash_available'), value: '\u20AC0.00', IconComponent: BanknotesIcon },
           { keyName: 'cash_deposit' as const, title: t('cash_deposit'), value: '\u20AC0.00', IconComponent: BuildingLibraryIcon },
         ];
 
-  const skeletonRows = [0, 1, 2];
+  const skeletonRows = [0, 1, 2, 3];
 
   return (
     <View style={styles.container}>

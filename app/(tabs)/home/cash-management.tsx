@@ -22,6 +22,7 @@ import RecentDeposits from "../../../components/home/cash/RecentDeposits";
 type CashSummary = {
   total_collected: number;
   cash_available: number;
+  pos_payments: number;
   withdrawals_total: number;
   bank_deposits: number;
   bank_deposits_total?: number;
@@ -98,6 +99,7 @@ export default function CashManagementScreen() {
           (currentData.summary as any).bank_deposits ??
           (currentData.summary as any).bank_deposits_total ??
           0,
+        pos_payments: (currentData.summary as any).pos_payments ?? 0,
       }
     : null;
 
@@ -178,6 +180,7 @@ export default function CashManagementScreen() {
                       (currentData.summary as any).bank_deposits ??
                       (currentData.summary as any).bank_deposits_total ??
                       0,
+                    pos_payments: (currentData.summary as any).pos_payments ?? 0,
                   }
                 }
                 status={currentData.status}

@@ -7,12 +7,14 @@ interface CashMetricsProps {
   summary: {
     total_collected: number;
     cash_available: number;
+    pos_payments: number;
     withdrawals_total: number;
     bank_deposits: number;
   };
   status: {
     total_collected: string;
     cash_available: string;
+    pos_payments: string;
     withdrawals: string;
     bank_deposits: string;
   };
@@ -52,9 +54,9 @@ export default function CashMetrics({ summary, status }: CashMetricsProps) {
 
       <View style={styles.row}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t("withdrawals")}</Text>
-          <Text style={styles.cardValue}>{formatCurrency(summary.withdrawals_total)}</Text>
-          <Text style={styles.tagGrey}>{status.withdrawals}</Text>
+          <Text style={styles.cardTitle}>{t("pos_payments")}</Text>
+          <Text style={styles.cardValue}>{formatCurrency(summary.pos_payments)}</Text>
+          <Text style={styles.tagGrey}>{status.pos_payments}</Text>
         </View>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("cash_deposit")}</Text>

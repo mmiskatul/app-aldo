@@ -379,6 +379,141 @@ const pdfStyles = `
   .muted {
     color: var(--muted);
   }
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+  .home-report {
+    page-break-inside: avoid;
+  }
+  .home-report .hero {
+    padding: 16px 20px 14px;
+  }
+  .home-report .eyebrow {
+    margin-bottom: 6px;
+  }
+  .home-report h1 {
+    font-size: 24px;
+  }
+  .home-report .hero-grid {
+    margin-top: 10px;
+  }
+  .home-report .content {
+    padding: 14px 20px 16px;
+  }
+  .home-report .section + .section {
+    margin-top: 12px;
+  }
+  .home-report .section-title {
+    margin-bottom: 4px;
+    font-size: 15px;
+  }
+  .home-report .section-copy {
+    margin-bottom: 8px;
+    font-size: 10px;
+    line-height: 1.35;
+  }
+  .home-report .summary-grid {
+    border-spacing: 8px;
+    margin: 0 -8px;
+  }
+  .home-report .metric-card {
+    min-height: 78px;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+  .home-report .metric-label {
+    font-size: 9px;
+  }
+  .home-report .metric-value {
+    margin-top: 6px;
+    font-size: 20px;
+  }
+  .home-report .metric-note {
+    display: none;
+  }
+  .home-report table.data-table {
+    border-radius: 10px;
+  }
+  .home-report .data-table thead th {
+    padding: 7px 9px;
+    font-size: 9px;
+  }
+  .home-report .data-table tbody td {
+    padding: 7px 9px;
+    font-size: 10px;
+  }
+  .app-promo {
+    margin-top: 12px;
+    border: 1px solid rgba(250, 140, 76, 0.28);
+    border-radius: 12px;
+    background: #fff8f3;
+    padding: 10px 12px;
+    display: table;
+    width: 100%;
+  }
+  .app-promo-copy,
+  .store-badges {
+    display: table-cell;
+    vertical-align: middle;
+  }
+  .app-promo-copy {
+    width: 52%;
+  }
+  .app-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .app-promo-text {
+    font-size: 10px;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+  .store-badges {
+    text-align: right;
+  }
+  .store-badge {
+    display: inline-block;
+    min-width: 118px;
+    background: #111827;
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 6px 9px;
+    margin-left: 6px;
+    text-align: left;
+  }
+  .store-icon,
+  .store-copy {
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .store-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: transparent;
+    margin-right: 7px;
+  }
+  .store-icon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+  }
+  .store-label {
+    display: block;
+    font-size: 7px;
+    line-height: 1.1;
+    color: #d1d5db;
+  }
+  .store-name {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #ffffff;
+  }
 `;
 
 const renderMetricCards = (
@@ -451,6 +586,43 @@ const renderTable = ({
     </table>
   `;
 };
+
+const renderAppPromotion = () => `
+  <div class="app-promo">
+    <div class="app-promo-copy">
+      <div class="app-name">RistoAI</div>
+      <div class="app-promo-text">Track restaurant performance, cash, VAT, inventory, and AI insights from one mobile workspace.</div>
+    </div>
+    <div class="store-badges">
+      <div class="store-badge">
+        <span class="store-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#ffffff" d="M16.8 12.8c0-2.2 1.8-3.3 1.9-3.4-1-1.5-2.6-1.7-3.2-1.7-1.4-.1-2.7.8-3.4.8-.7 0-1.8-.8-2.9-.8-1.5 0-2.9.9-3.7 2.2-1.6 2.8-.4 7 1.1 9.2.8 1.1 1.7 2.3 2.9 2.3 1.1 0 1.6-.7 3-.7s1.8.7 3 .7c1.2 0 2-1.1 2.8-2.2.9-1.3 1.2-2.5 1.2-2.6 0 0-2.6-1-2.7-3.8z"/>
+            <path fill="#ffffff" d="M14.6 6.3c.6-.8 1.1-1.8 1-2.9-1 .1-2 .6-2.7 1.4-.6.7-1.1 1.7-1 2.7 1 .1 2-.5 2.7-1.2z"/>
+          </svg>
+        </span>
+        <span class="store-copy">
+          <span class="store-label">Download on the</span>
+          <span class="store-name">App Store</span>
+        </span>
+      </div>
+      <div class="store-badge">
+        <span class="store-icon">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#34A853" d="M4.5 3.4c-.3.2-.5.6-.5 1.1v15c0 .5.2.9.5 1.1L13 12 4.5 3.4z"/>
+            <path fill="#FBBC04" d="M15.8 9.2 13 12l2.8 2.8 3.4-1.9c1.1-.6 1.1-1.2 0-1.8l-3.4-1.9z"/>
+            <path fill="#4285F4" d="M4.5 3.4 13 12l2.8-2.8L6.9 4.1c-.8-.5-1.7-.8-2.4-.7z"/>
+            <path fill="#EA4335" d="M4.5 20.6c.7.1 1.6-.2 2.4-.7l8.9-5.1L13 12l-8.5 8.6z"/>
+          </svg>
+        </span>
+        <span class="store-copy">
+          <span class="store-label">Get it on</span>
+          <span class="store-name">Google Play</span>
+        </span>
+      </div>
+    </div>
+  </div>
+`;
 
 const createWorksheet = (rows: (string | number)[][]) => XLSX.utils.aoa_to_sheet(rows);
 
@@ -530,8 +702,6 @@ export const generatePdfExport = async (data: ExportDataProps) => {
       metric.currency || primaryCurrency,
     ]) || [];
 
-  const reportNarrative = `This financial export summarizes the ${data.period.toLowerCase()} performance snapshot, with key commercial metrics and a cash position overview prepared for review or sharing.`;
-
   const html = `
     <html>
       <head>
@@ -540,13 +710,12 @@ export const generatePdfExport = async (data: ExportDataProps) => {
         <style>${pdfStyles}</style>
       </head>
       <body>
-        <div class="report-shell">
+        <div class="report-shell home-report">
           <div class="hero">
             <div class="eyebrow">Aldo Reporting</div>
             <div class="hero-grid">
               <div class="hero-main">
                 <h1>Financial Performance Report</h1>
-                <div class="hero-subtitle">${escapeHtml(reportNarrative)}</div>
               </div>
               <div class="hero-meta">
                 <div class="meta-chip">${escapeHtml(formatPeriodLabel(data.period))}</div>
@@ -559,13 +728,6 @@ export const generatePdfExport = async (data: ExportDataProps) => {
               <div class="section-title">Executive Summary</div>
               <div class="section-copy">A quick view of the most important values for the selected reporting window.</div>
               ${renderMetricCards(summaryCards)}
-            </div>
-
-            <div class="section">
-              <div class="highlight">
-                <div class="highlight-title">Management Note</div>
-                <p class="highlight-copy">Use this document as a clean handoff for finance reviews, weekly standups, or owner reporting. All amounts reflect the values currently available in the app at export time.</p>
-              </div>
             </div>
 
             <div class="section">
@@ -594,6 +756,8 @@ export const generatePdfExport = async (data: ExportDataProps) => {
                 emptyMessage: 'No cash management data is available for this period.',
               })}
             </div>
+
+            ${renderAppPromotion()}
           </div>
         </div>
       </body>
