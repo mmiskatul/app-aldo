@@ -7,7 +7,7 @@ interface OTPVerificationProps {
   code: string[];
   setCode: (code: string[]) => void;
   initialTimeLeft?: number;
-  onResend?: () => void;
+  onResend?: () => Promise<boolean | void> | boolean | void;
 }
 
 export default function OTPVerification({
@@ -18,6 +18,7 @@ export default function OTPVerification({
 }: OTPVerificationProps) {
   const inputRefs = useRef<Array<TextInput | null>>([null, null, null, null]);
   const [timeLeft, setTimeLeft] = useState(initialTimeLeft);
+  const [isResending, setIsResending] = useState(false);
 
   React.useEffect(() => {
     if (timeLeft <= 0) return;
@@ -87,17 +88,32 @@ export default function OTPVerification({
             </Text>
           </>
         ) : (
-          <TouchableOpacity onPress={() => {
-            if (onResend) onResend();
-            setTimeLeft(initialTimeLeft);
-          }}>
+          <TouchableOpacity
+            disabled={isResending}
+            onPress={async () => {
+              if (!onResend) {
+                setTimeLeft(initialTimeLeft);
+                return;
+              }
+
+              setIsResending(true);
+              try {
+                const result = await onResend();
+                if (result !== false) {
+                  setTimeLeft(initialTimeLeft);
+                }
+              } finally {
+                setIsResending(false);
+              }
+            }}
+          >
             <Text
               style={[
                 styles.resendText,
-                { color: "#FA8C4C", fontWeight: "600", marginLeft: 0 },
+                { color: isResending ? "#9CA3AF" : "#FA8C4C", fontWeight: "600", marginLeft: 0 },
               ]}
             >
-              Resend code now
+              {isResending ? "Resending..." : "Resend code now"}
             </Text>
           </TouchableOpacity>
         )}

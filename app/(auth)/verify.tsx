@@ -43,18 +43,23 @@ export default function VerifyIdentityScreen() {
     fallback;
 
   const handleResendCode = async () => {
-    if (!pendingRegistration) {
-      showErrorMessage("Missing registration details. Please restart the signup process.");
-      return;
+    if (!email) {
+      showErrorMessage("Missing email. Please restart the signup process.");
+      return false;
     }
     
     try {
-      const response = await axios.post(`${apiUrl}/api/v1/auth/restaurant/register`, pendingRegistration);
+      const response = await axios.post(`${apiUrl}/api/v1/auth/restaurant/resend-verification`, {
+        email,
+      });
       console.log("Resend API Response:", response.data);
       showSuccessMessage(response.data?.message || "Verification code resent to your email.");
+      setCode(["", "", "", ""]);
+      return true;
     } catch (error: any) {
       console.log("Resend API Error:", error.response?.data || error.message);
       showErrorMessage(getApiErrorMessage(error, "An unexpected error occurred."));
+      return false;
     }
   };
 

@@ -49,6 +49,33 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+const getApiErrorCode = (error: any): string => {
+  return String(error?.response?.data?.error?.code || error?.response?.data?.code || "").toLowerCase();
+};
+
+const getApiErrorResponseMessage = (error: any): string => {
+  return String(
+    error?.response?.data?.error?.message ||
+      error?.response?.data?.message ||
+      error?.response?.data?.detail ||
+      error?.message ||
+      ""
+  );
+};
+
+const isStalePersistedSessionError = (error: any): boolean => {
+  return (
+    error?.response?.status === 401 &&
+    getApiErrorCode(error) === "unauthorized" &&
+    getApiErrorResponseMessage(error).toLowerCase().includes("user not found")
+  );
+};
+
+const clearStaleSession = () => {
+  useAppStore.getState().logout();
+  router.replace("/(auth)" as any);
+};
+
 const redirectToSubscriptionSelection = () => {
   if (isRedirectingToSubscription) {
     return;
@@ -131,6 +158,13 @@ apiClient.interceptors.response.use(
     const refreshToken = useAppStore.getState().tokens?.refresh_token;
     const requestUrl = String(originalRequest?.url || "");
     const isRefreshRequest = requestUrl.includes("/api/v1/auth/refresh");
+
+    if (accessToken && isStalePersistedSessionError(error)) {
+      console.log("[apiClient] Stored session no longer exists on this backend; logging out.");
+      clearStaleSession();
+      return Promise.reject(error);
+    }
+
     const shouldAttemptRefresh =
       error.response?.status === 401 &&
       !originalRequest?._retry &&
