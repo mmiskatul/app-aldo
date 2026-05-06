@@ -61,6 +61,8 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [voiceLevel, setVoiceLevel] = useState(0.2);
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const isStartingRecordingRef = useRef(false);
+  const isStoppingRecordingRef = useRef(false);
   const waveformLevelsRef = useRef(Array.from({ length: WAVEFORM_BAR_COUNT }, () => WAVEFORM_IDLE_LEVEL));
   const waveformValuesRef = useRef(
     Array.from({ length: WAVEFORM_BAR_COUNT }, () => new Animated.Value(WAVEFORM_IDLE_LEVEL))
@@ -113,7 +115,20 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   };
 
   const startRecording = async () => {
+    if (isRecording || isTranscribing || isStartingRecordingRef.current || isStoppingRecordingRef.current) {
+      return;
+    }
+
+    isStartingRecordingRef.current = true;
+    let recording: Audio.Recording | null = null;
+
     try {
+      const previousRecording = recordingRef.current;
+      recordingRef.current = null;
+      if (previousRecording) {
+        await previousRecording.stopAndUnloadAsync().catch(() => undefined);
+      }
+
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
         showErrorMessage("Microphone permission is required for voice input.", "Voice Input");
@@ -128,7 +143,8 @@ export default function ChatInput({ onSend }: ChatInputProps) {
         playThroughEarpieceAndroid: false,
       });
 
-      const recording = new Audio.Recording();
+      recording = new Audio.Recording();
+      recordingRef.current = recording;
       await recording.prepareToRecordAsync({
         ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
         android: {
@@ -153,13 +169,20 @@ export default function ChatInput({ onSend }: ChatInputProps) {
       });
 
       await recording.startAsync();
-      recordingRef.current = recording;
       setIsRecording(true);
       resetWaveform(false);
     } catch (error: any) {
+      if (recordingRef.current === recording) {
+        recordingRef.current = null;
+      }
+      if (recording) {
+        await recording.stopAndUnloadAsync().catch(() => undefined);
+      }
       showErrorMessage(error?.message || "Could not start voice recording.", "Voice Input");
       setIsRecording(false);
       resetWaveform();
+    } finally {
+      isStartingRecordingRef.current = false;
     }
   };
 
@@ -182,9 +205,12 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   };
 
   const stopRecording = async (sendAfterTranscription = false) => {
+    if (isStoppingRecordingRef.current) return;
+
     const recording = recordingRef.current;
     if (!recording) return;
 
+    isStoppingRecordingRef.current = true;
     recordingRef.current = null;
     setIsRecording(false);
     setIsTranscribing(true);
@@ -212,6 +238,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     } catch (error: any) {
       showErrorMessage(getVoiceErrorMessage(error), "Voice Input");
     } finally {
+      isStoppingRecordingRef.current = false;
       setIsTranscribing(false);
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
@@ -327,7 +354,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
           accessibilityRole="button"
           accessibilityLabel="Attach file"
         >
-          <Feather name="paperclip" size={moderateScale(17)} color="#6B7280" />
+          <Feather name="plus" size={moderateScale(18)} color="#6B7280" />
         </TouchableOpacity>
 
         <TextInput
