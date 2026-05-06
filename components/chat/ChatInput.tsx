@@ -206,7 +206,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   const handleVoicePress = async () => {
     if (isTranscribing) return;
     if (isRecording) {
-      await stopRecording(false);
+      await stopRecording(true);
       return;
     }
     await startRecording();
@@ -219,7 +219,8 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     }
 
     if ((inputText.trim() || selectedFile) && onSend) {
-      onSend(inputText.trim(), selectedFile);
+      const messageText = inputText.trim() || "Please review the attached document.";
+      onSend(messageText, selectedFile);
       setInputText("");
       setSelectedFile(null);
     }
@@ -229,7 +230,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     setShowAttachmentMenu(false);
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ["application/pdf", "text/csv"],
+        type: "*/*",
         copyToCacheDirectory: true,
       });
 
@@ -302,6 +303,16 @@ export default function ChatInput({ onSend }: ChatInputProps) {
       )}
 
       <View style={styles.inputWrapper}>
+        <TouchableOpacity
+          style={styles.attachButton}
+          onPress={() => setShowAttachmentMenu(true)}
+          disabled={isRecording || isTranscribing}
+          accessibilityRole="button"
+          accessibilityLabel="Attach file"
+        >
+          <Feather name="paperclip" size={moderateScale(17)} color="#6B7280" />
+        </TouchableOpacity>
+
         <TextInput
           style={[styles.textInput, (isRecording || isTranscribing) && styles.textInputListening]}
           placeholder={isRecording ? "Recording..." : isTranscribing ? "Transcribing voice..." : t("chat_placeholder")}
@@ -489,6 +500,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(6),
     paddingVertical: verticalScale(10),
     maxHeight: verticalScale(100),
+  },
+  attachButton: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: scale(2),
   },
   textInputListening: {
     color: "#111827",
