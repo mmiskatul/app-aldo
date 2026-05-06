@@ -20,10 +20,12 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
+import AuthLanguageSelector from "../../components/auth/AuthLanguageSelector";
 import Input from "../../components/ui/Input";
 import { useAppStore } from "../../store/useAppStore";
 import { getApiBaseUrl } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
+import { useTranslation } from "../../utils/i18n";
 
 const getApiErrorMessage = (error: any, fallback: string) => {
   const errData = error.response?.data;
@@ -37,6 +39,7 @@ const getApiErrorMessage = (error: any, fallback: string) => {
 };
 
 export default function AuthSignupScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const setPendingRegistration = useAppStore((state) => state.setPendingRegistration);
@@ -54,11 +57,11 @@ export default function AuthSignupScreen() {
 
   const handleSignup = async () => {
     if (!restaurantName || !ownerName || !email || !password) {
-      showErrorMessage("Please fill in all fields.");
+      showErrorMessage(t("required_fields"));
       return;
     }
     if (password !== confirmPassword) {
-      showErrorMessage("Passwords do not match.");
+      showErrorMessage(t("passwords_do_not_match"));
       return;
     }
 
@@ -80,21 +83,21 @@ export default function AuthSignupScreen() {
       console.log("Signup API Response:", data);
       setPendingRegistration(normalizedPayload);
 
-      showSuccessMessage(data.message || "Account created successfully.");
+      showSuccessMessage(data.message || t("account_created_successfully"));
       router.push("/(auth)/verify" as any);
       
     } catch (error: any) {
       console.log("Signup API Error:", error.response?.data || error.message);
       const errorMessage = getApiErrorMessage(
         error,
-        "An unexpected error occurred during signup."
+        t("signup_failed_fallback")
       );
 
       if (
         error.response?.data?.error?.code === "conflict" ||
         errorMessage === "An account with this email already exists"
       ) {
-        showErrorMessage("An account with this email already exists.");
+        showErrorMessage(t("account_already_exists"));
       } else {
         showErrorMessage(errorMessage);
       }
@@ -120,11 +123,15 @@ export default function AuthSignupScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <View style={styles.languageSelector}>
+            <AuthLanguageSelector />
+          </View>
+
           {/* Logo Area */}
           <View style={styles.logoContainer}>
             <SplashLogo width={scale(120)} height={scale(120)} />
             <Text style={styles.logoSubtitle}>
-              AI POWERED RESTAURANT INTELLIGENCE
+              {t("auth_logo_subtitle")}
             </Text>
           </View>
 
@@ -143,17 +150,17 @@ export default function AuthSignupScreen() {
 
           {/* Header Title */}
           <View style={styles.headerContainer}>
-            <Text style={styles.headerTitle}>Create Your Account</Text>
+            <Text style={styles.headerTitle}>{t("signup_title")}</Text>
             <Text style={styles.headerSubtitle}>
-              Start managing your restaurant data with AI-powered insights.
+              {t("signup_subtitle")}
             </Text>
           </View>
 
           {/* Form */}
           <View style={styles.formContainer}>
             <Input
-              label="Restaurant Name"
-              placeholder="e.g. The Golden Bistro"
+              label={t("restaurant_name")}
+              placeholder={t("restaurant_name_signup_placeholder")}
               value={restaurantName}
               onChangeText={setRestaurantName}
               leadingIcon={
@@ -162,8 +169,8 @@ export default function AuthSignupScreen() {
             />
 
             <Input
-              label="Owner Full Name"
-              placeholder="John Doe"
+              label={t("owner_full_name")}
+              placeholder={t("owner_full_name_placeholder")}
               value={ownerName}
               onChangeText={setOwnerName}
               leadingIcon={
@@ -172,8 +179,8 @@ export default function AuthSignupScreen() {
             />
 
             <Input
-              label="Email Address"
-              placeholder="owner@restaurant.com"
+              label={t("email_address")}
+              placeholder={t("email_signup_placeholder")}
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}
@@ -184,8 +191,8 @@ export default function AuthSignupScreen() {
             />
 
             <Input
-              label="Password"
-              placeholder="••••••••"
+              label={t("password")}
+              placeholder="********"
               isPassword
               isPasswordVisible={isPasswordVisible}
               onTogglePasswordVisibility={() =>
@@ -199,8 +206,8 @@ export default function AuthSignupScreen() {
             />
 
             <Input
-              label="Confirm Password"
-              placeholder="••••••••"
+              label={t("confirm_password")}
+              placeholder="********"
               isPassword
               isPasswordVisible={isConfirmPasswordVisible}
               onTogglePasswordVisibility={() =>
@@ -225,7 +232,7 @@ export default function AuthSignupScreen() {
               {isLoading ? (
                 <ActivityIndicator color={"#FFFFFF"} />
               ) : (
-                <Text style={styles.createButtonText}>Create Account</Text>
+                <Text style={styles.createButtonText}>{t("create_account")}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -233,12 +240,12 @@ export default function AuthSignupScreen() {
           {/* Footer */}
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>
-              Already have an account?{" "}
+              {t("already_have_account")}{" "}
               <Text
                 style={styles.footerHighlight}
                 onPress={() => router.back()}
               >
-                Login
+                {t("login_button")}
               </Text>
             </Text>
           </View>
@@ -249,7 +256,7 @@ export default function AuthSignupScreen() {
         <View style={styles.loadingOverlay} pointerEvents="auto">
           <View style={styles.loadingContent}>
             <ActivityIndicator size="large" color="#FA8C4C" />
-            <Text style={styles.loadingText}>Creating account...</Text>
+            <Text style={styles.loadingText}>{t("create_account_loading")}</Text>
           </View>
         </View>
       ) : null}
@@ -278,6 +285,10 @@ const styles = StyleSheet.create({
     color: "#FA8C4C",
     marginTop: verticalScale(4),
     letterSpacing: 0.5,
+  },
+  languageSelector: {
+    alignSelf: "flex-end",
+    marginBottom: verticalScale(8),
   },
   heroContainer: {
     width: "100%",

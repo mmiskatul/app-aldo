@@ -16,15 +16,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../api/apiClient";
 import { hasCompletedOnboarding } from "../../api/auth";
+import AuthLanguageSelector from "../../components/auth/AuthLanguageSelector";
 import Input from "../../components/ui/Input";
 import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
 import { getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage } from "../../utils/feedback";
+import { useTranslation } from "../../utils/i18n";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
 
 export default function AuthLoginScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const setUser = useAppStore((state) => state.setUser);
@@ -38,7 +41,7 @@ export default function AuthLoginScreen() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
-      showErrorMessage("Please fill in all fields");
+      showErrorMessage(t("required_fields_no_period"));
       return;
     }
 
@@ -73,9 +76,9 @@ export default function AuthLoginScreen() {
 
       const errorMessage = getApiErrorMessage(
         error,
-        "An unexpected error occurred"
+        t("login_failed_fallback")
       );
-      showErrorMessage(errorMessage, "Login Failed");
+      showErrorMessage(errorMessage, t("login_failed"));
     } finally {
       setIsLoading(false);
     }
@@ -98,27 +101,31 @@ export default function AuthLoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <View style={styles.languageSelector}>
+            <AuthLanguageSelector />
+          </View>
+
           {/* Logo Area */}
           <View style={styles.logoContainer}>
             <SplashLogo width={scale(120)} height={scale(120)} />
             <Text style={styles.logoSubtitle}>
-              AI POWERED RESTAURANT INTELLIGENCE
+              {t("auth_logo_subtitle")}
             </Text>
           </View>
 
           {/* Header Title */}
           <View style={styles.headerContainer}>
-            <Text style={styles.headerTitle}>Welcome Back</Text>
+            <Text style={styles.headerTitle}>{t("login_title")}</Text>
             <Text style={styles.headerSubtitle}>
-              Sign in to access your restaurant dashboard and AI insights
+              {t("login_subtitle")}
             </Text>
           </View>
 
           {/* Form */}
           <View style={styles.formContainer}>
             <Input
-              label="Email Address"
-              placeholder="e.g. manager@restaurant.com"
+              label={t("email_address")}
+              placeholder={t("email_login_placeholder")}
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}
@@ -126,8 +133,8 @@ export default function AuthLoginScreen() {
             />
 
             <Input
-              label="Password"
-              placeholder="Enter your password"
+              label={t("password")}
+              placeholder={t("enter_password")}
               isPassword
               isPasswordVisible={isPasswordVisible}
               onTogglePasswordVisibility={() =>
@@ -141,14 +148,14 @@ export default function AuthLoginScreen() {
               style={styles.forgotPasswordButton}
               onPress={() => router.push("/(auth)/forgot-password" as any)}
             >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              <Text style={styles.forgotPasswordText}>{t("forgot_password")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={isLoading}>
               {isLoading ? (
                 <ActivityIndicator color={"#FFFFFF"} />
               ) : (
-                <Text style={styles.loginButtonText}>Login</Text>
+                <Text style={styles.loginButtonText}>{t("login_button")}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -156,12 +163,12 @@ export default function AuthLoginScreen() {
           {/* Footer */}
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>
-              Don&apos;t have an account?{" "}
+              {t("dont_have_account")}{" "}
               <Text
                 style={styles.footerHighlight}
                 onPress={() => router.push("/(auth)/signup" as any)}
               >
-                Sign-up
+                {t("signup_link")}
               </Text>
             </Text>
           </View>
@@ -172,7 +179,7 @@ export default function AuthLoginScreen() {
         <View style={styles.loadingOverlay} pointerEvents="auto">
           <View style={styles.loadingContent}>
             <ActivityIndicator size="large" color="#FA8C4C" />
-            <Text style={styles.loadingText}>Signing in...</Text>
+            <Text style={styles.loadingText}>{t("login_loading")}</Text>
           </View>
         </View>
       ) : null}
@@ -201,6 +208,10 @@ const styles = StyleSheet.create({
     color: "#FA8C4C",
     marginTop: verticalScale(10),
     letterSpacing: 0.5,
+  },
+  languageSelector: {
+    alignSelf: "flex-end",
+    marginBottom: verticalScale(8),
   },
   headerContainer: {
     marginBottom: verticalScale(30),

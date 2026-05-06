@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
 import { useAppStore } from '../../store/useAppStore';
@@ -8,9 +8,10 @@ import { useTranslation } from '../../utils/i18n';
 interface LanguageSelectorProps {
   value?: string;
   onChange?: (lang: string) => void;
+  compact?: boolean;
 }
 
-export default function LanguageSelector({ value, onChange }: LanguageSelectorProps) {
+export default function LanguageSelector({ value, onChange, compact = false }: LanguageSelectorProps) {
   const { t } = useTranslation();
   const globalAppLanguage = useAppStore((state) => state.appLanguage);
   const globalSetAppLanguage = useAppStore((state) => state.setAppLanguage);
@@ -19,21 +20,23 @@ export default function LanguageSelector({ value, onChange }: LanguageSelectorPr
   const setLanguage = onChange || globalSetAppLanguage;
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity 
-        style={[styles.option, currentLanguage === 'en' && styles.selectedOption]}
+    <View style={[styles.container, compact && styles.compactContainer]}>
+      <TouchableOpacity
+        style={[styles.option, compact && styles.compactOption, currentLanguage === 'en' && styles.selectedOption]}
         onPress={() => setLanguage('en')}
       >
-        <Text style={styles.flag}>🇺🇸</Text>
-        <Text style={[styles.label, currentLanguage === 'en' && styles.selectedLabel]}>{t('english')}</Text>
+        <Text style={[styles.label, compact && styles.compactLabel, currentLanguage === 'en' && styles.selectedLabel]}>
+          {compact ? 'EN' : t('english')}
+        </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={[styles.option, currentLanguage === 'it' && styles.selectedOption]}
+      <TouchableOpacity
+        style={[styles.option, compact && styles.compactOption, currentLanguage === 'it' && styles.selectedOption]}
         onPress={() => setLanguage('it')}
       >
-        <Text style={styles.flag}>🇮🇹</Text>
-        <Text style={[styles.label, currentLanguage === 'it' && styles.selectedLabel]}>{t('italian')}</Text>
+        <Text style={[styles.label, compact && styles.compactLabel, currentLanguage === 'it' && styles.selectedLabel]}>
+          {compact ? 'IT' : t('italian')}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -47,6 +50,11 @@ const styles = StyleSheet.create({
     padding: scale(6),
     marginTop: verticalScale(20),
   },
+  compactContainer: {
+    borderRadius: scale(9),
+    padding: scale(3),
+    marginTop: 0,
+  },
   option: {
     flex: 1,
     flexDirection: 'row',
@@ -55,17 +63,21 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(10),
     borderRadius: scale(8),
   },
+  compactOption: {
+    paddingVertical: verticalScale(5),
+    paddingHorizontal: scale(5),
+    borderRadius: scale(7),
+  },
   selectedOption: {
     backgroundColor: '#FFEDD5',
-  },
-  flag: {
-    fontSize: moderateScale(16),
-    marginRight: scale(8),
   },
   label: {
     fontSize: moderateScale(14, 0.3),
     fontWeight: '600',
     color: '#6B7280',
+  },
+  compactLabel: {
+    fontSize: moderateScale(11, 0.3),
   },
   selectedLabel: {
     color: '#FA8C4C',
