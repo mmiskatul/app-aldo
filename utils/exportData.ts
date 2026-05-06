@@ -337,11 +337,28 @@ const pdfStyles = `
     color: var(--brand);
     margin-bottom: 8px;
   }
+  .highlight-heading {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
   .highlight-copy {
     margin: 0;
     color: var(--text);
     font-size: 14px;
     line-height: 1.7;
+  }
+  .provider-chip {
+    display: inline-block;
+    margin-left: 8px;
+    border-radius: 999px;
+    padding: 3px 8px;
+    background: #111827;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 800;
+    vertical-align: middle;
   }
   table.data-table {
     width: 100%;
@@ -909,6 +926,16 @@ export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps)
   const insightSubtitle =
     analyticsData.insight_banner?.subtitle ||
     'This report compiles the analytics snapshot currently available in the application.';
+  const insightProvider =
+    String(analyticsData.insight_banner?.ai_provider || '').toLowerCase() === 'openai'
+      ? 'AI Generated'
+      : 'Fallback';
+  const supplierAlertRows =
+    (analyticsData.supplier_price_alerts || []).map((item: any) => [
+      item.title || 'Revenue Monitoring Alert',
+      item.subtitle || item.description || 'Alert available in analytics view.',
+      String(item.ai_provider || '').toLowerCase() === 'openai' ? 'AI Generated' : 'Fallback',
+    ]) || [];
 
   const html = `
     <html>
@@ -935,7 +962,8 @@ export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps)
           <div class="content">
             <div class="section">
               <div class="highlight">
-                <div class="highlight-title">${escapeHtml(insightTitle)}</div>
+                <div class="highlight-title">AI Business Insight <span class="provider-chip">${escapeHtml(insightProvider)}</span></div>
+                <div class="highlight-heading">${escapeHtml(insightTitle)}</div>
                 <p class="highlight-copy">${escapeHtml(insightSubtitle)}</p>
               </div>
             </div>
@@ -985,6 +1013,22 @@ export const generateAnalyticsPdfExport = async (data: AnalyticsExportDataProps)
                 emptyMessage: 'No activity or cost breakdown data is available for this period.',
               })}
             </div>
+
+            <div class="section">
+              <div class="section-title">Revenue Monitoring Alerts</div>
+              <div class="section-copy">AI generated or fallback monitoring alerts based on the latest analytics data.</div>
+              ${renderTable({
+                headers: [
+                  { label: 'Alert' },
+                  { label: 'Details' },
+                  { label: 'Source' },
+                ],
+                rows: supplierAlertRows,
+                emptyMessage: 'No revenue monitoring alerts are available for this period.',
+              })}
+            </div>
+
+            ${renderAppPromotion()}
           </div>
         </div>
       </body>
@@ -1023,7 +1067,7 @@ export const generateAnalyticsExcelExport = async (data: AnalyticsExportDataProp
       ['Metric Tiles', (analyticsData.metric_tiles || []).length],
       ['Summary Stats', (analyticsData.summary_stats || []).length],
       ['Revenue Points', (analyticsData.weekly_revenue || []).length],
-      ['Supplier Alerts', (analyticsData.supplier_price_alerts || []).length],
+      ['Revenue Monitoring Alerts', (analyticsData.supplier_price_alerts || []).length],
     ]);
     setSheetColumns(overviewSheet, [22, 42]);
     XLSX.utils.book_append_sheet(workbook, overviewSheet, 'Overview');
@@ -1100,7 +1144,7 @@ export const generateAnalyticsExcelExport = async (data: AnalyticsExportDataProp
     XLSX.utils.book_append_sheet(workbook, activitySheet, 'Activity & Cost');
 
     const alertsSheet = createWorksheet([
-      ['Supplier Price Alerts'],
+      ['Revenue Monitoring Alerts'],
       [],
       ['Supplier', 'Item', 'Message'],
     ]);

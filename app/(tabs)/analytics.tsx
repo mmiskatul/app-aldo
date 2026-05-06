@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { useCachedFocusRefresh } from '../../hooks/useCachedFocusRefresh';
 import Header from '../../components/ui/Header';
@@ -26,6 +27,7 @@ type PeriodKey = 'weekly' | 'monthly';
 type InsightBanner = {
   title: string;
   subtitle: string;
+  ai_provider?: string | null;
   title_translations?: {
     en?: string | null;
     it?: string | null;
@@ -62,6 +64,7 @@ type SupplierAlert = {
   title: string;
   subtitle?: string;
   impact?: string;
+  ai_provider?: string | null;
   title_translations?: {
     en?: string | null;
     it?: string | null;
@@ -291,6 +294,15 @@ export default function AnalyticsScreen() {
       void fetchAnalyticsScreenData(activePeriod, true);
     },
   });
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (hasCachedPeriodData) {
+        void fetchAnalyticsScreenData(activePeriod, true);
+      }
+      return undefined;
+    }, [activePeriod, fetchAnalyticsScreenData, hasCachedPeriodData]),
+  );
 
   React.useEffect(() => {
     if (hasCachedPeriodData && !businessInsight) {

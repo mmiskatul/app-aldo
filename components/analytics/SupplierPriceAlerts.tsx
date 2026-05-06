@@ -14,10 +14,10 @@ export default function SupplierPriceAlerts({ alerts }: SupplierPriceAlertsProps
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>{t('supplier_price_alerts')}</Text>
+          <Text style={styles.title}>{t('revenue_monitoring_alerts')}</Text>
         </View>
         <View style={[styles.alertCard, { backgroundColor: '#F3F4F6', justifyContent: 'center' }]}>
-          <Text style={[styles.alertTitle, { color: '#6B7280', textAlign: 'center' }]}>{t('no_price_alerts')}</Text>
+          <Text style={[styles.alertTitle, { color: '#6B7280', textAlign: 'center' }]}>{t('no_revenue_alerts')}</Text>
         </View>
       </View>
     );
@@ -26,7 +26,7 @@ export default function SupplierPriceAlerts({ alerts }: SupplierPriceAlertsProps
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t('supplier_price_alerts')}</Text>
+        <Text style={styles.title}>{t('revenue_monitoring_alerts')}</Text>
         <TouchableOpacity>
           <Text style={styles.viewAll}>{t('see_all').toUpperCase()}</Text>
         </TouchableOpacity>
@@ -38,8 +38,13 @@ export default function SupplierPriceAlerts({ alerts }: SupplierPriceAlertsProps
             <Feather name="trending-up" size={moderateScale(18)} color="#EF4444" />
           </View>
           <View style={styles.textContainer}>
-            <Text style={styles.alertTitle}>{alert.title || t('price_alert')}</Text>
-            <Text style={styles.impact}>{t('impact')} <Text style={styles.impactValue}>{alert.impact || t('calculating')}</Text></Text>
+            <View style={styles.alertTitleRow}>
+              <Text style={styles.alertTitle}>{alert.title || t('revenue_alert')}</Text>
+              <Text style={styles.providerBadge}>
+                {String(alert.ai_provider || '').toLowerCase() === 'openai' ? 'AI' : 'Fallback'}
+              </Text>
+            </View>
+            <Text style={styles.impact}>{alert.subtitle || alert.impact || t('calculating')}</Text>
           </View>
         </View>
       ))}
@@ -88,11 +93,27 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
   },
+  alertTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: scale(8),
+  },
   alertTitle: {
+    flex: 1,
     fontSize: moderateScale(12, 0.3),
     fontWeight: '800',
     color: '#111827',
     marginBottom: verticalScale(2),
+  },
+  providerBadge: {
+    color: '#7F1D1D',
+    backgroundColor: '#FEE2E2',
+    fontSize: moderateScale(8, 0.3),
+    fontWeight: '900',
+    paddingHorizontal: scale(6),
+    paddingVertical: verticalScale(2),
+    borderRadius: scale(7),
+    overflow: 'hidden',
   },
   impact: {
     fontSize: moderateScale(10, 0.3),

@@ -8,12 +8,14 @@ interface AnalyticsAIInsightCardProps {
   insight: {
     title?: string | null;
     subtitle?: string | null;
+    ai_provider?: string | null;
   };
 }
 
 export default function AnalyticsAIInsightCard({ insight }: AnalyticsAIInsightCardProps) {
   const title = String(insight.title || '').trim();
   const subtitle = String(insight.subtitle || '').trim();
+  const isAiGenerated = String(insight.ai_provider || '').toLowerCase() === 'openai';
   const hasSeparateSubtitle = Boolean(subtitle && subtitle !== title);
 
   if (!title && !subtitle) {
@@ -30,6 +32,7 @@ export default function AnalyticsAIInsightCard({ insight }: AnalyticsAIInsightCa
       <View style={styles.header}>
         <SparklesIcon size={moderateScale(16)} color="#FB923C" />
         <Text style={styles.title}>AI Business Insight</Text>
+        <Text style={styles.providerBadge}>{isAiGenerated ? 'AI' : 'Fallback'}</Text>
       </View>
       <Text style={styles.content}>{title || subtitle}</Text>
       {hasSeparateSubtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -55,6 +58,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginLeft: scale(8),
     letterSpacing: 0,
+  },
+  providerBadge: {
+    marginLeft: 'auto',
+    color: '#111827',
+    backgroundColor: '#FDE68A',
+    fontSize: moderateScale(9, 0.3),
+    fontWeight: '900',
+    paddingHorizontal: scale(7),
+    paddingVertical: verticalScale(3),
+    borderRadius: scale(8),
+    overflow: 'hidden',
   },
   content: {
     color: '#F9FAFB',
