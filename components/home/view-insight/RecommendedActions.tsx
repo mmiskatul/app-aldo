@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-import { SparklesIcon, DocumentTextIcon, AdjustmentsHorizontalIcon, TrashIcon } from 'react-native-heroicons/outline';
+import { SparklesIcon, DocumentTextIcon, CheckCircleIcon } from 'react-native-heroicons/outline';
 
 interface Action {
   title: string;
@@ -11,9 +11,12 @@ interface Action {
 
 interface RecommendedActionsProps {
   actions?: Action[];
+  onApply?: (action: Action, index: number) => void;
 }
 
-export default function RecommendedActions({ actions = [] }: RecommendedActionsProps) {
+export default function RecommendedActions({ actions = [], onApply }: RecommendedActionsProps) {
+  const [appliedIndexes, setAppliedIndexes] = React.useState<Record<number, boolean>>({});
+
   if (!actions || actions.length === 0) return null;
   return (
     <View style={styles.container}>
@@ -23,10 +26,12 @@ export default function RecommendedActions({ actions = [] }: RecommendedActionsP
       </View>
       
       {actions.map((action, index) => {
-        // Just use DocumentTextIcon generically for api items
-        const IconComponent = <DocumentTextIcon size={moderateScale(20)} color="#FB923C" />;
+        const isApplied = Boolean(appliedIndexes[index]);
+        const IconComponent = isApplied
+          ? <CheckCircleIcon size={moderateScale(20)} color="#16A34A" />
+          : <DocumentTextIcon size={moderateScale(20)} color="#FB923C" />;
         return (
-          <View key={index} style={styles.actionCard}>
+          <View key={index} style={[styles.actionCard, isApplied && styles.actionCardApplied]}>
             <View style={styles.iconContainer}>
               {IconComponent}
             </View>
@@ -34,8 +39,15 @@ export default function RecommendedActions({ actions = [] }: RecommendedActionsP
               <Text style={styles.actionTitle}>{action.title}</Text>
               <Text style={styles.actionDescription}>{action.description}</Text>
             </View>
-            <TouchableOpacity>
-              <Text style={styles.applyText}>{action.action_label || 'Apply'}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setAppliedIndexes((current) => ({ ...current, [index]: true }));
+                onApply?.(action, index);
+              }}
+            >
+              <Text style={[styles.applyText, isApplied && styles.appliedText]}>
+                {isApplied ? 'Applied' : action.action_label || 'Apply'}
+              </Text>
             </TouchableOpacity>
           </View>
         );
@@ -69,6 +81,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFEDD5',
   },
+  actionCardApplied: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
   iconContainer: {
     width: scale(40),
     height: scale(40),
@@ -97,5 +113,8 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 0.3),
     fontWeight: '700',
     color: '#FB923C',
+  },
+  appliedText: {
+    color: '#16A34A',
   },
 });

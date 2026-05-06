@@ -13,6 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore";
+import { showSuccessMessage } from "../../../utils/feedback";
 import {
   resolveLocalizedActions,
   resolveLocalizedList,
@@ -32,6 +33,40 @@ export default function ViewInsightScreen() {
   const appLanguage = useAppStore((state) => state.appLanguage);
   const [data, setData] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+
+  const resolveActionRoute = React.useCallback((action: any) => {
+    const text = `${action?.title || ""} ${action?.description || ""} ${action?.action_label || ""}`.toLowerCase();
+
+    if (text.includes("supplier") || text.includes("fornitor") || text.includes("invoice") || text.includes("fattur")) {
+      return "/(tabs)/documents/upload-invoice";
+    }
+    if (text.includes("waste") || text.includes("sprechi") || text.includes("ingredient") || text.includes("inventory") || text.includes("stock")) {
+      return "/(tabs)/inventory";
+    }
+    if (text.includes("cash") || text.includes("cassa") || text.includes("deposit")) {
+      return "/(tabs)/home/cash-management";
+    }
+    if (text.includes("expense") || text.includes("spesa") || text.includes("cost")) {
+      return "/(tabs)/home/add-expense";
+    }
+    if (text.includes("daily") || text.includes("revenue") || text.includes("ricavi") || text.includes("covers") || text.includes("coperti")) {
+      return "/(tabs)/home/add-daily-data";
+    }
+    return "/(tabs)/analytics";
+  }, []);
+
+  const handleApplyRecommendedAction = React.useCallback((action: any) => {
+    showSuccessMessage("Action marked as applied. Opening the related workflow.", "Recommended Action");
+    router.push(resolveActionRoute(action) as any);
+  }, [resolveActionRoute, router]);
+
+  const handleBackPress = React.useCallback(() => {
+    if ((router as any).canGoBack?.()) {
+      router.back();
+      return;
+    }
+    router.replace("/(tabs)/home" as any);
+  }, [router]);
 
   const fetchInsight = React.useCallback(async (isMounted: () => boolean) => {
     setLoading(true);
@@ -135,7 +170,7 @@ export default function ViewInsightScreen() {
           headerLeft: () => (
             <TouchableOpacity 
               style={[styles.headerIconButton, { marginLeft: scale(4) }]} 
-              onPress={() => router.back()}
+              onPress={handleBackPress}
               activeOpacity={0.7}
             >
               <Feather name="arrow-left" size={moderateScale(20)} color="#111827" />
@@ -173,7 +208,10 @@ export default function ViewInsightScreen() {
               trend={localizedInsightData.trend}
             />
             <RootCauses causes={localizedInsightData.root_causes} />
-            <RecommendedActions actions={localizedInsightData.recommended_actions} />
+            <RecommendedActions
+              actions={localizedInsightData.recommended_actions}
+              onApply={handleApplyRecommendedAction}
+            />
             <OtherInsights insights={localizedInsightData.other_related_insights} />
           </>
         ) : (
