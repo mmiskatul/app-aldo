@@ -33,6 +33,8 @@ export default function DocumentDetailsScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const tokens = useAppStore((state) => state.tokens);
+  const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
+  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
 
   const [data, setData] = useState<any>(null);
   const [editableData, setEditableData] = useState<any>(null);
@@ -173,6 +175,8 @@ export default function DocumentDetailsScreen() {
 
       setData(response.data);
       setIsEditing(false);
+      bumpInventoryRefreshToken();
+      clearHomeScreenCache();
       showSuccessMessage(t('document_updated'), t('success'));
     } catch (error) {
       showApiError("documents.update", error, t('document_update_failed'), t('error'));
@@ -195,6 +199,8 @@ export default function DocumentDetailsScreen() {
               setLoading(true);
               showInfoMessage(t('deleting'));
               await apiClient.delete(`/api/v1/restaurant/documents/${id}`);
+              bumpInventoryRefreshToken();
+              clearHomeScreenCache();
               showSuccessMessage(t('success'));
               router.back();
             } catch (error) {

@@ -29,7 +29,7 @@ export default function RevenueInputMethodsModal({
 
           <Text style={styles.title}>Revenue Input Methods</Text>
           <Text style={styles.subtitle}>
-            Choose the logic that fits your restaurant's operational flow.
+            Choose the logic that fits your restaurant&apos;s operational flow.
           </Text>
 
           <View style={styles.methodBlock}>

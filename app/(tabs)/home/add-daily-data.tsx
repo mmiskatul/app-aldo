@@ -1,12 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
   ActivityIndicator,
@@ -23,6 +24,24 @@ import RevenueInputMethodsModal from "../../../components/home/add-daily-data/Re
 import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
 import { useAppStore } from "../../../store/useAppStore";
 import { getApiErrorMessage } from "../../../utils/api";
+import { useTranslation } from "../../../utils/i18n";
+
+interface InventorySuggestionItem {
+  id: string;
+  product_name: string;
+  stock_quantity: number;
+  unit_type: string;
+}
+
+interface InventoryUsageItem {
+  rowId: string;
+  inventoryItemId: string;
+  productName: string;
+  query: string;
+  quantityUsed: string;
+  availableQuantity: number;
+  unitType: string;
+}
 
 const parseNumberInput = (value: string) => {
   const normalized = value.trim().replace(/,/g, ".");
@@ -61,14 +80,28 @@ const getLocalBusinessDate = () => {
 };
 
 export default function AddDailyDataScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
+  const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
   const [selectedMethod, setSelectedMethod] = useState<"method1" | "method2">("method1");
   const [isSaving, setIsSaving] = useState(false);
   const [isMethodsModalVisible, setIsMethodsModalVisible] = useState(false);
+  const [inventoryItems, setInventoryItems] = useState<InventorySuggestionItem[]>([]);
+  const [inventoryUsage, setInventoryUsage] = useState<InventoryUsageItem[]>([
+    {
+      rowId: String(Date.now()),
+      inventoryItemId: "",
+      productName: "",
+      query: "",
+      quantityUsed: "",
+      availableQuantity: 0,
+      unitType: "",
+    },
+  ]);
 
   const [method1Data, setMethod1Data] = useState<Method1Data>({
     pos_payments: "",
@@ -104,8 +137,86 @@ export default function AddDailyDataScreen() {
 
   const currentBusinessDate = getLocalBusinessDate();
 
+  useEffect(() => {
+    const fetchInventoryItems = async () => {
+      try {
+        const response = await apiClient.get("/api/v1/restaurant/inventory", {
+          params: {
+            page: 1,
+            page_size: 100,
+          },
+        });
+        setInventoryItems(response.data.items || []);
+      } catch (error: any) {
+        console.log("Daily inventory suggestions error:", error?.response?.data || error?.message);
+      }
+    };
+
+    void fetchInventoryItems();
+  }, []);
+
+  const usedInventoryPayload = useMemo(
+    () =>
+      inventoryUsage
+        .filter((item) => item.inventoryItemId && parseNumberInput(item.quantityUsed) > 0)
+        .map((item) => ({
+          inventory_item_id: item.inventoryItemId,
+          quantity_used: parseNumberInput(item.quantityUsed),
+        })),
+    [inventoryUsage],
+  );
+
+  const updateUsageRow = (rowId: string, updates: Partial<InventoryUsageItem>) => {
+    setInventoryUsage((current) =>
+      current.map((item) => (item.rowId === rowId ? { ...item, ...updates } : item)),
+    );
+  };
+
+  const selectInventoryItem = (rowId: string, item: InventorySuggestionItem) => {
+    updateUsageRow(rowId, {
+      inventoryItemId: item.id,
+      productName: item.product_name,
+      query: item.product_name,
+      availableQuantity: Number(item.stock_quantity || 0),
+      unitType: item.unit_type,
+    });
+  };
+
+  const addUsageRow = () => {
+    setInventoryUsage((current) => [
+      ...current,
+      {
+        rowId: `${Date.now()}-${current.length}`,
+        inventoryItemId: "",
+        productName: "",
+        query: "",
+        quantityUsed: "",
+        availableQuantity: 0,
+        unitType: "",
+      },
+    ]);
+  };
+
+  const removeUsageRow = (rowId: string) => {
+    setInventoryUsage((current) =>
+      current.length === 1
+        ? [
+            {
+              rowId: String(Date.now()),
+              inventoryItemId: "",
+              productName: "",
+              query: "",
+              quantityUsed: "",
+              availableQuantity: 0,
+              unitType: "",
+            },
+          ]
+        : current.filter((item) => item.rowId !== rowId),
+    );
+  };
+
   const validateNumberFields = (
-    fields: Array<{ label: string; value: string; integer?: boolean }>,
+    fields: { label: string; value: string; integer?: boolean }[],
   ) => {
     const invalidField = fields.find((field) =>
       field.integer ? !isValidIntegerInput(field.value) : !isValidNumberInput(field.value),
@@ -152,10 +263,32 @@ export default function AddDailyDataScreen() {
       return;
     }
 
+    const invalidUsage = inventoryUsage.find((item) => {
+      if (!item.query.trim() && !item.quantityUsed.trim()) {
+        return false;
+      }
+      return !item.inventoryItemId || parseNumberInput(item.quantityUsed) <= 0;
+    });
+    if (invalidUsage) {
+      showErrorMessage(t("select_inventory_item"));
+      return;
+    }
+
+    const overUsedItem = inventoryUsage.find(
+      (item) =>
+        item.inventoryItemId &&
+        parseNumberInput(item.quantityUsed) > Number(item.availableQuantity || 0),
+    );
+    if (overUsedItem) {
+      showErrorMessage(t("used_quantity_exceeds_stock"));
+      return;
+    }
+
     setIsSaving(true);
     try {
       const payload = {
         method: selectedMethod === "method1" ? "method_1" : "method_2",
+        inventory_usage: usedInventoryPayload,
         ...(selectedMethod === "method1"
           ? {
               method_one: {
@@ -191,6 +324,7 @@ export default function AddDailyDataScreen() {
       console.log("Manual Entry Response:", res.data);
       clearHomeScreenCache();
       clearDailyDataScreenCache();
+      bumpInventoryRefreshToken();
       setCashOverviewData(null);
       showSuccessMessage("Daily data has been saved successfully.");
       router.back();
@@ -238,6 +372,94 @@ export default function AddDailyDataScreen() {
               onInfoPress={() => setIsMethodsModalVisible(true)}
             />
           )}
+
+          <View style={styles.inventoryUsageCard}>
+            <Text style={styles.inventoryUsageTitle}>{t("inventory_used")}</Text>
+            <Text style={styles.inventoryUsageSubtitle}>{t("inventory_used_subtitle")}</Text>
+
+            {inventoryUsage.map((usageItem) => {
+              const query = usageItem.query.trim().toLowerCase();
+              const suggestions =
+                query.length >= 2 && usageItem.query !== usageItem.productName
+                  ? inventoryItems
+                      .filter((item) => item.product_name.toLowerCase().includes(query))
+                      .slice(0, 4)
+                  : [];
+              const quantityUsed = parseNumberInput(usageItem.quantityUsed);
+              const remainingQuantity = Math.max(Number(usageItem.availableQuantity || 0) - quantityUsed, 0);
+
+              return (
+                <View key={usageItem.rowId} style={styles.usageRowCard}>
+                  <View style={styles.usageRowHeader}>
+                    <Text style={styles.usageLabel}>{t("product_used")}</Text>
+                    <TouchableOpacity onPress={() => removeUsageRow(usageItem.rowId)} hitSlop={styles.iconHitSlop}>
+                      <Feather name="x" size={moderateScale(16)} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput
+                    style={styles.usageInput}
+                    value={usageItem.query}
+                    onChangeText={(text) =>
+                      updateUsageRow(usageItem.rowId, {
+                        query: text,
+                        inventoryItemId: "",
+                        productName: "",
+                        availableQuantity: 0,
+                        unitType: "",
+                      })
+                    }
+                    placeholder={t("select_inventory_item")}
+                    placeholderTextColor="#9CA3AF"
+                  />
+
+                  {suggestions.length > 0 ? (
+                    <View style={styles.suggestionBox}>
+                      {suggestions.map((item) => (
+                        <TouchableOpacity
+                          key={item.id}
+                          style={styles.suggestionItem}
+                          onPress={() => selectInventoryItem(usageItem.rowId, item)}
+                        >
+                          <Text style={styles.suggestionName}>{item.product_name}</Text>
+                          <Text style={styles.suggestionMeta}>
+                            {t("available")}: {Number(item.stock_quantity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {item.unit_type}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
+
+                  <View style={styles.quantityRow}>
+                    <View style={styles.quantityInputWrap}>
+                      <Text style={styles.usageLabel}>{t("quantity_used")}</Text>
+                      <TextInput
+                        style={styles.usageInput}
+                        value={usageItem.quantityUsed}
+                        onChangeText={(text) => updateUsageRow(usageItem.rowId, { quantityUsed: text })}
+                        placeholder="0"
+                        placeholderTextColor="#9CA3AF"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={styles.availableBox}>
+                      <Text style={styles.availableLabel}>{t("available")}</Text>
+                      <Text style={styles.availableValue}>
+                        {Number(usageItem.availableQuantity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {usageItem.unitType}
+                      </Text>
+                      <Text style={styles.remainingText}>
+                        {t("remaining")}: {remainingQuantity.toLocaleString(undefined, { maximumFractionDigits: 2 })} {usageItem.unitType}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+
+            <TouchableOpacity style={styles.addUsageButton} onPress={addUsageRow}>
+              <Feather name="plus" size={moderateScale(16)} color="#FA8C4C" />
+              <Text style={styles.addUsageText}>{t("add_used_item")}</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
 
         <View style={[styles.bottomFooter, { paddingBottom: Math.max(insets.bottom, verticalScale(16)) }]}>
@@ -333,6 +555,134 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: verticalScale(24),
     lineHeight: moderateScale(20),
+  },
+  inventoryUsageCard: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: scale(16),
+    padding: scale(16),
+    marginTop: verticalScale(18),
+    marginBottom: verticalScale(22),
+    backgroundColor: "#FFFFFF",
+  },
+  inventoryUsageTitle: {
+    fontSize: moderateScale(16, 0.3),
+    fontWeight: "800",
+    color: "#111827",
+  },
+  inventoryUsageSubtitle: {
+    marginTop: verticalScale(4),
+    marginBottom: verticalScale(14),
+    fontSize: moderateScale(12, 0.3),
+    color: "#6B7280",
+    lineHeight: moderateScale(17),
+  },
+  usageRowCard: {
+    borderRadius: scale(12),
+    backgroundColor: "#F9FAFB",
+    padding: scale(12),
+    marginBottom: verticalScale(12),
+  },
+  usageRowHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  usageLabel: {
+    fontSize: moderateScale(11, 0.3),
+    fontWeight: "700",
+    color: "#6B7280",
+    marginBottom: verticalScale(6),
+  },
+  usageInput: {
+    minHeight: verticalScale(44),
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: scale(10),
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: scale(12),
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: "600",
+    color: "#111827",
+  },
+  suggestionBox: {
+    marginTop: verticalScale(6),
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: scale(10),
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+  },
+  suggestionItem: {
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(9),
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  suggestionName: {
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: "700",
+    color: "#111827",
+  },
+  suggestionMeta: {
+    marginTop: verticalScale(2),
+    fontSize: moderateScale(11, 0.3),
+    color: "#6B7280",
+  },
+  quantityRow: {
+    flexDirection: "row",
+    gap: scale(10),
+    marginTop: verticalScale(12),
+  },
+  quantityInputWrap: {
+    flex: 1,
+  },
+  availableBox: {
+    flex: 1,
+    borderRadius: scale(10),
+    backgroundColor: "#FFF4EE",
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(9),
+    justifyContent: "center",
+  },
+  availableLabel: {
+    fontSize: moderateScale(10, 0.3),
+    fontWeight: "700",
+    color: "#9CA3AF",
+  },
+  availableValue: {
+    marginTop: verticalScale(3),
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: "800",
+    color: "#111827",
+  },
+  remainingText: {
+    marginTop: verticalScale(3),
+    fontSize: moderateScale(10, 0.3),
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  addUsageButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#FCE7D6",
+    borderRadius: scale(12),
+    minHeight: verticalScale(44),
+    backgroundColor: "#FFF8F3",
+  },
+  addUsageText: {
+    marginLeft: scale(6),
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: "800",
+    color: "#FA8C4C",
+  },
+  iconHitSlop: {
+    top: 8,
+    right: 8,
+    bottom: 8,
+    left: 8,
   },
   bottomFooter: {
     paddingHorizontal: scale(20),

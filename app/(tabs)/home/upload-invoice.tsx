@@ -33,6 +33,8 @@ export default function UploadInvoiceScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const tokens = useAppStore((state) => state.tokens);
+  const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
+  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
 
   const [selectedFile, setSelectedFile] = useState<UploadFile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -149,6 +151,8 @@ export default function UploadInvoiceScreen() {
         payload,
       );
 
+      bumpInventoryRefreshToken();
+      clearHomeScreenCache();
       showSuccessMessage("Invoice saved successfully!");
       router.replace("/(tabs)/documents");
     } catch (error: any) {

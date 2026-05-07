@@ -45,8 +45,21 @@ interface InventoryApiItem {
 
 interface InventoryListResponse {
   total_inventory_value?: number | string | null;
+  usage_summary?: {
+    total_quantity_used?: number;
+    total_usage_cost?: number;
+    top_items?: {
+      inventory_item_id: string;
+      product_name: string;
+      quantity_used: number;
+      unit_type: string;
+      total_cost: number;
+    }[];
+  };
   items: InventoryApiItem[];
 }
+
+type InventoryUsageSummary = NonNullable<InventoryListResponse['usage_summary']>;
 
 const INVENTORY_CACHE_TTL_MS = 60 * 1000;
 
@@ -66,6 +79,12 @@ const resolveInventoryTotalValue = (payload: InventoryListResponse) => {
   return backendTotal > 0 ? backendTotal : calculateInventoryValue(payload.items);
 };
 
+const emptyUsageSummary: InventoryUsageSummary = {
+  total_quantity_used: 0,
+  total_usage_cost: 0,
+  top_items: [],
+};
+
 const iconForCategory = (category: string) => {
   const normalized = category.toLowerCase();
   if (normalized.includes('sauce')) return '🧴';
@@ -78,11 +97,15 @@ const iconForCategory = (category: string) => {
 };
 
 const statusColorFor = (status: string) => {
-  switch (status.toLowerCase()) {
+  const normalized = status.toLowerCase();
+  if (normalized.includes('alert')) {
+    return '#DC2626';
+  }
+
+  switch (normalized) {
     case 'in_stock':
       return '#16A34A';
     case 'low_stock':
-      return '#EA580C';
     case 'out_of_stock':
       return '#DC2626';
     default:
@@ -142,8 +165,11 @@ export default function InventoryScreen() {
   const setInventoryDetailCacheItem = useAppStore((state) => state.setInventoryDetailCacheItem);
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showAllStatusItems, setShowAllStatusItems] = useState(false);
+  const [showAllUsageItems, setShowAllUsageItems] = useState(false);
   const [items, setItems] = useState<InventoryCardItem[]>(inventoryListCache);
   const [totalValue, setTotalValue] = useState(calculateInventoryValueFromCache(inventoryListCache));
+  const [usageSummary, setUsageSummary] = useState<InventoryUsageSummary>(emptyUsageSummary);
   const hasCachedInventory = inventoryListCache.length > 0;
   const hasLoadedInventory = inventoryListFetchedAt !== null;
   const [valueLoading, setValueLoading] = useState(!hasCachedInventory);
@@ -186,6 +212,7 @@ export default function InventoryScreen() {
 
       setItems(nextItems);
       setTotalValue(resolveInventoryTotalValue(response.data));
+      setUsageSummary(response.data.usage_summary || emptyUsageSummary);
       setValueLoading(false);
       if (query.trim().length === 0) {
         setInventoryListCache(nextItems);
@@ -281,6 +308,12 @@ export default function InventoryScreen() {
   };
 
   const filtered = useMemo(() => items, [items]);
+  const availableItems = useMemo(
+    () => filtered.filter((item) => toSafeNumber(item.quantity) > 0),
+    [filtered],
+  );
+  const visibleAvailableItems = showAllStatusItems ? availableItems : availableItems.slice(0, 3);
+  const visibleUsageItems = showAllUsageItems ? (usageSummary.top_items || []) : (usageSummary.top_items || []).slice(0, 3);
   const emptyInventoryTitle = t('no_inventory_items_found', {
     defaultValue: appLanguage === 'it' ? 'Nessun articolo di inventario trovato' : 'No inventory items found',
   });
@@ -330,22 +363,111 @@ export default function InventoryScreen() {
           <Text style={styles.pageSubtitle}>{t('inventory_subtitle')}</Text>
         </View>
 
-        <View style={styles.valueCard}>
-          <Text style={styles.valueLabelSmall}>{t('total_inventory_value')}</Text>
-          {valueLoading ? (
-            <View style={styles.valueAmountSkeleton} />
-          ) : (
-            <Text style={styles.valueAmount}>
-              €{toSafeNumber(totalValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </Text>
-          )}
-          <View style={styles.valueBadge}>
-            <Feather name="package" size={moderateScale(12)} color="#16A34A" />
-            <Text style={styles.valueBadgeText}> {filtered.length}</Text>
-            <Text style={styles.valueBadgeSub}> {t('items').toLowerCase()}</Text>
+        <View style={styles.topSummaryRow}>
+          <View style={styles.valueCard}>
+            <View style={styles.summaryCardHeader}>
+              <Text style={styles.summaryCardTitle}>{t('total_inventory_value')}</Text>
+            </View>
+            {valueLoading ? (
+              <View style={styles.summaryCardAmountSkeleton} />
+            ) : (
+              <Text style={styles.summaryCardAmount} numberOfLines={1} adjustsFontSizeToFit>
+                €{toSafeNumber(totalValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </Text>
+            )}
+            <View style={styles.summaryCardFooter}>
+              <Feather name="package" size={moderateScale(11)} color="#16A34A" />
+              <Text style={styles.summaryCardFooterText}> {filtered.length}</Text>
+              <Text style={styles.summaryCardFooterSub}> {t('items').toLowerCase()}</Text>
+            </View>
+          </View>
+
+          <View style={styles.statusCard}>
+            <View style={styles.summaryCardHeader}>
+              <Text style={styles.summaryCardTitle}>{t('total_usage_cost')}</Text>
+            </View>
+            {valueLoading ? (
+              <View style={styles.summaryCardAmountSkeleton} />
+            ) : (
+              <Text style={styles.summaryCardAmount} numberOfLines={1} adjustsFontSizeToFit>
+                €{toSafeNumber(usageSummary.total_usage_cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </Text>
+            )}
+            <View style={styles.summaryCardFooter}>
+              <Feather name="trending-down" size={moderateScale(11)} color="#FA8C4C" />
+              <Text style={styles.summaryCardFooterText}> {toSafeNumber(usageSummary.total_quantity_used).toLocaleString(undefined, { maximumFractionDigits: 2 })}</Text>
+              <Text style={styles.summaryCardFooterSub}> {t('quantity_used').toLowerCase()}</Text>
+            </View>
           </View>
         </View>
 
+        <View style={styles.previewCardsRow}>
+          <View style={styles.previewCard}>
+            <View style={styles.summaryCardHeader}>
+              <Text style={styles.summaryCardTitle}>{t('item_status')}</Text>
+              <Text style={styles.summaryCardSubtitle}>{t('recent_item_status')}</Text>
+            </View>
+
+            {visibleAvailableItems.length > 0 ? (
+              <View style={styles.usageRows}>
+                {visibleAvailableItems.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.statusRow}
+                    activeOpacity={0.82}
+                    onPress={() => router.push(`/(tabs)/inventory/${item.id}`)}
+                  >
+                    <View style={styles.statusProductMeta}>
+                      <View style={[styles.statusDot, { backgroundColor: item.statusColor }]} />
+                      <Text style={styles.statusProductName} numberOfLines={1}>{item.name}</Text>
+
+                      <Text style={styles.statusQuantity} numberOfLines={1}>
+                        {toSafeNumber(item.quantity).toLocaleString(undefined, { maximumFractionDigits: 2 })} {item.unit}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+                {availableItems.length > 3 ? (
+                  <TouchableOpacity style={styles.seeMoreButton} onPress={() => setShowAllStatusItems((current) => !current)}>
+                    <Text style={styles.seeMoreText}>{showAllStatusItems ? t('show_less') : t('see_more')}</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : (
+              <Text style={styles.statusEmptyText}>{t('no_available_products')}</Text>
+            )}
+          </View>
+
+          <View style={styles.previewCard}>
+            <View style={styles.summaryCardHeader}>
+              <Text style={styles.summaryCardTitle}>{t('usage_summary')}</Text>
+              <Text style={styles.summaryCardSubtitle}>{t('recent_usage')}</Text>
+            </View>
+
+            {visibleUsageItems.length > 0 ? (
+              <View style={styles.usageRows}>
+                {visibleUsageItems.map((item) => (
+                  <View key={item.inventory_item_id} style={styles.usageRow}>
+                    <View style={styles.statusProductMeta}>
+                      <View style={styles.usageRankDot} />
+                      <Text style={styles.statusProductName} numberOfLines={1}>{item.product_name}</Text>
+                      <Text style={styles.statusQuantity} numberOfLines={1}>
+                        {toSafeNumber(item.quantity_used).toLocaleString(undefined, { maximumFractionDigits: 2 })} {item.unit_type}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+                {(usageSummary.top_items || []).length > 3 ? (
+                  <TouchableOpacity style={styles.seeMoreButton} onPress={() => setShowAllUsageItems((current) => !current)}>
+                    <Text style={styles.seeMoreText}>{showAllUsageItems ? t('show_less') : t('see_more')}</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : (
+              <Text style={styles.statusEmptyText}>{t('no_usage_recorded')}</Text>
+            )}
+          </View>
+        </View>
         <View style={styles.listWrap}>
           {loading ? (
             <>
@@ -423,25 +545,194 @@ const styles = StyleSheet.create({
   },
   pageTitle: { fontSize: moderateScale(20), fontWeight: '700', color: '#111827' },
   pageSubtitle: { fontSize: moderateScale(12), color: '#6B7280', marginTop: verticalScale(2) },
-  valueCard: {
+  topSummaryRow: {
+    flexDirection: 'row',
+    gap: scale(10),
     marginHorizontal: scale(20),
     marginBottom: verticalScale(16),
+  },
+  valueCard: {
+    flex: 1,
     backgroundColor: '#FFF4EE',
     borderRadius: scale(14),
-    padding: scale(18),
+    padding: scale(16),
+    gap: verticalScale(8),
   },
-  valueLabelSmall: { fontSize: moderateScale(10), color: '#9CA3AF', fontWeight: '600', letterSpacing: 0.5 },
-  valueAmount: { fontSize: moderateScale(28), fontWeight: '800', color: '#111827', marginTop: verticalScale(4) },
-  valueAmountSkeleton: {
+  summaryCardHeader: {
+    minHeight: verticalScale(28),
+    justifyContent: 'flex-start',
+  },
+  summaryCardTitle: { fontSize: moderateScale(9, 0.3), color: '#9CA3AF', fontWeight: '700', letterSpacing: 0.2, textAlign: 'left' },
+  summaryCardSubtitle: { marginTop: verticalScale(2), fontSize: moderateScale(10, 0.3), fontWeight: '600', color: '#6B7280', textAlign: 'left' },
+  summaryCardAmount: { fontSize: moderateScale(22, 0.3), fontWeight: '800', color: '#111827', marginTop: verticalScale(6), textAlign: 'left' },
+  summaryCardAmountSkeleton: {
     marginTop: verticalScale(8),
-    width: '58%',
-    height: verticalScale(34),
+    width: '76%',
+    height: verticalScale(28),
     borderRadius: scale(8),
     backgroundColor: '#F3E2D7',
   },
-  valueBadge: { flexDirection: 'row', alignItems: 'center', marginTop: verticalScale(6) },
-  valueBadgeText: { fontSize: moderateScale(12), color: '#16A34A', fontWeight: '600' },
-  valueBadgeSub: { fontSize: moderateScale(12), color: '#6B7280' },
+  summaryCardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: verticalScale(6) },
+  summaryCardFooterText: { fontSize: moderateScale(11, 0.3), color: '#16A34A', fontWeight: '700' },
+  summaryCardFooterSub: { fontSize: moderateScale(11, 0.3), color: '#6B7280' },
+  statusCard: {
+    flex: 1,
+    backgroundColor: '#FFF4EE',
+    borderRadius: scale(14),
+    padding: scale(16),
+    gap: verticalScale(8),
+  },
+  statusRows: {
+    gap: verticalScale(6),
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: scale(10),
+    backgroundColor: 'rgba(255, 255, 255, 0.72)',
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(8),
+  },
+  statusProductMeta: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusDot: {
+    width: moderateScale(8),
+    height: moderateScale(8),
+    borderRadius: moderateScale(4),
+    marginRight: scale(8),
+  },
+  statusProductName: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  statusQuantity: {
+    marginLeft: scale(8),
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: '800',
+    color: '#111827',
+  },
+  statusMoreText: {
+    alignSelf: 'flex-end',
+    fontSize: moderateScale(11, 0.3),
+    fontWeight: '700',
+    color: '#FA8C4C',
+  },
+  statusEmptyText: {
+    borderRadius: scale(10),
+    backgroundColor: '#F9FAFB',
+    paddingVertical: verticalScale(12),
+    textAlign: 'center',
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  usageCard: {
+    marginHorizontal: scale(20),
+    marginBottom: verticalScale(16),
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(14),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: scale(16),
+  },
+  previewCardsRow: {
+    flexDirection: 'row',
+    gap: scale(10),
+    marginHorizontal: scale(20),
+    marginBottom: verticalScale(16),
+  },
+  previewCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(14),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: scale(12),
+  },
+  usageHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: scale(12),
+    marginBottom: verticalScale(12),
+  },
+  usageTitle: {
+    fontSize: moderateScale(15, 0.3),
+    fontWeight: '800',
+    color: '#111827',
+  },
+  usageSubtitle: {
+    marginTop: verticalScale(2),
+    fontSize: moderateScale(11, 0.3),
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  usageRows: {
+    gap: verticalScale(8),
+  },
+  seeMoreButton: {
+    alignSelf: 'flex-start',
+    borderRadius: scale(999),
+    backgroundColor: '#FFF4EE',
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(6),
+  },
+  seeMoreText: {
+    fontSize: moderateScale(11, 0.3),
+    fontWeight: '800',
+    color: '#FA8C4C',
+  },
+  costPill: {
+    display: 'none',
+    alignSelf: 'flex-start',
+    alignItems: 'flex-start',
+    borderRadius: scale(10),
+    backgroundColor: '#FFF4EE',
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(7),
+  },
+  costPillLabel: {
+    fontSize: moderateScale(9, 0.3),
+    fontWeight: '700',
+    color: '#9CA3AF',
+  },
+  costPillValue: {
+    marginTop: verticalScale(2),
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: '900',
+    color: '#111827',
+  },
+  usageRow: {
+    alignItems: 'flex-start',
+    borderRadius: scale(10),
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(10),
+  },
+  usageRankDot: {
+    width: moderateScale(8),
+    height: moderateScale(8),
+    borderRadius: moderateScale(4),
+    marginRight: scale(8),
+    backgroundColor: '#FA8C4C',
+  },
+  usageValues: {
+    alignItems: 'flex-start',
+    marginTop: verticalScale(4),
+  },
+  usageCost: {
+    display: 'none',
+    marginTop: verticalScale(2),
+    fontSize: moderateScale(11, 0.3),
+    fontWeight: '700',
+    color: '#6B7280',
+  },
   listWrap: { paddingHorizontal: scale(20) },
   skeletonCard: {
     backgroundColor: '#FFFFFF',
