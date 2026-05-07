@@ -15,21 +15,9 @@ import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Header from '../../../components/ui/Header';
 import { DetailRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { getTicketById, TicketDetail, TicketMessage } from '../../../api/support';
+import { getSupportPriorityPresentation, getSupportStatusPresentation } from '../../../utils/supportPresentation';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  open:     { label: 'Open',     bg: '#FEF3C7', text: '#B45309' },
-  closed:   { label: 'Closed',   bg: '#D1FAE5', text: '#065F46' },
-  resolved: { label: 'Resolved', bg: '#D1FAE5', text: '#065F46' },
-  pending:  { label: 'Pending',  bg: '#E0E7FF', text: '#3730A3' },
-};
-
-const PRIORITY_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  normal: { label: 'Normal', bg: '#F3F4F6', text: '#374151' },
-  high:   { label: 'High',   bg: '#FEE2E2', text: '#991B1B' },
-  low:    { label: 'Low',    bg: '#E0F2FE', text: '#0369A1' },
-};
 
 const formatDateTime = (iso: string) => {
   const d = new Date(iso);
@@ -122,8 +110,8 @@ export default function TicketDetailScreen() {
     );
   }
 
-  const status   = STATUS_CONFIG[ticket.status]   ?? { label: ticket.status,   bg: '#F3F4F6', text: '#374151' };
-  const priority = PRIORITY_CONFIG[ticket.priority] ?? { label: ticket.priority, bg: '#F3F4F6', text: '#374151' };
+  const status = getSupportStatusPresentation(ticket.status);
+  const priority = getSupportPriorityPresentation(ticket.priority);
 
   return (
     <View style={styles.safeArea}>

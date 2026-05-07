@@ -11,7 +11,6 @@ import {
 import {
   BillingCycle,
   RestaurantSubscriptionSettings,
-  SubscriptionStatus,
   UserSubscriptionPlan,
   cancelUserSubscription,
   getRestaurantSubscriptionSettings,
@@ -19,31 +18,8 @@ import {
   selectUserSubscriptionPlan,
 } from '../../../api/settings';
 import { useAppStore } from '../../../store/useAppStore';
+import { formatBillingCycleLabel, formatReadableDate, formatSubscriptionStatus } from '../../../utils/date';
 import { showDialog, showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
-
-const formatBillingCycle = (billingCycle: BillingCycle | null) => {
-  if (billingCycle === '1_year') return 'Yearly';
-  if (billingCycle === '1_month') return 'Monthly';
-  return 'Not selected';
-};
-
-const formatStatus = (status: SubscriptionStatus | null) => {
-  if (!status) return 'Not active';
-  return status.charAt(0).toUpperCase() + status.slice(1);
-};
-
-const formatDate = (value: string | null) => {
-  if (!value) return 'Not available';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return 'Not available';
-  }
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-};
 
 export default function ManageSubscriptionScreen() {
   const router = useRouter();
@@ -259,19 +235,19 @@ export default function ManageSubscriptionScreen() {
                 ) : null}
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>Status</Text>
-                  <Text style={styles.infoValue}>{formatStatus(subscription?.status ?? null)}</Text>
+                  <Text style={styles.infoValue}>{formatSubscriptionStatus(subscription?.status ?? null)}</Text>
                 </View>
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>Billing</Text>
-                  <Text style={styles.infoValue}>{formatBillingCycle(subscription?.billing_cycle ?? null)}</Text>
+                  <Text style={styles.infoValue}>{formatBillingCycleLabel(subscription?.billing_cycle ?? null)}</Text>
                 </View>
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>Started</Text>
-                  <Text style={styles.infoValue}>{formatDate(subscription?.started_at ?? null)}</Text>
+                  <Text style={styles.infoValue}>{formatReadableDate(subscription?.started_at ?? null)}</Text>
                 </View>
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>Next renewal</Text>
-                  <Text style={styles.infoValue}>{formatDate(subscription?.expires_at ?? null)}</Text>
+                  <Text style={styles.infoValue}>{formatReadableDate(subscription?.expires_at ?? null)}</Text>
                 </View>
               </View>
             </View>

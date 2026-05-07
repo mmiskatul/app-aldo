@@ -10,7 +10,7 @@
     "android:aab:local": "cd android && gradlew.bat bundleRelease",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@expo/vector-icons": "^13.0.0",

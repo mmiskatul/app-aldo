@@ -15,33 +15,17 @@ import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import Header from '../../../components/ui/Header';
 import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { getUserTickets, TicketListItem } from '../../../api/support';
+import { formatReadableDate } from '../../../utils/date';
 import { buildSettingsHref, normalizeOrigin } from '../../../utils/settingsNavigation';
+import { getSupportPriorityPresentation, getSupportStatusPresentation } from '../../../utils/supportPresentation';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  open: { label: 'Open', bg: '#FEF3C7', text: '#B45309' },
-  closed: { label: 'Closed', bg: '#D1FAE5', text: '#065F46' },
-  pending: { label: 'Pending', bg: '#E0E7FF', text: '#3730A3' },
-  resolved: { label: 'Resolved', bg: '#D1FAE5', text: '#065F46' },
-};
-
-const PRIORITY_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  normal: { label: 'Normal', bg: '#F3F4F6', text: '#374151' },
-  high: { label: 'High', bg: '#FEE2E2', text: '#991B1B' },
-  low: { label: 'Low', bg: '#E0F2FE', text: '#0369A1' },
-};
-
-const formatDate = (iso: string) => {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-};
 
 // ─── Ticket Card ─────────────────────────────────────────────────────────────
 
 const TicketCard = ({ item, onPress }: { item: TicketListItem; onPress: () => void }) => {
-  const status = STATUS_CONFIG[item.status] ?? { label: item.status, bg: '#F3F4F6', text: '#374151' };
-  const priority = PRIORITY_CONFIG[item.priority] ?? { label: item.priority, bg: '#F3F4F6', text: '#374151' };
+  const status = getSupportStatusPresentation(item.status);
+  const priority = getSupportPriorityPresentation(item.priority);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
@@ -62,7 +46,9 @@ const TicketCard = ({ item, onPress }: { item: TicketListItem; onPress: () => vo
         </View>
         <View style={styles.dateRow}>
           <Feather name="calendar" size={moderateScale(12)} color="#9CA3AF" />
-          <Text style={styles.dateText}>{formatDate(item.date)}</Text>
+          <Text style={styles.dateText}>
+            {formatReadableDate(item.date, { day: 'numeric', month: 'short', year: 'numeric' }, item.date, 'input')}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>

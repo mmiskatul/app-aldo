@@ -11,6 +11,7 @@ import { Redirect, Tabs, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
+import StartupSplash from "../../components/app/StartupSplash";
 import { getRestrictedAccessStatus, hasActiveSubscription, useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../utils/i18n";
 
@@ -73,7 +74,7 @@ export default function TabLayout() {
   }, [hasHydrated, logout, setUser, tokens]);
 
   if (!hasHydrated || isSessionChecking) {
-    return null;
+    return <StartupSplash />;
   }
 
   if (!user || !tokens?.access_token) {

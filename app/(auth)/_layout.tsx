@@ -1,5 +1,6 @@
 import { Redirect, Stack, useSegments } from "expo-router";
 import { hasCompletedOnboarding } from "../../api/auth";
+import StartupSplash from "../../components/app/StartupSplash";
 import { getRestrictedAccessStatus, hasActiveSubscription, useAppStore } from "../../store/useAppStore";
 
 export default function AuthLayout() {
@@ -11,7 +12,7 @@ export default function AuthLayout() {
   const isAuthSession = Boolean(user && tokens?.access_token);
 
   if (!hasHydrated) {
-    return null;
+    return <StartupSplash />;
   }
 
   if (isAuthSession) {
