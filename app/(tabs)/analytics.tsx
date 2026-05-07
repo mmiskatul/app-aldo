@@ -356,6 +356,34 @@ export default function AnalyticsScreen() {
     }
   }, [t]);
 
+  const localizePeakHourSubtitle = React.useCallback((subtitle?: string) => {
+    const safeSubtitle = String(subtitle || '').trim();
+    const normalizedSubtitle = safeSubtitle.toLowerCase();
+
+    if (!safeSubtitle) {
+      return safeSubtitle;
+    }
+
+    if (normalizedSubtitle === 'no cover data yet' || normalizedSubtitle === 'nessun dato coperti') {
+      return t('peak_hour_no_cover_data');
+    }
+
+    const match = safeSubtitle.match(/^(\d+)\s+(covers|coperti),\s+(\d+)%\s+(of this period|del periodo)(.*)$/i);
+    if (!match) {
+      return safeSubtitle;
+    }
+
+    const suffix = /latest available record|ultimo dato disponibile/i.test(match[5] || '')
+      ? t('peak_hour_latest_suffix')
+      : '';
+
+    return t('peak_hour_period_subtitle', {
+      covers: match[1],
+      share: match[3],
+      suffix,
+    });
+  }, [t]);
+
   const localizedMetricTiles = React.useMemo(
     () =>
       (metricTilesByPeriod[activePeriod] ?? []).map((item) => ({
@@ -365,8 +393,12 @@ export default function AnalyticsScreen() {
           item.label.trim().toLowerCase() === 'peak hour'
             ? localizeAnalyticsLabel(String(item.value))
             : item.value,
+        subtitle:
+          item.label.trim().toLowerCase() === 'peak hour'
+            ? localizePeakHourSubtitle(item.subtitle)
+            : item.subtitle,
       })),
-    [activePeriod, localizeAnalyticsLabel, metricTilesByPeriod],
+    [activePeriod, localizeAnalyticsLabel, localizePeakHourSubtitle, metricTilesByPeriod],
   );
 
   const localizedBusinessInsight = React.useMemo(() => {
