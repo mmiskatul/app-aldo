@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   },
   footerHighlight: {
     fontWeight: "700",
-    color: "#D97706", // Slightly darker orange variant as shown in mockup for "Join Premium"
+    color: "#D97706",
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

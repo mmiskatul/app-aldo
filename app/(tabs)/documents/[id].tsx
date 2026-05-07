@@ -193,9 +193,9 @@ export default function DocumentDetailsScreen() {
           onPress: async () => {
             try {
               setLoading(true);
-              showInfoMessage('Deleting document...');
+              showInfoMessage(t('deleting'));
               await apiClient.delete(`/api/v1/restaurant/documents/${id}`);
-              showSuccessMessage('Document deleted.');
+              showSuccessMessage(t('success'));
               router.back();
             } catch (error) {
               showApiError("documents.delete", error, t('document_delete_failed'), t('error'));
@@ -309,10 +309,10 @@ export default function DocumentDetailsScreen() {
       <View style={styles.safeArea}>
         <Header title={t('document_details_title')} showBack={true} />
         <View style={styles.errorState}>
-          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorTitle}>{t('something_went_wrong')}</Text>
           <Text style={styles.errorSubtitle}>{errorMessage || t('unable_to_load_item')}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => void fetchDetails()}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('try_again')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -328,7 +328,7 @@ export default function DocumentDetailsScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <DocumentPreview
-          status={data.status === "processed" ? "Processed" : "Pending Review"}
+          status={data.status === "processed" ? t('status_processed') : t('status_pending')}
           supplierName={data.counterparty_name || data.supplier_name}
           invoiceNumber={
             data.document_number ||

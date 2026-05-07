@@ -19,6 +19,7 @@ import {
   resolveLocalizedList,
   resolveLocalizedText,
 } from "../../../utils/localizedContent";
+import { useTranslation } from "../../../utils/i18n";
 
 // Components
 import InsightSummaryCard from "../../../components/home/view-insight/InsightSummaryCard";
@@ -30,6 +31,7 @@ import { DetailRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 export default function ViewInsightScreen() {
   const router = useRouter();
   const navigation = useNavigation();
+  const { t } = useTranslation();
   const appLanguage = useAppStore((state) => state.appLanguage);
   const [data, setData] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
@@ -156,7 +158,7 @@ export default function ViewInsightScreen() {
       <Stack.Screen 
         options={{ 
           headerShown: true,
-          title: "AI Business Insight",
+          title: t("ai_business_insight"),
           headerTitleAlign: "center",
           headerTitleStyle: {
             fontSize: moderateScale(18, 0.3),

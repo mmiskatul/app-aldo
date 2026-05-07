@@ -52,13 +52,15 @@ export default function ActionFilterBar({
           <Text style={styles.actionText}>{t("export_data")}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setIsPeriodMenuOpen(true)}
-        >
-          <Text style={styles.filterText}>{formatPeriod(activePeriod)}</Text>
-          <ChevronDownIcon size={moderateScale(14)} color="#111827" />
-        </TouchableOpacity>
+        {availablePeriods.length > 0 ? (
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={() => setIsPeriodMenuOpen(true)}
+          >
+            <Text style={styles.filterText}>{formatPeriod(activePeriod)}</Text>
+            <ChevronDownIcon size={moderateScale(14)} color="#111827" />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Export Dropdown Modal */}

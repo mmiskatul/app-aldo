@@ -3,8 +3,26 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useRouter } from 'expo-router';
 import { DocumentArrowUpIcon, ClipboardDocumentListIcon, BoltIcon, ArchiveBoxIcon, BuildingLibraryIcon } from 'react-native-heroicons/outline';
+import { useAppStore } from '../../store/useAppStore';
 import { useTranslation } from '../../utils/i18n';
+import { resolveLocalizedText, type LocalizedText } from '../../utils/localizedContent';
 import Skeleton from '../ui/Skeleton';
+
+type AppLanguage = 'en' | 'it';
+
+interface ActivityRecord {
+  kind?: string;
+  title?: string;
+  subtitle?: string;
+  timestamp?: string;
+  entity_id?: string;
+  reference_date?: string;
+  route?: string;
+  source_kind?: string;
+  source_entity_id?: string;
+  title_translations?: LocalizedText;
+  subtitle_translations?: LocalizedText;
+}
 
 interface ActivityItemProps {
   title: string;
@@ -60,7 +78,7 @@ const ActivityItem = ({ title, subtitle, timeText, IconComponent, iconBgColor, i
 };
 
 interface RecentActivityProps {
-  activities?: any[];
+  activities?: ActivityRecord[];
   loading?: boolean;
   onNavigate?: (route: string) => void;
   onSeeAll?: () => void;
@@ -68,7 +86,95 @@ interface RecentActivityProps {
   bottomSpacing?: number;
 }
 
-const resolveActivityRoute = (activity: any) => {
+const activityTitlePairs = [
+  { en: 'Daily data', it: 'Dati giornalieri' },
+  { en: 'Invoice uploaded', it: 'Fattura caricata' },
+  { en: 'Daily data expense', it: 'Spesa dati giornalieri' },
+  { en: 'Document expense', it: 'Spesa documento' },
+  { en: 'Inventory expense', it: 'Spesa inventario' },
+  { en: 'Expense added', it: 'Spesa aggiunta' },
+  { en: 'Bank deposit logged', it: 'Deposito bancario registrato' },
+  { en: 'Cash deposit logged', it: 'Deposito cassa registrato' },
+  { en: 'POS payment recorded', it: 'Pagamento POS registrato' },
+  { en: 'Cash in recorded', it: 'Entrata cassa registrata' },
+  { en: 'Bank transfer recorded', it: 'Bonifico registrato' },
+  { en: 'Cash withdrawal recorded', it: 'Prelievo cassa registrato' },
+  { en: 'Cash out recorded', it: 'Uscita cassa registrata' },
+  { en: 'Cash expense recorded', it: 'Spesa in contanti registrata' },
+  { en: 'Cash transaction recorded', it: 'Movimento di cassa registrato' },
+  { en: 'Inventory item added', it: 'Articolo inventario aggiunto' },
+];
+
+const normalizeActivityText = (value?: string | null) => (value || '').trim().toLowerCase();
+
+const formatActivityDateTitle = (referenceDate: string | undefined, language: AppLanguage) => {
+  if (!referenceDate) {
+    return language === 'it' ? 'Dati giornalieri' : 'Daily data';
+  }
+
+  const parsed = new Date(`${referenceDate}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return language === 'it' ? 'Dati giornalieri' : 'Daily data';
+  }
+
+  const monthNames =
+    language === 'it'
+      ? ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic']
+      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  return `${String(parsed.getDate()).padStart(2, '0')} ${monthNames[parsed.getMonth()]} ${parsed.getFullYear()}`;
+};
+
+const localizeKnownActivityTitle = (title: string, language: AppLanguage) => {
+  const normalizedTitle = normalizeActivityText(title);
+  const matchedTitle = activityTitlePairs.find(
+    (item) => normalizeActivityText(item.en) === normalizedTitle || normalizeActivityText(item.it) === normalizedTitle,
+  );
+
+  if (!matchedTitle) {
+    return title;
+  }
+
+  return matchedTitle[language];
+};
+
+const localizeKnownActivitySubtitle = (subtitle: string, language: AppLanguage) => {
+  if (!subtitle) {
+    return '';
+  }
+
+  if (language === 'it') {
+    return subtitle
+      .replace(/\bRevenue\b/g, 'Ricavi')
+      .replace(/\bCovers\b/g, 'Coperti')
+      .replace(/\bAvg\b/g, 'Media')
+      .replace(/\bDocument\b/g, 'Documento')
+      .replace(/\bInventory\b/g, 'Inventario');
+  }
+
+  return subtitle
+    .replace(/\bRicavi\b/g, 'Revenue')
+    .replace(/\bCoperti\b/g, 'Covers')
+    .replace(/\bMedia\b/g, 'Avg')
+    .replace(/\bDocumento\b/g, 'Document')
+    .replace(/\bInventario\b/g, 'Inventory');
+};
+
+const resolveActivityTitle = (activity: ActivityRecord, language: AppLanguage, fallback: string) => {
+  if (activity.kind === 'daily_record') {
+    return formatActivityDateTitle(activity.reference_date, language);
+  }
+
+  const resolvedTitle = resolveLocalizedText(language, activity.title_translations, activity.title || fallback);
+  return localizeKnownActivityTitle(resolvedTitle || fallback, language);
+};
+
+const resolveActivitySubtitle = (activity: ActivityRecord, language: AppLanguage) => {
+  const resolvedSubtitle = resolveLocalizedText(language, activity.subtitle_translations, activity.subtitle || '');
+  return localizeKnownActivitySubtitle(resolvedSubtitle, language);
+};
+
+const resolveActivityRoute = (activity: ActivityRecord) => {
   if (!activity) {
     return null;
   }
@@ -107,6 +213,7 @@ export default function RecentActivity({
   bottomSpacing,
 }: RecentActivityProps) {
   const { t } = useTranslation();
+  const appLanguage = useAppStore((state) => state.appLanguage);
 
   const getIconForType = (type?: string) => {
     switch (type?.toLowerCase()) {
@@ -125,7 +232,7 @@ export default function RecentActivity({
     }
   };
 
-  const formatTimestamp = (timestamp: string) => {
+  const formatTimestamp = (timestamp?: string) => {
     if (!timestamp) return t('just_now');
     const date = new Date(timestamp);
     const now = new Date();
@@ -140,8 +247,8 @@ export default function RecentActivity({
   const displayActivities: ActivityItemProps[] =
     apiActivities && apiActivities.length > 0
       ? apiActivities.map((activity) => ({
-          title: activity.title || t('activity'),
-          subtitle: activity.subtitle || '',
+          title: resolveActivityTitle(activity, appLanguage, t('activity')),
+          subtitle: resolveActivitySubtitle(activity, appLanguage),
           timeText: formatTimestamp(activity.timestamp),
           route: resolveActivityRoute(activity),
           onNavigate,

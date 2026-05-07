@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Animated, Easing, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { AppMessageType, registerAppMessageHandler } from "../../utils/feedback";
@@ -10,6 +10,7 @@ type SnackbarState = {
   message: string;
   type: AppMessageType;
   durationMs: number;
+  presentation: "snackbar" | "modal";
 };
 
 const ICON_BY_TYPE: Record<AppMessageType, keyof typeof Feather.glyphMap> = {
@@ -65,6 +66,7 @@ export default function TopSnackbar() {
         message: payload.message,
         type: payload.type,
         durationMs: payload.durationMs,
+        presentation: payload.presentation,
       });
       setVisible(true);
     });
@@ -120,13 +122,50 @@ export default function TopSnackbar() {
       }),
     ]).start();
 
-    dismissTimerRef.current = setTimeout(() => {
-      hideSnackbar();
-    }, snackbar.durationMs);
+    if (snackbar.presentation === "snackbar" && snackbar.durationMs > 0) {
+      dismissTimerRef.current = setTimeout(() => {
+        hideSnackbar();
+      }, snackbar.durationMs);
+    }
   }, [hideSnackbar, opacity, snackbar, translateY, visible]);
 
   if (!snackbar) {
     return null;
+  }
+
+  if (snackbar.presentation === "modal") {
+    return (
+      <Modal visible transparent animationType="fade" onRequestClose={hideSnackbar}>
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: palette.background,
+                borderColor: palette.border,
+              },
+            ]}
+          >
+            <TouchableOpacity style={styles.modalCloseButton} onPress={hideSnackbar} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Feather name="x" size={moderateScale(18)} color={palette.message} />
+            </TouchableOpacity>
+            <View style={[styles.modalIconWrap, { backgroundColor: "#FFFFFF" }]}>
+              <Feather
+                name={ICON_BY_TYPE[snackbar.type]}
+                size={moderateScale(24)}
+                color={palette.icon}
+              />
+            </View>
+            <Text style={[styles.modalTitle, { color: palette.title }]}>
+              {snackbar.title}
+            </Text>
+            <Text style={[styles.modalMessage, { color: palette.message }]}>
+              {snackbar.message}
+            </Text>
+          </View>
+        </View>
+      </Modal>
+    );
   }
 
   return (
@@ -217,5 +256,53 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12, 0.3),
     fontWeight: "500",
     lineHeight: moderateScale(18, 0.3),
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(17, 24, 39, 0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: scale(24),
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: scale(340),
+    borderWidth: 1,
+    borderRadius: scale(18),
+    paddingHorizontal: scale(22),
+    paddingTop: verticalScale(26),
+    paddingBottom: verticalScale(24),
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 22,
+    elevation: 12,
+  },
+  modalCloseButton: {
+    position: "absolute",
+    top: verticalScale(12),
+    right: scale(12),
+    zIndex: 2,
+  },
+  modalIconWrap: {
+    width: scale(48),
+    height: scale(48),
+    borderRadius: scale(24),
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: verticalScale(14),
+  },
+  modalTitle: {
+    fontSize: moderateScale(17, 0.3),
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: verticalScale(8),
+  },
+  modalMessage: {
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: "500",
+    lineHeight: moderateScale(20, 0.3),
+    textAlign: "center",
   },
 });

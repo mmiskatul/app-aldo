@@ -28,6 +28,7 @@ export default function AddInventoryItemScreen() {
   const [categoryOptions, setCategoryOptions] = useState<InventoryMetaItem[]>([]);
   const [supplierOptions, setSupplierOptions] = useState<InventoryMetaItem[]>([]);
   const [categoryFocused, setCategoryFocused] = useState(false);
+  const [unitTypeFocused, setUnitTypeFocused] = useState(false);
   const [supplierFocused, setSupplierFocused] = useState(false);
 
   useEffect(() => {
@@ -64,19 +65,72 @@ export default function AddInventoryItemScreen() {
 
   const filteredCategoryOptions = useMemo(() => {
     const query = category.trim().toLowerCase();
+    if (query.length < 2) {
+      return [];
+    }
     const matches = categoryOptions.filter((item) =>
       item.name.toLowerCase().includes(query),
     );
     return matches.slice(0, 6);
   }, [category, categoryOptions]);
 
+  const hasExactCategoryMatch = useMemo(() => {
+    const query = category.trim().toLowerCase();
+    return categoryOptions.some((item) => item.name.trim().toLowerCase() === query);
+  }, [category, categoryOptions]);
+
+  const unitTypeOptions = useMemo(() => {
+    const existingUnits = new Set<string>();
+    ['kg', 'g', 'l', 'ml', 'pcs', 'box', 'pack', 'bottle', 'bag'].forEach((unit) => existingUnits.add(unit));
+    return Array.from(existingUnits).map((name) => ({ id: name, name }));
+  }, []);
+
+  const filteredUnitTypeOptions = useMemo(() => {
+    const query = unitType.trim().toLowerCase();
+    if (query.length < 1) {
+      return [];
+    }
+
+    return unitTypeOptions
+      .filter((item) => item.name.toLowerCase().includes(query))
+      .slice(0, 6);
+  }, [unitType, unitTypeOptions]);
+
+  const hasExactUnitTypeMatch = useMemo(() => {
+    const query = unitType.trim().toLowerCase();
+    return unitTypeOptions.some((item) => item.name.trim().toLowerCase() === query);
+  }, [unitType, unitTypeOptions]);
+
+  const shouldShowNewCategoryLabel =
+    categoryFocused &&
+    category.trim().length >= 2 &&
+    !hasExactCategoryMatch;
+
+  const shouldShowNewUnitTypeLabel =
+    unitTypeFocused &&
+    unitType.trim().length >= 1 &&
+    !hasExactUnitTypeMatch;
+
   const filteredSupplierOptions = useMemo(() => {
     const query = supplierName.trim().toLowerCase();
+    if (query.length < 2) {
+      return [];
+    }
     const matches = supplierOptions.filter((item) =>
       item.name.toLowerCase().includes(query),
     );
     return matches.slice(0, 6);
   }, [supplierName, supplierOptions]);
+
+  const hasExactSupplierMatch = useMemo(() => {
+    const query = supplierName.trim().toLowerCase();
+    return supplierOptions.some((item) => item.name.trim().toLowerCase() === query);
+  }, [supplierName, supplierOptions]);
+
+  const shouldShowNewSupplierLabel =
+    supplierFocused &&
+    supplierName.trim().length >= 2 &&
+    !hasExactSupplierMatch;
 
   const buildErrorMessage = (error: any) => {
     const detail = error?.response?.data?.detail;
@@ -158,7 +212,11 @@ export default function AddInventoryItemScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <Text style={styles.pageTitle}>{t('add_inventory_item')}</Text>
           <Text style={styles.pageSubtitle}>{t('add_inventory_item_subtitle')}</Text>
 
@@ -185,6 +243,10 @@ export default function AddInventoryItemScreen() {
                     key={item.id}
                     style={styles.suggestionItem}
                     activeOpacity={0.8}
+                    onPressIn={() => {
+                      setCategory(item.name);
+                      setCategoryFocused(false);
+                    }}
                     onPress={() => {
                       setCategory(item.name);
                       setCategoryFocused(false);
@@ -195,6 +257,9 @@ export default function AddInventoryItemScreen() {
                 ))}
               </View>
             ) : null}
+            {shouldShowNewCategoryLabel ? (
+              <Text style={styles.newCategoryLabel}>{t('new_category')}</Text>
+            ) : null}
           </View>
 
           <View style={styles.row}>
@@ -204,7 +269,39 @@ export default function AddInventoryItemScreen() {
             </View>
             <View style={[styles.formGroup, { flex: 1 }]}>
               <Text style={styles.label}>{t('unit_type')}</Text>
-              <TextInput style={styles.input} placeholder="kg" placeholderTextColor="#9CA3AF" value={unitType} onChangeText={setUnitType} />
+              <TextInput
+                style={styles.input}
+                placeholder="kg"
+                placeholderTextColor="#9CA3AF"
+                value={unitType}
+                onChangeText={setUnitType}
+                onFocus={() => setUnitTypeFocused(true)}
+                onBlur={() => setTimeout(() => setUnitTypeFocused(false), 120)}
+              />
+              {unitTypeFocused && filteredUnitTypeOptions.length > 0 ? (
+                <View style={styles.suggestionList}>
+                  {filteredUnitTypeOptions.map((item) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.suggestionItem}
+                      activeOpacity={0.8}
+                      onPressIn={() => {
+                        setUnitType(item.name);
+                        setUnitTypeFocused(false);
+                      }}
+                      onPress={() => {
+                        setUnitType(item.name);
+                        setUnitTypeFocused(false);
+                      }}
+                    >
+                      <Text style={styles.suggestionText}>{item.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
+              {shouldShowNewUnitTypeLabel ? (
+                <Text style={styles.newCategoryLabel}>{t('new_unit_type')}</Text>
+              ) : null}
             </View>
           </View>
 
@@ -226,6 +323,10 @@ export default function AddInventoryItemScreen() {
                     key={item.id}
                     style={styles.suggestionItem}
                     activeOpacity={0.8}
+                    onPressIn={() => {
+                      setSupplierName(item.name);
+                      setSupplierFocused(false);
+                    }}
                     onPress={() => {
                       setSupplierName(item.name);
                       setSupplierFocused(false);
@@ -235,6 +336,9 @@ export default function AddInventoryItemScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+            ) : null}
+            {shouldShowNewSupplierLabel ? (
+              <Text style={styles.newCategoryLabel}>{t('new_supplier')}</Text>
             ) : null}
           </View>
 
@@ -309,6 +413,12 @@ const styles = StyleSheet.create({
   suggestionText: {
     fontSize: moderateScale(13),
     color: '#111827',
+  },
+  newCategoryLabel: {
+    marginTop: verticalScale(6),
+    fontSize: moderateScale(12),
+    color: '#FA8C4C',
+    fontWeight: '700',
   },
   footer: {
     paddingHorizontal: scale(20),

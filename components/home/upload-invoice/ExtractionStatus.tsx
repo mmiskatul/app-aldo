@@ -36,7 +36,6 @@ export default function ExtractionStatus({ progress }: ExtractionStatusProps) {
         </View>
         <Text style={styles.extractionText}>AI is extracting invoice data...</Text>
       </View>
-      {/* Simple Progress Bar Mockup */}
       <View style={styles.progressBarTrack}>
         <Animated.View style={[styles.progressBarFill, { width: widthInterpolate }]} />
       </View>

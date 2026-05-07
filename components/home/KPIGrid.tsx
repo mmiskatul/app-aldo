@@ -128,37 +128,6 @@ export default function KPIGrid({ metrics, loading = false }: KPIGridProps) {
     return '€';
   };
 
-  const getFallbackData = (): KPIItemProps[] => [
-    {
-      title: t('revenue'),
-      value: '€0.00',
-      trend: '0.0%',
-      isPositive: true,
-      ...getIconData('Revenue'),
-    },
-    {
-      title: t('expenses'),
-      value: '€0.00',
-      trend: '0.0%',
-      isPositive: false,
-      ...getIconData('Expenses'),
-    },
-    {
-      title: t('food_cost'),
-      value: '€0.00',
-      trend: '0.0%',
-      isPositive: false,
-      ...getIconData('Food Cost'),
-    },
-    {
-      title: t('profit'),
-      value: '€0.00',
-      trend: '0.0%',
-      isPositive: true,
-      ...getIconData('Profit'),
-    },
-  ];
-
   const kpiData: KPIItemProps[] =
     metrics && metrics.length > 0
       ? metrics.map((metric) => ({
@@ -171,7 +140,7 @@ export default function KPIGrid({ metrics, loading = false }: KPIGridProps) {
           isPositive: metric.change_percent >= 0,
           ...getIconData(metric.label),
         }))
-      : getFallbackData();
+      : [];
 
   if (loading) {
     return (
@@ -212,6 +181,10 @@ export default function KPIGrid({ metrics, loading = false }: KPIGridProps) {
         ))}
       </View>
     );
+  }
+
+  if (kpiData.length === 0) {
+    return null;
   }
 
   return (

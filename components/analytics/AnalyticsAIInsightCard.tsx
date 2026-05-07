@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SparklesIcon } from 'react-native-heroicons/solid';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { useTranslation } from '../../utils/i18n';
 
 interface AnalyticsAIInsightCardProps {
   insight: {
@@ -13,8 +14,15 @@ interface AnalyticsAIInsightCardProps {
 }
 
 export default function AnalyticsAIInsightCard({ insight }: AnalyticsAIInsightCardProps) {
-  const title = String(insight.title || '').trim();
-  const subtitle = String(insight.subtitle || '').trim();
+  const { t } = useTranslation();
+  const normalizeInsightText = (value?: string | null) => {
+    const text = String(value || '').trim();
+    return /^ai business insig(?:h|n)?t$/i.test(text) || /^business insight$/i.test(text)
+      ? t('ai_business_insight')
+      : text;
+  };
+  const title = normalizeInsightText(insight.title);
+  const subtitle = normalizeInsightText(insight.subtitle);
   const isAiGenerated = String(insight.ai_provider || '').toLowerCase() === 'openai';
   const hasSeparateSubtitle = Boolean(subtitle && subtitle !== title);
 
@@ -24,14 +32,14 @@ export default function AnalyticsAIInsightCard({ insight }: AnalyticsAIInsightCa
 
   return (
     <LinearGradient
-      colors={['#111111', '#B47B12']} // Darkish to gold-ish gradient based on image
+      colors={['#111111', '#B47B12']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
       <View style={styles.header}>
         <SparklesIcon size={moderateScale(16)} color="#FB923C" />
-        <Text style={styles.title}>AI Business Insight</Text>
+        <Text style={styles.title}>{t('ai_business_insight')}</Text>
         <Text style={styles.providerBadge}>{isAiGenerated ? 'AI' : 'Fallback'}</Text>
       </View>
       <Text style={styles.content}>{title || subtitle}</Text>

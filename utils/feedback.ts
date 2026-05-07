@@ -1,15 +1,21 @@
 import { Alert, AlertButton } from "react-native";
 
 export type AppMessageType = "success" | "error" | "info";
+export type AppMessagePresentation = "snackbar" | "modal";
 
 type ShowAppMessagePayload = {
   title?: string;
   message: string;
   type?: AppMessageType;
   durationMs?: number;
+  presentation?: AppMessagePresentation;
 };
 
-type AppMessageHandler = (payload: Required<ShowAppMessagePayload>) => void;
+type NormalizedAppMessagePayload = Required<Omit<ShowAppMessagePayload, "presentation">> & {
+  presentation: AppMessagePresentation;
+};
+
+type AppMessageHandler = (payload: NormalizedAppMessagePayload) => void;
 
 let currentHandler: AppMessageHandler | null = null;
 
@@ -22,6 +28,7 @@ export const showAppMessage = ({
   message,
   type = "info",
   durationMs = 3000,
+  presentation = "snackbar",
 }: ShowAppMessagePayload) => {
   if (currentHandler) {
     currentHandler({
@@ -29,6 +36,7 @@ export const showAppMessage = ({
       message,
       type,
       durationMs,
+      presentation,
     });
     return;
   }
@@ -42,6 +50,10 @@ export const showSuccessMessage = (message: string, title = "Success") => {
 
 export const showErrorMessage = (message: string, title = "Error") => {
   showAppMessage({ title, message, type: "error" });
+};
+
+export const showModalErrorMessage = (message: string, title = "Error") => {
+  showAppMessage({ title, message, type: "error", presentation: "modal", durationMs: 0 });
 };
 
 export const showInfoMessage = (message: string, title = "Info") => {

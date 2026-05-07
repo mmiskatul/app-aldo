@@ -54,27 +54,27 @@ export default function DocumentPreview({
           <View style={styles.invoiceTopRow}>
             <View>
               <Text style={styles.invoiceHeading}>{t("invoice")}</Text>
-              <Text style={styles.mutedText}>{supplierName || "Supplier"}</Text>
+              <Text style={styles.mutedText}>{supplierName || t("supplier")}</Text>
             </View>
             <View style={styles.metaGroup}>
-              <Text style={styles.metaLabel}>No.</Text>
-              <Text style={styles.metaValue}>{invoiceNumber || "N/A"}</Text>
-              <Text style={[styles.metaLabel, styles.metaGap]}>Date</Text>
-              <Text style={styles.metaValue}>{invoiceDate || "N/A"}</Text>
+              <Text style={styles.metaLabel}>{t("no")}</Text>
+              <Text style={styles.metaValue}>{invoiceNumber || t("not_available")}</Text>
+              <Text style={[styles.metaLabel, styles.metaGap]}>{t("date")}</Text>
+              <Text style={styles.metaValue}>{invoiceDate || t("not_available")}</Text>
             </View>
           </View>
 
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.itemColumn]}>Item</Text>
-            <Text style={styles.tableHeaderText}>Qty</Text>
-            <Text style={styles.tableHeaderText}>Total</Text>
+            <Text style={[styles.tableHeaderText, styles.itemColumn]}>{t("item")}</Text>
+            <Text style={styles.tableHeaderText}>{t("qty")}</Text>
+            <Text style={styles.tableHeaderText}>{t("total")}</Text>
           </View>
 
           {previewItems.length > 0 ? (
             previewItems.map((item, index) => (
               <View key={`${item.product_name || "item"}-${index}`} style={styles.tableRow}>
                 <Text style={[styles.tableCell, styles.itemColumn]} numberOfLines={1}>
-                  {item.product_name || "Line item"}
+                  {item.product_name || t("line_item")}
                 </Text>
                 <Text style={styles.tableCell}>{item.quantity ?? 0}</Text>
                 <Text style={styles.tableCell}>{formatCurrency(item.total_price)}</Text>
@@ -82,21 +82,21 @@ export default function DocumentPreview({
             ))
           ) : (
             <View style={styles.emptyRow}>
-              <Text style={styles.emptyText}>No line items available</Text>
+              <Text style={styles.emptyText}>{t("no_line_items_available")}</Text>
             </View>
           )}
 
           <View style={styles.summarySection}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryLabel}>{t("subtotal")}</Text>
               <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>VAT</Text>
+              <Text style={styles.summaryLabel}>{t("vat")}</Text>
               <Text style={styles.summaryValue}>{formatCurrency(vatAmount)}</Text>
             </View>
             <View style={[styles.summaryRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalLabel}>{t("total")}</Text>
               <Text style={styles.totalValue}>{formatCurrency(totalAmount)}</Text>
             </View>
           </View>

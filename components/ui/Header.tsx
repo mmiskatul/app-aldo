@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     width: moderateScale(40),
     height: moderateScale(40),
     borderRadius: moderateScale(20),
-    backgroundColor: '#F9FAFB', // Light background as seen in mockups
+    backgroundColor: '#F9FAFB',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,

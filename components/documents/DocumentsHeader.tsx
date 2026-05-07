@@ -1,15 +1,22 @@
 import React from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform } from "react-native";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
 import { Feather } from "@expo/vector-icons";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import { useTranslation } from "../../utils/i18n";
 
 interface DocumentsHeaderProps {
   searchQuery: string;
   dateLabel: string;
   supplierLabel: string;
   statusLabel: string;
+  statusDefaultLabel: string;
   onSearchChange: (value: string) => void;
   onDatePress: () => void;
+  selectedDate: Date;
+  showDatePicker: boolean;
+  onDateChange: (event: DateTimePickerEvent, selectedDate?: Date) => void;
+  onDatePickerDone: () => void;
   onSupplierPress: () => void;
   onStatusPress: () => void;
   onUploadPress: () => void;
@@ -20,13 +27,19 @@ export default function DocumentsHeader({
   dateLabel,
   supplierLabel,
   statusLabel,
+  statusDefaultLabel,
   onSearchChange,
   onDatePress,
+  selectedDate,
+  showDatePicker,
+  onDateChange,
+  onDatePickerDone,
   onSupplierPress,
   onStatusPress,
   onUploadPress,
 }: DocumentsHeaderProps) {
-  const statusActive = statusLabel !== "Status";
+  const { t } = useTranslation();
+  const statusActive = statusLabel !== statusDefaultLabel;
 
   return (
     <View style={styles.container}>
@@ -34,7 +47,7 @@ export default function DocumentsHeader({
         <Feather name="search" size={moderateScale(16)} color="#9CA3AF" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search invoices, suppliers..."
+          placeholder={t("documents_search_placeholder", { defaultValue: "Search invoices, suppliers..." })}
           placeholderTextColor="#9CA3AF"
           value={searchQuery}
           onChangeText={onSearchChange}
@@ -73,9 +86,25 @@ export default function DocumentsHeader({
 
         <TouchableOpacity style={styles.uploadBtn} onPress={onUploadPress} activeOpacity={0.85}>
           <Feather name="upload" size={moderateScale(12)} color="#FFFFFF" style={styles.uploadIcon} />
-          <Text style={styles.uploadBtnText}>Upload Invoice</Text>
+          <Text style={styles.uploadBtnText}>{t("upload_invoice")}</Text>
         </TouchableOpacity>
       </View>
+
+      {showDatePicker ? (
+        <View style={Platform.OS === "ios" ? styles.iosPickerWrapper : undefined}>
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display={Platform.OS === "android" ? "calendar" : "spinner"}
+            onChange={onDateChange}
+          />
+          {Platform.OS === "ios" ? (
+            <TouchableOpacity style={styles.iosPickerDoneButton} onPress={onDatePickerDone}>
+              <Text style={styles.iosPickerDoneText}>{t("done")}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -154,5 +183,24 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: moderateScale(8, 0.3),
     fontWeight: "800",
+  },
+  iosPickerWrapper: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: scale(12),
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginTop: verticalScale(10),
+    overflow: "hidden",
+  },
+  iosPickerDoneButton: {
+    backgroundColor: "#FA8C4C",
+    paddingVertical: verticalScale(12),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iosPickerDoneText: {
+    color: "#FFFFFF",
+    fontSize: moderateScale(15, 0.3),
+    fontWeight: "600",
   },
 });

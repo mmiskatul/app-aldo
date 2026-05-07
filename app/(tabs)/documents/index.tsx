@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 
 import apiClient from "../../../api/apiClient";
 import AIExtractionBanner from "../../../components/documents/AIExtractionBanner";
@@ -10,7 +11,9 @@ import RecentDocumentsList from "../../../components/documents/RecentDocumentsLi
 import Header from "../../../components/ui/Header";
 import { useAppStore } from "../../../store/useAppStore";
 import { getApiDisplayMessage, logApiError } from "../../../utils/apiErrors";
+import { isNetworkLikeApiError } from "../../../utils/api";
 import { useTranslation } from "../../../utils/i18n";
+import { formatEuropeanDate } from "../../../utils/date";
 
 export default function DocumentsScreen() {
   const { t } = useTranslation();
@@ -22,8 +25,11 @@ export default function DocumentsScreen() {
   const [loading, setLoading] = useState(!hasFetchedDocuments);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isConnectionError, setIsConnectionError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [dateSort, setDateSort] = useState<"newest" | "oldest">("newest");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [supplierFilterIndex, setSupplierFilterIndex] = useState(0);
   const [statusFilter, setStatusFilter] = useState<"all" | "processed" | "pending">("all");
 
@@ -34,6 +40,7 @@ export default function DocumentsScreen() {
       setLoading(true);
     }
     setError(null);
+    setIsConnectionError(false);
 
     try {
       const response = await apiClient.get("/api/v1/restaurant/documents", {
@@ -53,6 +60,7 @@ export default function DocumentsScreen() {
       });
     } catch (nextError) {
       logApiError("documents.fetch", nextError);
+      setIsConnectionError(isNetworkLikeApiError(nextError));
       setError(getApiDisplayMessage(nextError, "Unable to load documents."));
     } finally {
       setLoading(false);
@@ -83,17 +91,32 @@ export default function DocumentsScreen() {
       .map((item) => item.counterparty_name || item.supplier_name)
       .filter((name): name is string => typeof name === "string" && name.trim().length > 0);
 
-    return ["Supplier", ...Array.from(new Set(names.map((name) => name.trim())))];
-  }, [documentsScreenCache.documents]);
+    return [t("supplier"), ...Array.from(new Set(names.map((name) => name.trim())))];
+  }, [documentsScreenCache.documents, t]);
 
-  const supplierLabel = supplierOptions[supplierFilterIndex] || "Supplier";
+  const supplierLabel = supplierOptions[supplierFilterIndex] || t("supplier");
+  const statusDefaultLabel = t("status", { defaultValue: "Status" });
   const statusLabel =
-    statusFilter === "processed" ? "Processed" : statusFilter === "pending" ? "Pending" : "Status";
-  const dateLabel = dateSort === "newest" ? "Date" : "Oldest";
+    statusFilter === "processed" ? t("status_processed") : statusFilter === "pending" ? t("status_pending") : statusDefaultLabel;
+  const dateLabel = selectedDate ? formatEuropeanDate(selectedDate) : t("date", { defaultValue: "Date" });
+
+  const getDocumentDateKey = useCallback((value?: string | null) => {
+    if (!value) {
+      return "";
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return String(value).slice(0, 10);
+    }
+
+    return parsed.toISOString().slice(0, 10);
+  }, []);
 
   const filteredDocuments = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    const selectedSupplier = supplierLabel === "Supplier" ? null : supplierLabel.toLowerCase();
+    const selectedSupplier = supplierFilterIndex === 0 ? null : supplierLabel.toLowerCase();
+    const selectedDateKey = selectedDate ? selectedDate.toISOString().slice(0, 10) : null;
 
     const getSearchText = (item: any) =>
       [
@@ -121,6 +144,15 @@ export default function DocumentsScreen() {
           return false;
         }
 
+        if (selectedDateKey) {
+          const itemDateKey = getDocumentDateKey(
+            item.document_date || item.invoice_date || item.upload_date || item.created_at,
+          );
+          if (itemDateKey !== selectedDateKey) {
+            return false;
+          }
+        }
+
         if (selectedSupplier) {
           const itemSupplier = String(item.counterparty_name || item.supplier_name || "").toLowerCase();
           if (itemSupplier !== selectedSupplier) {
@@ -142,7 +174,20 @@ export default function DocumentsScreen() {
         const direction = dateSort === "newest" ? -1 : 1;
         return (getSortDate(a) - getSortDate(b)) * direction;
       });
-  }, [dateSort, documentsScreenCache.documents, searchQuery, statusFilter, supplierLabel]);
+  }, [dateSort, documentsScreenCache.documents, getDocumentDateKey, searchQuery, selectedDate, statusFilter, supplierFilterIndex, supplierLabel]);
+
+  const handleDateChange = useCallback((event: DateTimePickerEvent, nextDate?: Date) => {
+    if (event.type === "dismissed") {
+      setShowDatePicker(false);
+      return;
+    }
+
+    if (nextDate) {
+      setSelectedDate(nextDate);
+    }
+
+    setShowDatePicker(false);
+  }, []);
 
   const handleSupplierPress = useCallback(() => {
     setSupplierFilterIndex((current) => (current + 1) % Math.max(supplierOptions.length, 1));
@@ -168,20 +213,29 @@ export default function DocumentsScreen() {
           dateLabel={dateLabel}
           supplierLabel={supplierLabel}
           statusLabel={statusLabel}
+          statusDefaultLabel={statusDefaultLabel}
           onSearchChange={setSearchQuery}
-          onDatePress={() => setDateSort((current) => (current === "newest" ? "oldest" : "newest"))}
+          onDatePress={() => setShowDatePicker(true)}
+          selectedDate={selectedDate || new Date()}
+          showDatePicker={showDatePicker}
+          onDateChange={handleDateChange}
+          onDatePickerDone={() => setShowDatePicker(false)}
           onSupplierPress={handleSupplierPress}
           onStatusPress={handleStatusPress}
           onUploadPress={openUploadInvoice}
         />
 
-        <AIExtractionBanner
-          title={documentsScreenCache.bannerData.title || "AI Data Extraction Active"}
-          subtitle={
-            documentsScreenCache.bannerData.subtitle ||
-            "Risto AI automatically extracts supplier, date, line items, quantities, and unit prices from your uploads."
-          }
-        />
+        {!isConnectionError ? (
+          <AIExtractionBanner
+            title={documentsScreenCache.bannerData.title || t("ai_data_extraction_active", { defaultValue: "AI Data Extraction Active" })}
+            subtitle={
+              documentsScreenCache.bannerData.subtitle ||
+              t("ai_data_extraction_subtitle", {
+                defaultValue: "Risto AI automatically extracts supplier, date, line items, quantities, and unit prices from your uploads.",
+              })
+            }
+          />
+        ) : null}
       </>
     ),
     [
@@ -190,10 +244,16 @@ export default function DocumentsScreen() {
       dateLabel,
       handleStatusPress,
       handleSupplierPress,
+      handleDateChange,
+      isConnectionError,
       openUploadInvoice,
       searchQuery,
+      selectedDate,
+      showDatePicker,
       statusLabel,
+      statusDefaultLabel,
       supplierLabel,
+      t,
     ],
   );
 
@@ -204,10 +264,10 @@ export default function DocumentsScreen() {
 
     return (
       <View style={styles.errorCard}>
-        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorTitle}>{t("something_went_wrong")}</Text>
         <Text style={styles.errorSubtitle}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => void fetchDocuments()}>
-          <Text style={styles.retryText}>Try Again</Text>
+          <Text style={styles.retryText}>{t("try_again")}</Text>
         </TouchableOpacity>
       </View>
     );

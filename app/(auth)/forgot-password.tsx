@@ -116,7 +116,7 @@ export default function ForgotPasswordScreen() {
           <View style={styles.formContainer}>
             <Input
               label="Email Address"
-              placeholder="owner@restaurant.com"
+              placeholder="Enter email address"
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}

@@ -15,6 +15,11 @@ export default function VatBalance({ balance, loading = false, onPress }: VatBal
   const Container = onPress ? TouchableOpacity : React.Fragment;
   const { t } = useTranslation();
 
+  if (!loading && balance === undefined) {
+    return null;
+  }
+  const displayBalance = balance ?? 0;
+
   return (
     <Container {...(onPress ? { onPress, activeOpacity: 0.8 } : {})}>
       <LinearGradient
@@ -33,7 +38,7 @@ export default function VatBalance({ balance, loading = false, onPress }: VatBal
           />
         ) : (
           <Text style={styles.balanceText}>
-            {'\u20AC'}{balance !== undefined ? balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : 80}
+            {'\u20AC'}{displayBalance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
           </Text>
         )}
 

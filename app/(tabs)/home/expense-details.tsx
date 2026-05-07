@@ -16,6 +16,7 @@ import Header from '../../../components/ui/Header';
 import { useAppStore } from '../../../store/useAppStore';
 import { showDialog, showErrorMessage, showInfoMessage, showSuccessMessage } from '../../../utils/feedback';
 import { formatEuropeanDate } from '../../../utils/date';
+import { useTranslation } from '../../../utils/i18n';
 
 type ExpenseDetail = {
   id: string;
@@ -41,23 +42,23 @@ const formatCurrency = (value: number) =>
 
 const formatDate = (value?: string | null) => formatEuropeanDate(value);
 
-const formatSource = (value?: string | null) => {
+const formatSource = (value: string | null | undefined, t: ReturnType<typeof useTranslation>['t']) => {
   if (!value) {
-    return 'Manual';
+    return t('manual');
   }
   return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const sourceNoticeText = (item: ExpenseDetail) => {
+const sourceNoticeText = (item: ExpenseDetail, t: ReturnType<typeof useTranslation>['t']) => {
   switch (item.source_kind) {
     case 'manual_entry':
-      return 'This expense was generated from daily data. Delete or edit the daily data record to change it.';
+      return t('expense_generated_daily_data');
     case 'document':
-      return 'This expense was generated from a saved document. Delete or edit the document to change it.';
+      return t('expense_generated_document');
     case 'inventory':
-      return 'This expense was generated from an inventory purchase. Delete or edit the inventory item to change it.';
+      return t('expense_generated_inventory');
     default:
-      return 'This expense is generated from another source. Delete or edit the source record to change it.';
+      return t('expense_generated_source');
   }
 };
 
@@ -71,6 +72,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function ExpenseDetailsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const expenseId = toSingleParam(id);
@@ -92,8 +94,8 @@ export default function ExpenseDetailsScreen() {
       setItem(response.data);
     } catch (error: any) {
       showErrorMessage(
-        error?.response?.data?.detail || error?.message || 'Could not load expense details.',
-        'Load failed'
+        error?.response?.data?.detail || error?.message || t('could_not_load_expense_details'),
+        t('load_failed')
       );
     } finally {
       setLoading(false);
@@ -114,20 +116,20 @@ export default function ExpenseDetailsScreen() {
 
     setDeleting(true);
     try {
-      showInfoMessage('Deleting expense...');
+      showInfoMessage(t('deleting_expense'));
       await apiClient.delete(`/api/v1/restaurant/expenses/${item.id}`);
       clearHomeScreenCache();
       clearDailyDataScreenCache();
       setCashOverviewData(null);
-      showSuccessMessage('Expense deleted successfully.');
+      showSuccessMessage(t('expense_deleted'));
       router.back();
     } catch (error: any) {
       showErrorMessage(
-        error?.response?.data?.error?.message ||
+          error?.response?.data?.error?.message ||
           error?.response?.data?.detail ||
           error?.message ||
-          'Could not delete this expense.',
-        'Delete failed'
+          t('could_not_delete_expense'),
+        t('delete_failed')
       );
     } finally {
       setDeleting(false);
@@ -135,10 +137,10 @@ export default function ExpenseDetailsScreen() {
   };
 
   const handleDelete = () => {
-    showDialog('Delete Expense', 'Delete this expense permanently?', [
-      { text: 'Cancel', style: 'cancel' },
+    showDialog(t('delete_expense'), t('delete_expense_message'), [
+      { text: t('cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('delete'),
         style: 'destructive',
         onPress: () => {
           void deleteExpense();
@@ -149,7 +151,7 @@ export default function ExpenseDetailsScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Expense Details" showBack={true} />
+      <Header title={t('expense_details')} showBack={true} />
 
       {loading ? (
         <View style={styles.centerState}>
@@ -158,8 +160,8 @@ export default function ExpenseDetailsScreen() {
       ) : !item ? (
         <View style={styles.centerState}>
           <Feather name="alert-circle" size={moderateScale(34)} color="#EF4444" />
-          <Text style={styles.emptyTitle}>Expense not found</Text>
-          <Text style={styles.emptySubtitle}>This expense record could not be loaded.</Text>
+          <Text style={styles.emptyTitle}>{t('expense_not_found')}</Text>
+          <Text style={styles.emptySubtitle}>{t('expense_not_found_subtitle')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -178,19 +180,19 @@ export default function ExpenseDetailsScreen() {
           {isSourceControlled ? (
             <View style={styles.noticeCard}>
               <Feather name="info" size={moderateScale(18)} color="#FA8C4C" />
-              <Text style={styles.noticeText}>{sourceNoticeText(item)}</Text>
+              <Text style={styles.noticeText}>{sourceNoticeText(item, t)}</Text>
             </View>
           ) : null}
 
           <View style={styles.detailsCard}>
-            <DetailRow label="Category" value={item.category} />
-            <DetailRow label="Amount" value={amountLabel} />
-            <DetailRow label="Expense Date" value={formatDate(item.expense_date)} />
-            <DetailRow label="Section" value={item.section === 'bank' ? 'Bank' : 'Cash'} />
-            <DetailRow label="Source" value={formatSource(item.source_kind)} />
-            {item.source_id ? <DetailRow label="Source ID" value={item.source_id} /> : null}
-            <DetailRow label="Created" value={formatDate(item.created_at)} />
-            <DetailRow label="Notes" value={item.notes || 'No notes'} />
+            <DetailRow label={t('category')} value={item.category} />
+            <DetailRow label={t('amount')} value={amountLabel} />
+            <DetailRow label={t('expense_date')} value={formatDate(item.expense_date)} />
+            <DetailRow label={t('section')} value={item.section === 'bank' ? t('bank') : t('cash')} />
+            <DetailRow label={t('source')} value={formatSource(item.source_kind, t)} />
+            {item.source_id ? <DetailRow label={t('source_id')} value={item.source_id} /> : null}
+            <DetailRow label={t('created')} value={formatDate(item.created_at)} />
+            <DetailRow label={t('notes')} value={item.notes || t('no_notes')} />
           </View>
 
           {!isSourceControlled ? (
@@ -204,7 +206,7 @@ export default function ExpenseDetailsScreen() {
               ) : (
                 <>
                   <Feather name="trash-2" size={moderateScale(16)} color="#FFFFFF" />
-                  <Text style={styles.deleteButtonText}>Delete Expense</Text>
+                  <Text style={styles.deleteButtonText}>{t('delete_expense_button')}</Text>
                 </>
               )}
             </TouchableOpacity>

@@ -12,11 +12,13 @@ import React, { useEffect, useState } from "react";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
 import { getRestrictedAccessStatus, hasActiveSubscription, useAppStore } from "../../store/useAppStore";
+import { useTranslation } from "../../utils/i18n";
 
 const hugeiconsAny = HugeiconsModule as any;
 const HugeiconsIcon = hugeiconsAny.HugeiconsIcon || hugeiconsAny.default?.HugeiconsIcon || hugeiconsAny;
 
 export default function TabLayout() {
+  const { t } = useTranslation();
   const router = useRouter();
   const segments = useSegments();
   const hasHydrated = useAppStore((state) => state.hasHydrated);
@@ -99,12 +101,12 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#FA8C4C", // Active color from mockup
+        tabBarActiveTintColor: "#FA8C4C",
         tabBarInactiveTintColor: "#6B7280",
         tabBarHideOnKeyboard: true,
         tabBarStyle: shouldHideTabBar ? { display: 'none', height: 0, opacity: 0 } : {
           position: "absolute", // Needed for border radii to sit above content seamlessly
-          backgroundColor: "#FFF0E5", // Faint orange background from the mockup
+          backgroundColor: "#FFF0E5",
           borderTopLeftRadius: scale(20),
           borderTopRightRadius: scale(20),
           height: verticalScale(60),
@@ -126,7 +128,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          tabBarLabel: "Home",
+          tabBarLabel: t("home"),
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={Home07Icon}
@@ -139,7 +141,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="analytics"
         options={{
-          tabBarLabel: "Analytics",
+          tabBarLabel: t("analytics"),
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={Analytics01Icon}
@@ -152,7 +154,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="inventory"
         options={{
-          tabBarLabel: "Inventory",
+          tabBarLabel: t("inventory"),
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={CheckListIcon}
@@ -165,7 +167,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="documents"
         options={{
-          tabBarLabel: "Documents",
+          tabBarLabel: t("documents"),
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={DocumentAttachmentIcon}
@@ -178,7 +180,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          tabBarLabel: "Chat",
+          tabBarLabel: t("chat"),
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={Comment01Icon}
@@ -191,7 +193,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          tabBarLabel: "Settings",
+          tabBarLabel: t("settings"),
           tabBarIcon: ({ color }) => (
             <HugeiconsIcon
               icon={Settings01Icon}

@@ -153,7 +153,7 @@ export default function ItemDetailScreen() {
       if (status === 404 || status === 405) {
         console.error('[inventory.delete]', error?.response?.data || error?.message || error);
         showErrorMessage(
-          'Inventory delete is not available on the current API deployment. Please deploy the latest backend and try again.',
+          t('unable_to_delete_item'),
           t('delete_failed'),
         );
       } else {
@@ -191,10 +191,10 @@ export default function ItemDetailScreen() {
       <View style={styles.safe}>
         <Header title={t('inventory_title')} showBack={true} />
         <View style={styles.errorState}>
-          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorTitle}>{t('something_went_wrong')}</Text>
           <Text style={styles.errorSubtitle}>{errorMessage || t('unable_to_load_item')}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => void fetchItem()}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('try_again')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -270,9 +270,9 @@ export default function ItemDetailScreen() {
               <View style={styles.confirmIconWrap}>
                 <Feather name="trash-2" size={moderateScale(22)} color="#DC2626" />
               </View>
-              <Text style={styles.confirmTitle}>Delete inventory item?</Text>
+              <Text style={styles.confirmTitle}>{t('delete_inventory_item_title')}</Text>
               <Text style={styles.confirmMessage}>
-                This item will be permanently deleted from your inventory.
+                {t('delete_inventory_item_message')}
               </Text>
               <View style={styles.confirmActions}>
                 <TouchableOpacity
@@ -280,14 +280,14 @@ export default function ItemDetailScreen() {
                   onPress={handleCancelDelete}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.confirmActionButton, styles.deleteButton]}
                   onPress={() => void handleDelete()}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.deleteButtonText}>Delete</Text>
+                  <Text style={styles.deleteButtonText}>{t('delete')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

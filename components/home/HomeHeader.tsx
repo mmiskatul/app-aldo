@@ -25,7 +25,8 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
   const displayName =
     greetingName ||
     profile?.full_name?.trim() ||
-    t("restaurant_name_fallback");
+    "";
+  const displayRestaurantName = restaurantName || profile?.restaurant_name || "";
   const hasProfileImage = !!profile?.profile_image_url;
 
   useFocusEffect(
@@ -52,9 +53,7 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
         )}
         <View style={styles.textContainer}>
           <Text style={styles.restaurantName} numberOfLines={1}>
-            {(restaurantName || profile?.restaurant_name)
-              ? (restaurantName || profile?.restaurant_name || "").toUpperCase()
-              : t('restaurant_name_fallback')}
+            {displayRestaurantName ? displayRestaurantName.toUpperCase() : ""}
           </Text>
           <Text style={styles.greeting} numberOfLines={1}>
             {t('greeting')}

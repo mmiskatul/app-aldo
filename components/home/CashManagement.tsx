@@ -116,14 +116,13 @@ export default function CashManagement({ cashData, loading = false, onItemPress 
           })}`,
           IconComponent: getIconData(cashItem.label),
         }))
-      : [
-          { keyName: 'total_collected' as const, title: t('total_collected'), value: '\u20AC0.00', IconComponent: CreditCardIcon },
-          { keyName: 'pos_payments' as const, title: t('pos_payments'), value: '\u20AC0.00', IconComponent: CreditCardIcon },
-          { keyName: 'cash_available' as const, title: t('cash_available'), value: '\u20AC0.00', IconComponent: BanknotesIcon },
-          { keyName: 'cash_deposit' as const, title: t('cash_deposit'), value: '\u20AC0.00', IconComponent: BuildingLibraryIcon },
-        ];
+      : [];
 
   const skeletonRows = [0, 1, 2, 3];
+
+  if (!loading && parsedCashData.length === 0) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

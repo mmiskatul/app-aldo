@@ -9,19 +9,25 @@ interface SupplierInfoProps {
 }
 
 export default function SupplierInfo({ name, invoiceNumber, invoiceDate }: SupplierInfoProps) {
+  const hasSupplierInfo = !!(name || invoiceNumber || invoiceDate);
+
+  if (!hasSupplierInfo) {
+    return null;
+  }
+
   return (
     <View style={styles.infoCard}>
       <Text style={styles.infoLabel}>SUPPLIER NAME</Text>
-      <Text style={styles.infoValueMain}>{name || 'Fresh Food Supplier Ltd'}</Text>
+      <Text style={styles.infoValueMain}>{name || ''}</Text>
       
       <View style={styles.infoRow}>
         <View style={styles.infoCol}>
           <Text style={styles.infoLabel}>INVOICE NUMBER</Text>
-          <Text style={styles.infoValue}>{invoiceNumber || 'INV-2045'}</Text>
+          <Text style={styles.infoValue}>{invoiceNumber || ''}</Text>
         </View>
         <View style={styles.infoCol}>
           <Text style={styles.infoLabel}>INVOICE DATE</Text>
-          <Text style={styles.infoValue}>{invoiceDate || '10 March 2026'}</Text>
+          <Text style={styles.infoValue}>{invoiceDate || ''}</Text>
         </View>
       </View>
     </View>

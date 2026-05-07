@@ -2,7 +2,7 @@ import axios from "axios";
 import { router } from "expo-router";
 import { useAppStore } from "../store/useAppStore";
 import { API_REQUEST_TIMEOUT_MS, getApiBaseUrl, getApiErrorMessage, isNetworkLikeApiError } from "../utils/api";
-import { showErrorMessage } from "../utils/feedback";
+import { showModalErrorMessage } from "../utils/feedback";
 
 const apiUrl = getApiBaseUrl();
 
@@ -27,12 +27,8 @@ const showConnectionError = () => {
     return;
   }
   lastConnectionErrorShownAt = now;
-  showErrorMessage(
-    getApiErrorMessage(
-      { code: "ERR_NETWORK" },
-      "Please check your internet connection and try again.",
-      apiUrl
-    ),
+  showModalErrorMessage(
+    "Please check the internet.",
     "Connection error"
   );
 };

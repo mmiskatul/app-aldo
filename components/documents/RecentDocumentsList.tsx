@@ -85,7 +85,7 @@ const DocumentCard = React.memo(function DocumentCard({
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => onEdit(doc.id)} activeOpacity={0.75}>
           <Feather name="edit-2" size={moderateScale(13)} color="#4B5563" style={styles.actionIcon} />
-          <Text style={styles.actionButtonText}>Edit</Text>
+          <Text style={styles.actionButtonText}>{t("edit_data")}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -134,7 +134,7 @@ export default function RecentDocumentsList({
     () =>
       (documents || []).map((item) => ({
         id: item.id,
-        supplier: item.counterparty_name || item.supplier_name || "Unknown Supplier",
+        supplier: item.counterparty_name || item.supplier_name || t("unknown_supplier"),
         invoiceNumber: item.document_number || item.invoice_number || "N/A",
         date: formatDocumentDate(
           item.document_date || item.invoice_date_formatted || item.invoice_date || item.upload_date,
@@ -142,9 +142,11 @@ export default function RecentDocumentsList({
         amount: formatCurrency(item.total_amount),
         itemCount: item.line_item_count || 0,
         status: item.status === "processed" ? "Processed" : "Pending Review",
-        tag: item.status === "processed" ? (item.line_item_count ? "AUTO-CATEGORIZED" : "VERIFIED") : "PENDING",
+        tag: item.status === "processed"
+          ? (item.line_item_count ? t("auto_categorized") : t("verified"))
+          : t("pending"),
       })),
-    [documents],
+    [documents, t],
   );
 
   const handleOpenDocument = React.useCallback(

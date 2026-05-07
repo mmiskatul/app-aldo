@@ -19,6 +19,11 @@ export default function AIInsightBox({ insight, loading = false, onNavigate }: A
   const router = useRouter();
   const { t } = useTranslation();
 
+  if (!loading && !insight) {
+    return null;
+  }
+  const displayInsight = insight ?? { title: "", summary: "" };
+
   return (
     <View style={styles.container}>
       {loading ? (
@@ -36,11 +41,11 @@ export default function AIInsightBox({ insight, loading = false, onNavigate }: A
         <>
           <View style={styles.header}>
             <CpuChipIcon size={moderateScale(14)} color="#FA8C4C" style={styles.icon} />
-            <Text style={styles.headerText}>{insight?.title?.toUpperCase() || t('risto_ai_insight')}</Text>
+            <Text style={styles.headerText}>{displayInsight.title.toUpperCase()}</Text>
           </View>
           
           <Text style={styles.insightText}>
-            {insight?.summary || t('insight_fallback_text')}
+            {displayInsight.summary}
           </Text>
           
           <TouchableOpacity 

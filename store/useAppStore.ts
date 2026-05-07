@@ -227,7 +227,20 @@ export interface HomeActivityCacheItem {
   kind?: string;
   title?: string;
   subtitle?: string;
+  title_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  subtitle_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
   timestamp?: string;
+  entity_id?: string;
+  reference_date?: string;
+  route?: string;
+  source_kind?: string;
+  source_entity_id?: string;
 }
 
 export interface HomeShellCacheItem {

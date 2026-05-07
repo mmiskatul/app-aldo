@@ -19,6 +19,14 @@ interface ActivityItem {
   kind?: string;
   title?: string;
   subtitle?: string;
+  title_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  subtitle_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
   timestamp?: string;
   entity_id?: string;
   reference_date?: string;

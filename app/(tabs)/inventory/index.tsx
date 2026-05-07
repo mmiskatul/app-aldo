@@ -133,6 +133,7 @@ function InventoryCardSkeleton() {
 
 export default function InventoryScreen() {
   const { t } = useTranslation();
+  const appLanguage = useAppStore((state) => state.appLanguage);
   const { notice, noticeKey } = useLocalSearchParams<{ notice?: string; noticeKey?: string }>();
   const inventoryRefreshToken = useAppStore((state) => state.inventoryRefreshToken);
   const inventoryListCache = useAppStore((state) => state.inventoryListCache);
@@ -144,6 +145,7 @@ export default function InventoryScreen() {
   const [items, setItems] = useState<InventoryCardItem[]>(inventoryListCache);
   const [totalValue, setTotalValue] = useState(calculateInventoryValueFromCache(inventoryListCache));
   const hasCachedInventory = inventoryListCache.length > 0;
+  const hasLoadedInventory = inventoryListFetchedAt !== null;
   const [valueLoading, setValueLoading] = useState(!hasCachedInventory);
   const [loading, setLoading] = useState(!hasCachedInventory);
   const [refreshing, setRefreshing] = useState(false);
@@ -242,8 +244,8 @@ export default function InventoryScreen() {
     if (query.length === 0) {
       setItems(inventoryListCache);
       setTotalValue(calculateInventoryValueFromCache(inventoryListCache));
-      setLoading(false);
-      setValueLoading(false);
+      setLoading(!hasLoadedInventory && inventoryListCache.length === 0);
+      setValueLoading(!hasLoadedInventory && inventoryListCache.length === 0);
       return;
     }
 
@@ -252,7 +254,7 @@ export default function InventoryScreen() {
     }, 250);
 
     return () => clearTimeout(timeoutId);
-  }, [fetchInventory, inventoryListCache, search]);
+  }, [fetchInventory, hasLoadedInventory, inventoryListCache, search]);
 
   useEffect(() => {
     if (!notice || !noticeKey) {
@@ -279,6 +281,12 @@ export default function InventoryScreen() {
   };
 
   const filtered = useMemo(() => items, [items]);
+  const emptyInventoryTitle = t('no_inventory_items_found', {
+    defaultValue: appLanguage === 'it' ? 'Nessun articolo di inventario trovato' : 'No inventory items found',
+  });
+  const emptyInventorySubtitle = t('inventory_empty_subtitle', {
+    defaultValue: appLanguage === 'it' ? 'Crea un articolo o modifica il termine di ricerca.' : 'Create an item or change the search term.',
+  });
 
   return (
     <View style={styles.safe}>
@@ -334,7 +342,7 @@ export default function InventoryScreen() {
           <View style={styles.valueBadge}>
             <Feather name="package" size={moderateScale(12)} color="#16A34A" />
             <Text style={styles.valueBadgeText}> {filtered.length}</Text>
-            <Text style={styles.valueBadgeSub}> items</Text>
+            <Text style={styles.valueBadgeSub}> {t('items').toLowerCase()}</Text>
           </View>
         </View>
 
@@ -355,8 +363,8 @@ export default function InventoryScreen() {
             ))
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No inventory items found</Text>
-              <Text style={styles.emptySubtitle}>Create an item or change the search term.</Text>
+              <Text style={styles.emptyTitle}>{emptyInventoryTitle}</Text>
+              <Text style={styles.emptySubtitle}>{emptyInventorySubtitle}</Text>
             </View>
           )}
         </View>

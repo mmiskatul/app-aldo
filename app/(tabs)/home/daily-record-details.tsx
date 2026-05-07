@@ -16,6 +16,7 @@ import SectionDataCard, {
   SectionDataField,
 } from "../../../components/home/data-management/daily-record-details/SectionDataCard";
 import Header from "../../../components/ui/Header";
+import { getLocale, useTranslation } from "../../../utils/i18n";
 
 type DetailSegment = "date" | "week" | "month";
 
@@ -47,50 +48,50 @@ interface DailyDataListResponse {
   items: DailyDataListItem[];
 }
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-GB", {
+const formatCurrency = (value: number, locale: string) =>
+  new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number.isFinite(value) ? value : 0);
 
-const formatBusinessDate = (value: string, segment: DetailSegment) => {
+const formatBusinessDate = (value: string, segment: DetailSegment, locale: string, weekOf: (date: string) => string) => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
 
   if (segment === "month") {
-    return parsed.toLocaleDateString("en-GB", {
+    return parsed.toLocaleDateString(locale, {
       month: "long",
       year: "numeric",
     });
   }
 
   if (segment === "week") {
-    return `Week of ${parsed.toLocaleDateString("en-GB", {
+    return weekOf(parsed.toLocaleDateString(locale, {
       day: "2-digit",
       month: "short",
       year: "numeric",
-    })}`;
+    }));
   }
 
-  return parsed.toLocaleDateString("en-GB", {
+  return parsed.toLocaleDateString(locale, {
     month: "short",
     day: "2-digit",
     year: "numeric",
   });
 };
 
-const segmentLabel = (segment: DetailSegment) => {
+const segmentLabel = (segment: DetailSegment, t: ReturnType<typeof useTranslation>["t"]) => {
   if (segment === "week") {
-    return "WEEK COLLECTION";
+    return t("week_collection");
   }
   if (segment === "month") {
-    return "MONTH COLLECTION";
+    return t("month_collection");
   }
-  return "DATE COLLECTION";
+  return t("date_collection");
 };
 
 const endpointForSegment = (segment: DetailSegment, referenceDate: string) => {
@@ -104,6 +105,8 @@ const endpointForSegment = (segment: DetailSegment, referenceDate: string) => {
 };
 
 export default function DailyRecordDetailsScreen() {
+  const { t } = useTranslation();
+  const locale = getLocale();
   const { segment, referenceDate, recordId, dataId } = useLocalSearchParams<{
     segment?: DetailSegment;
     referenceDate?: string;
@@ -234,15 +237,15 @@ export default function DailyRecordDetailsScreen() {
     const expenses = (record?.total_expenses ?? 0) + (record?.invoice_document_total ?? 0);
     const revenue = record?.total_revenue ?? 0;
     return {
-      profit: formatCurrency(revenue - expenses),
-      revenue: formatCurrency(revenue),
-      expenses: formatCurrency(expenses),
+      profit: formatCurrency(revenue - expenses, locale),
+      revenue: formatCurrency(revenue, locale),
+      expenses: formatCurrency(expenses, locale),
     };
-  }, [record]);
+  }, [locale, record]);
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Daily Record Details" showBack={true} />
+      <Header title={t("daily_record_details")} showBack={true} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -251,13 +254,13 @@ export default function DailyRecordDetailsScreen() {
         {loading ? (
           <View style={styles.stateCard}>
             <ActivityIndicator size="small" color="#FA8C4C" />
-            <Text style={styles.stateText}>Loading collection...</Text>
+            <Text style={styles.stateText}>{t("loading_collection")}</Text>
           </View>
         ) : !record ? (
           <View style={styles.stateCard}>
-            <Text style={styles.stateTitle}>Collection not found</Text>
+            <Text style={styles.stateTitle}>{t("collection_not_found")}</Text>
             <Text style={styles.stateText}>
-              This grouped daily data collection could not be loaded.
+              {t("collection_not_found_subtitle")}
             </Text>
           </View>
         ) : (
@@ -265,10 +268,10 @@ export default function DailyRecordDetailsScreen() {
             <View style={styles.reportHeaderRow}>
               <View>
                 <Text style={styles.reportsForLabel}>
-                  {showGroupedHeader ? segmentLabel(selectedSegment) : "DAILY RECORD"}
+                  {showGroupedHeader ? segmentLabel(selectedSegment, t) : t("daily_record_label")}
                 </Text>
                 <Text style={styles.reportsForDate}>
-                  {formatBusinessDate(record.business_date, selectedSegment)}
+                  {formatBusinessDate(record.business_date, selectedSegment, locale, (date) => t("week_of", { date }))}
                 </Text>
               </View>
               <View style={styles.statusBadge}>
@@ -279,7 +282,7 @@ export default function DailyRecordDetailsScreen() {
                   style={styles.badgeIcon}
                 />
                 <Text style={styles.statusBadgeText}>
-                  {showGroupedHeader ? "COLLECTED" : String(record.method || "RECORD").replace("_", " ").toUpperCase()}
+                  {showGroupedHeader ? t("collected") : String(record.method || t("record")).replace("_", " ").toUpperCase()}
                 </Text>
               </View>
             </View>
@@ -305,7 +308,7 @@ export default function DailyRecordDetailsScreen() {
                 color="#111827"
                 style={styles.exportIcon}
               />
-              <Text style={styles.exportButtonText}>Export</Text>
+              <Text style={styles.exportButtonText}>{t("export")}</Text>
             </TouchableOpacity>
           </>
         )}

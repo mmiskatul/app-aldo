@@ -54,6 +54,14 @@ interface ActivityItem {
   kind?: string;
   title?: string;
   subtitle?: string;
+  title_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  subtitle_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
   timestamp?: string;
   entity_id?: string;
   reference_date?: string;
@@ -152,21 +160,24 @@ const cashOverviewToHomeItems = (overview: CashOverviewResponse, period: PeriodK
   }
 
   const cashDeposit = Number(summary.bank_deposits ?? summary.bank_deposits_total ?? 0);
+  const posPayments = Number(summary.pos_payments ?? 0);
+  const cashAvailable = Number(summary.cash_available ?? 0);
+  const totalCollection = cashAvailable + posPayments + cashDeposit;
 
   return [
     {
       label: "Total Collection",
-      amount: Number(summary.total_collected ?? 0),
-      subtitle: "Available cash plus cash deposits",
+      amount: totalCollection,
+      subtitle: "Cash collected plus POS payments and cash deposits",
     },
     {
       label: "POS Payments",
-      amount: Number(summary.pos_payments ?? 0),
+      amount: posPayments,
       subtitle: "Card and POS settlements",
     },
     {
       label: "Available Cash",
-      amount: Number(summary.cash_available ?? 0),
+      amount: cashAvailable,
       subtitle: "Cash remaining after expenses and withdrawals",
     },
     {
@@ -301,6 +312,10 @@ export default function TabsIndex() {
       weekly: data.weekly.revenue,
       monthly: data.monthly.revenue,
     };
+    const nextCashByPeriod = {
+      weekly: data.weekly.cash_management,
+      monthly: data.monthly.cash_management,
+    };
     const nextInsightByPeriod: Partial<Record<PeriodKey, FeaturedInsight | null>> = {};
 
     if (includeFeaturedInsight && data.weekly.featured_insight !== undefined) {
@@ -312,6 +327,7 @@ export default function TabsIndex() {
 
     setShellData(nextShellData);
     setMetricsByPeriod(nextMetricsByPeriod);
+    setCashByPeriod(nextCashByPeriod);
     setRevenueByPeriod(nextRevenueByPeriod);
     setVatBalance(data[period].vat_balance);
     if (data.recent_activity?.length) {
@@ -324,6 +340,7 @@ export default function TabsIndex() {
     setHomeScreenCache({
       shellData: nextShellData,
       metricsByPeriod: nextMetricsByPeriod,
+      cashByPeriod: nextCashByPeriod,
       revenueByPeriod: nextRevenueByPeriod,
       vatBalance: data[period].vat_balance,
       fetchedAt: Date.now(),
@@ -346,7 +363,7 @@ export default function TabsIndex() {
       params: {
         period,
         include_metrics: true,
-        include_cash_management: false,
+        include_cash_management: true,
         include_revenue: true,
         include_featured_insight: includeFeaturedInsight,
         include_recent_activity: false,
@@ -505,6 +522,10 @@ export default function TabsIndex() {
       if (!silent) {
         setLoading(true);
       }
+      if (force) {
+        setCashByPeriod({});
+        setHomeScreenCache({ cashByPeriod: {} });
+      }
       triggeredSectionsRef.current = {
         revenue: false,
         insight: false,
@@ -521,7 +542,7 @@ export default function TabsIndex() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fetchHomeOverview, fetchRecentActivitySection, hydrateSupportingData, recentActivity]);
+  }, [fetchHomeOverview, fetchRecentActivitySection, hydrateSupportingData, recentActivity, setHomeScreenCache]);
 
   useFocusEffect(
     useCallback(() => {
@@ -686,7 +707,7 @@ export default function TabsIndex() {
       >
         <ActionFilterBar
           activePeriod={activePeriod}
-          availablePeriods={shellData?.available_periods || ["weekly", "monthly"]}
+          availablePeriods={shellData?.available_periods || []}
           onPeriodChange={(period) => setActivePeriod(period as PeriodKey)}
           onExport={handleExport}
         />

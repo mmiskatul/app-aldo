@@ -69,14 +69,7 @@ export default function QuickActions({ items: apiItems, loading = false, onNavig
     }
   };
 
-  const fallbackActions = [
-    { key: 'upload_invoice', label: t('upload_invoice') },
-    { key: 'daily_data', label: t('daily_data') },
-    { key: 'expenses', label: t('expenses') },
-    { key: 'cash', label: t('cash') },
-  ];
-
-  const displayActions = (apiItems && apiItems.length > 0 ? apiItems : fallbackActions).map(item => {
+  const displayActions = (apiItems || []).map(item => {
     const { IconComponent, route } = getActionData(item.key);
     return {
       title: getTranslatedActionTitle(item.key, item.label),
@@ -90,6 +83,10 @@ export default function QuickActions({ items: apiItems, loading = false, onNavig
       },
     };
   });
+
+  if (!loading && displayActions.length === 0) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

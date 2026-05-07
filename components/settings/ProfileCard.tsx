@@ -13,6 +13,7 @@ export default function ProfileCard({ onEditProfile }: ProfileCardProps) {
   const profile = useAppStore((state) => state.profile);
   const { t } = useTranslation();
   const hasProfileImage = !!profile?.profile_image_url;
+  const locationParts = [profile?.restaurant_name, profile?.city_location].filter(Boolean);
 
   return (
     <View style={styles.container}>
@@ -26,9 +27,9 @@ export default function ProfileCard({ onEditProfile }: ProfileCardProps) {
           <ProfilePlaceholderAvatar size={scale(70)} style={styles.avatar} />
         )}
         <View style={styles.textContainer}>
-          <Text style={styles.name}>{profile?.full_name || 'Loading...'}</Text>
-          <Text style={styles.email}>{profile?.email || '-----'}</Text>
-          <Text style={styles.location}>{profile?.restaurant_name || '-----'} • {profile?.city_location || '-----'}</Text>
+          {profile?.full_name ? <Text style={styles.name}>{profile.full_name}</Text> : null}
+          {profile?.email ? <Text style={styles.email}>{profile.email}</Text> : null}
+          {locationParts.length > 0 ? <Text style={styles.location}>{locationParts.join(' • ')}</Text> : null}
         </View>
       </View>
       

@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { useTranslation, type TranslationKey } from "../../../../utils/i18n";
 
 export interface SectionDataField {
   key: string;
@@ -36,16 +37,54 @@ const formatValue = (field: SectionDataField) => {
   return text.length > 0 ? text : "-";
 };
 
+const sectionTitleKeyByApiTitle: Record<string, TranslationKey> = {
+  "Deposit Section": "deposit_section",
+  "Expense Section": "expense_section",
+  "Coperti Section": "covers_section",
+  "Register Section": "register_section",
+  "Cash Movement Section": "cash_movement_section",
+  "Notes Section": "notes_section",
+};
+
+const fieldLabelKeyByApiLabel: Record<string, TranslationKey> = {
+  "POS Payments": "pos_payments",
+  "Cash Payments": "cash_payments",
+  "Bank Transfer Payments": "bank_transfer_payments",
+  "Total Deposits": "total_deposits",
+  "Expenses in Cash": "expenses_in_cash",
+  "Lunch Coperti": "lunch_coperti",
+  "Dinner Coperti": "dinner_coperti",
+  "Total Coperti": "total_coperti",
+  "Opening Cash": "opening_cash",
+  "Closing Cash": "closing_cash",
+  "Cash Payments in Register": "cash_payments_in_register",
+  "Daily Cash Difference": "daily_cash_difference",
+  "Cash In": "cash_in",
+  "Cash Withdrawals": "cash_withdrawals",
+  "Cash Out": "cash_out",
+  "Notes": "notes",
+  "Daily Data Cash Expense": "daily_data_cash_expense",
+  "Additional Manual Expenses": "additional_manual_expenses",
+  "Uploaded Documents": "uploaded_documents",
+  "Total Expense Collection": "total_expense_collection",
+  "Total Cash On Hand": "total_cash_on_hand",
+};
+
 export default function SectionDataCard({ title, fields }: SectionDataCardProps) {
+  const { t } = useTranslation();
+  const localizedTitle = sectionTitleKeyByApiTitle[title] ? t(sectionTitleKeyByApiTitle[title]) : title;
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title}>{localizedTitle}</Text>
       {fields.map((field, index) => (
         <View
           key={field.key}
           style={[styles.row, index === fields.length - 1 ? styles.rowLast : null]}
         >
-          <Text style={styles.label}>{field.label}</Text>
+          <Text style={styles.label}>
+            {fieldLabelKeyByApiLabel[field.label] ? t(fieldLabelKeyByApiLabel[field.label]) : field.label}
+          </Text>
           <Text
             style={[
               styles.value,

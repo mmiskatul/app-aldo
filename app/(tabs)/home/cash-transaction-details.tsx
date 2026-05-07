@@ -28,6 +28,7 @@ import {
   showInfoMessage,
   showSuccessMessage,
 } from "../../../utils/feedback";
+import { useTranslation } from "../../../utils/i18n";
 
 type CashTransactionType =
   | "bank_deposit"
@@ -97,24 +98,24 @@ const CASH_TRANSACTION_TYPES = new Set<string>([
 const resolveCashTransactionType = (value: string): CashTransactionType =>
   CASH_TRANSACTION_TYPES.has(value) ? (value as CashTransactionType) : "bank_deposit";
 
-const formatType = (type: CashTransaction["type"]) => {
+const formatType = (type: CashTransaction["type"], t: ReturnType<typeof useTranslation>["t"]) => {
   switch (type) {
     case "cash_deposit":
-      return "Cash Deposit";
+      return t("cash_deposit");
     case "pos_payment":
-      return "POS Payment";
+      return t("pos_payments");
     case "cash_in":
-      return "Cash In";
+      return t("cash_in");
     case "bank_transfer_payment":
-      return "Bank Transfer";
+      return t("bank_transfer_payments");
     case "cash_withdrawal":
-      return "Cash Withdrawal";
+      return t("cash_withdrawals");
     case "cash_out":
-      return "Cash Out";
+      return t("cash_out");
     case "cash_expense":
-      return "Cash Expense";
+      return t("cash");
     default:
-      return "Bank Deposit";
+      return t("bank_deposits");
   }
 };
 
@@ -134,14 +135,15 @@ const getSummaryIconType = (type: CashTransaction["type"]): "bank" | "cash" | "p
   return "bank";
 };
 
-const formatSourceLabel = (value?: string | null) => {
+const formatSourceLabel = (value: string | null | undefined, t: ReturnType<typeof useTranslation>["t"]) => {
   if (!value) {
-    return "Manual";
+    return t("manual");
   }
   return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 export default function CashTransactionDetailsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
@@ -205,7 +207,7 @@ export default function CashTransactionDetailsScreen() {
       applyTransaction(response.data);
     } catch (error) {
       console.error("Error loading cash transaction:", error);
-      showErrorMessage("Could not load this transaction.");
+      showErrorMessage(t("transaction_not_found"));
     } finally {
       setLoading(false);
     }
@@ -222,7 +224,7 @@ export default function CashTransactionDetailsScreen() {
 
     const parsedAmount = Number.parseFloat(amount);
     if (!bankAccount.trim() || !Number.isFinite(parsedAmount) || parsedAmount < 0) {
-      showErrorMessage("Enter a valid amount and bank account.", "Missing Fields");
+      showErrorMessage(t("valid_amount_bank_account"), t("missing_fields"));
       return;
     }
 
@@ -243,10 +245,10 @@ export default function CashTransactionDetailsScreen() {
       setCashOverviewData(null);
       setHomeScreenCache({ cashByPeriod: {}, recentActivity: null });
       setIsEditing(false);
-      showSuccessMessage("Transaction updated successfully.");
+      showSuccessMessage(t("transaction_updated"));
     } catch (error) {
       console.error("Error updating cash transaction:", error);
-      showErrorMessage("Could not update this transaction.");
+      showErrorMessage(t("save_failed"));
     } finally {
       setSaving(false);
     }
@@ -259,25 +261,25 @@ export default function CashTransactionDetailsScreen() {
 
     setDeleting(true);
     try {
-      showInfoMessage("Deleting transaction...");
+      showInfoMessage(t("deleting_transaction"));
       await apiClient.delete(`/api/v1/restaurant/cash/deposits/${transaction.id}`);
       setCashOverviewData(null);
       setHomeScreenCache({ cashByPeriod: {}, recentActivity: null });
-      showSuccessMessage("Transaction deleted successfully.");
+      showSuccessMessage(t("transaction_deleted"));
       router.back();
     } catch (error) {
       console.error("Error deleting cash transaction:", error);
-      showErrorMessage("Could not delete this transaction.");
+      showErrorMessage(t("delete_failed"));
     } finally {
       setDeleting(false);
     }
   };
 
   const handleDelete = () => {
-    showDialog("Delete Transaction", "Delete this cash transaction permanently?", [
-      { text: "Cancel", style: "cancel" },
+    showDialog(t("delete_transaction"), t("delete_transaction_message"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Delete",
+        text: t("delete"),
         style: "destructive",
         onPress: () => {
           void deleteTransaction();
@@ -294,7 +296,7 @@ export default function CashTransactionDetailsScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Transaction Details" showBack={true} />
+      <Header title={t("transaction_details")} showBack={true} />
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -302,8 +304,8 @@ export default function CashTransactionDetailsScreen() {
         </View>
       ) : !transaction ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>Transaction not found</Text>
-          <Text style={styles.emptyText}>Open the transaction again from Cash Management.</Text>
+          <Text style={styles.emptyTitle}>{t("transaction_not_found")}</Text>
+          <Text style={styles.emptyText}>{t("transaction_not_found_subtitle")}</Text>
         </View>
       ) : (
         <KeyboardAvoidingView
@@ -324,7 +326,7 @@ export default function CashTransactionDetailsScreen() {
                   <BuildingLibraryIcon size={moderateScale(28)} color="#FFFFFF" />
                 )}
               </View>
-              <Text style={styles.summaryLabel}>{formatType(transaction.type)}</Text>
+              <Text style={styles.summaryLabel}>{formatType(transaction.type, t)}</Text>
               <Text style={styles.summaryAmount}>{displayAmount}</Text>
               <Text style={styles.summaryMeta}>{displayDate}</Text>
             </View>
@@ -333,8 +335,7 @@ export default function CashTransactionDetailsScreen() {
               <View style={styles.noticeCard}>
                 <Feather name="info" size={moderateScale(18)} color="#FA8C4C" />
                 <Text style={styles.noticeText}>
-                  This transaction is generated from another source. Edit or delete
-                  the source record to change it.
+                  {t("transaction_generated_notice")}
                 </Text>
               </View>
             ) : null}
@@ -342,7 +343,7 @@ export default function CashTransactionDetailsScreen() {
             {isEditing ? (
               <View style={styles.formCard}>
                 <DatePicker
-                  label="Transaction Date"
+                  label={t("transaction_date")}
                   value={date}
                   onChange={setDate}
                   leftIcon={
@@ -351,7 +352,7 @@ export default function CashTransactionDetailsScreen() {
                 />
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Amount</Text>
+                  <Text style={styles.label}>{t("amount")}</Text>
                   <View style={styles.textInputContainer}>
                     <Text style={styles.prefix}>€ </Text>
                     <TextInput
@@ -366,25 +367,25 @@ export default function CashTransactionDetailsScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Bank Account</Text>
+                  <Text style={styles.label}>{t("bank_account")}</Text>
                   <View style={styles.textInputContainer}>
                     <TextInput
                       style={styles.textInput}
                       value={bankAccount}
                       onChangeText={setBankAccount}
-                      placeholder="Enter bank account"
+                      placeholder={t("enter_bank_account")}
                       placeholderTextColor="#9CA3AF"
                     />
                   </View>
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Notes</Text>
+                  <Text style={styles.label}>{t("notes")}</Text>
                   <TextInput
                     style={styles.textArea}
                     value={notes}
                     onChangeText={setNotes}
-                    placeholder="Optional notes"
+                    placeholder={t("optional_notes")}
                     placeholderTextColor="#9CA3AF"
                     multiline
                     textAlignVertical="top"
@@ -393,14 +394,14 @@ export default function CashTransactionDetailsScreen() {
               </View>
             ) : (
               <View style={styles.detailsCard}>
-                <DetailRow label="Account" value={transaction.bank_account || "-"} />
-                <DetailRow label="Type" value={formatType(transaction.type)} />
-                <DetailRow label="Date" value={displayDate} />
-                <DetailRow label="Source" value={formatSourceLabel(transaction.source_kind)} />
+                <DetailRow label={t("account")} value={transaction.bank_account || "-"} />
+                <DetailRow label={t("type")} value={formatType(transaction.type, t)} />
+                <DetailRow label={t("date")} value={displayDate} />
+                <DetailRow label={t("source")} value={formatSourceLabel(transaction.source_kind, t)} />
                 {transaction.source_subtype ? (
-                  <DetailRow label="Source Field" value={formatSourceLabel(transaction.source_subtype)} />
+                  <DetailRow label={t("source_field")} value={formatSourceLabel(transaction.source_subtype, t)} />
                 ) : null}
-                <DetailRow label="Notes" value={transaction.notes || "No notes"} />
+                <DetailRow label={t("notes")} value={transaction.notes || t("no_notes")} />
               </View>
             )}
           </ScrollView>
@@ -414,7 +415,7 @@ export default function CashTransactionDetailsScreen() {
                     onPress={() => setIsEditing(false)}
                     disabled={saving}
                   >
-                    <Text style={styles.secondaryButtonText}>Cancel</Text>
+                    <Text style={styles.secondaryButtonText}>{t("cancel")}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.primaryButton, styles.footerButton]}
@@ -424,7 +425,7 @@ export default function CashTransactionDetailsScreen() {
                     {saving ? (
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
-                      <Text style={styles.primaryButtonText}>Save</Text>
+                      <Text style={styles.primaryButtonText}>{t("save")}</Text>
                     )}
                   </TouchableOpacity>
                 </>
@@ -436,7 +437,7 @@ export default function CashTransactionDetailsScreen() {
                     disabled={deleting}
                   >
                     <Feather name="edit-2" size={moderateScale(16)} color="#FA8C4C" />
-                    <Text style={styles.secondaryButtonText}>Edit</Text>
+                    <Text style={styles.secondaryButtonText}>{t("edit_data")}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.deleteButton, styles.footerButton]}
@@ -448,7 +449,7 @@ export default function CashTransactionDetailsScreen() {
                     ) : (
                       <>
                         <Feather name="trash-2" size={moderateScale(16)} color="#FFFFFF" />
-                        <Text style={styles.deleteButtonText}>Delete</Text>
+                        <Text style={styles.deleteButtonText}>{t("delete")}</Text>
                       </>
                     )}
                   </TouchableOpacity>

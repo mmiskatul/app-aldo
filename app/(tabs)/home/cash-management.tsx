@@ -93,14 +93,23 @@ export default function CashManagementScreen() {
   const hasScreenData = Boolean(currentData);
 
   const currentSummary: CashSummary | null = currentData?.summary
-    ? {
-        ...currentData.summary,
-        bank_deposits:
-          (currentData.summary as any).bank_deposits ??
-          (currentData.summary as any).bank_deposits_total ??
-          0,
-        pos_payments: (currentData.summary as any).pos_payments ?? 0,
-      }
+    ? (() => {
+        const posPayments = Number((currentData.summary as any).pos_payments ?? 0);
+        const cashAvailable = Number((currentData.summary as any).cash_available ?? 0);
+        const bankDeposits =
+          Number(
+            (currentData.summary as any).bank_deposits ??
+            (currentData.summary as any).bank_deposits_total ??
+            0,
+          );
+        return {
+          ...currentData.summary,
+          total_collected: cashAvailable + posPayments + bankDeposits,
+          cash_available: cashAvailable,
+          bank_deposits: bankDeposits,
+          pos_payments: posPayments,
+        };
+      })()
     : null;
 
   const recentTransactions = currentData?.recent_deposits;

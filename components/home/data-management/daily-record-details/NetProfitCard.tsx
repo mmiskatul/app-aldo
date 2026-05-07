@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
+import { useTranslation } from "../../../../utils/i18n";
 
 interface NetProfitCardProps {
   profit: string;
@@ -9,20 +10,22 @@ interface NetProfitCardProps {
 }
 
 export default function NetProfitCard({ profit, revenue, expenses }: NetProfitCardProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.netProfitLabel}>NET PROFIT</Text>
+      <Text style={styles.netProfitLabel}>{t("net_profit")}</Text>
       <Text style={styles.netProfitValue}>{profit}</Text>
 
       <View style={styles.divider} />
 
       <View style={styles.row}>
         <View style={styles.col}>
-          <Text style={styles.subLabel}>Revenue</Text>
+          <Text style={styles.subLabel}>{t("revenue")}</Text>
           <Text style={styles.subValue}>{revenue}</Text>
         </View>
         <View style={styles.col}>
-          <Text style={styles.subLabel}>Expenses</Text>
+          <Text style={styles.subLabel}>{t("expenses")}</Text>
           <Text style={styles.subValue}>{expenses}</Text>
         </View>
       </View>
