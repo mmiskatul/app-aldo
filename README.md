@@ -48,3 +48,17 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+
+## AI Chat Improvements & Fixes
+- **Request Resilience:** Increased axios timeout to 60 seconds for chat endpoints to match backend processing expectations.
+- **Polling Recovery:** Implemented a silent 30-second polling retry mechanism to recover AI responses if the backend connection drops (e.g., 504/524 Gateway Timeouts).
+- **Voice Flow:**
+  - Added an 'X' (cancel) button to the voice waveform UI.
+  - Cancelling the recording instantly unloads the audio and dismisses the waveform without transcribing or sending anything to the AI.
+  - The cancel button now also works during the in-flight transcription phase, securely discarding the payload.
+- **Message Rendering:**
+  - Filtered out backend 'insight' messages from the chat UI to prevent empty chat bubbles.
+  - Fixed sender mapping logic to reliably map roles to 'ai' or 'user' avatars.
+  - Corrected the 'AI is typing...' indicator logic to align with the new filtered message list.
+
