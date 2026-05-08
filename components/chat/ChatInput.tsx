@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+﻿import { Feather } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
@@ -204,6 +204,24 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     return String(response.data?.text || "").trim();
   };
 
+  const cancelRecording = async () => {
+    if (isStoppingRecordingRef.current) return;
+    const recording = recordingRef.current;
+    recordingRef.current = null;
+    setIsRecording(false);
+    setIsTranscribing(false);
+    setVoiceLevel(0.2);
+    resetWaveform();
+    isStoppingRecordingRef.current = false;
+    if (recording) {
+      await recording.stopAndUnloadAsync().catch(() => undefined);
+    }
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+    }).catch(() => undefined);
+  };
+
   const stopRecording = async (sendAfterTranscription = false) => {
     if (isStoppingRecordingRef.current) return;
 
@@ -400,6 +418,16 @@ export default function ChatInput({ onSend }: ChatInputProps) {
             <Text style={styles.listeningText}>
               {isTranscribing ? "Converting voice to text..." : "Recording voice..."}
             </Text>
+            {!isTranscribing && (
+              <TouchableOpacity
+                style={styles.voiceCancelButton}
+                onPress={cancelRecording}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel voice recording"
+              >
+                <Feather name="x" size={moderateScale(14)} color="#EF4444" />
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.waveform} accessibilityLabel="Voice frequency indicator">
@@ -619,6 +647,15 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12, 0.3),
     color: "#EF4444",
     fontWeight: "800",
+  },
+  voiceCancelButton: {
+    width: moderateScale(28),
+    height: moderateScale(28),
+    borderRadius: moderateScale(14),
+    backgroundColor: "#FEE2E2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: scale(8),
   },
   modalOverlay: {
     flex: 1,
