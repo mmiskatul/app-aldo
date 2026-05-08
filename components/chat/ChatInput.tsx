@@ -63,6 +63,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   const recordingRef = useRef<Audio.Recording | null>(null);
   const isStartingRecordingRef = useRef(false);
   const isStoppingRecordingRef = useRef(false);
+  const isCancelledRef = useRef(false);
   const waveformLevelsRef = useRef(Array.from({ length: WAVEFORM_BAR_COUNT }, () => WAVEFORM_IDLE_LEVEL));
   const waveformValuesRef = useRef(
     Array.from({ length: WAVEFORM_BAR_COUNT }, () => new Animated.Value(WAVEFORM_IDLE_LEVEL))
@@ -205,7 +206,8 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   };
 
   const cancelRecording = async () => {
-    if (isStoppingRecordingRef.current) return;
+    // Mark as cancelled — stopRecording will see this and discard the transcript
+    isCancelledRef.current = true;
     const recording = recordingRef.current;
     recordingRef.current = null;
     setIsRecording(false);
@@ -228,6 +230,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     const recording = recordingRef.current;
     if (!recording) return;
 
+    isCancelledRef.current = false;
     isStoppingRecordingRef.current = true;
     recordingRef.current = null;
     setIsRecording(false);
@@ -243,6 +246,8 @@ export default function ChatInput({ onSend }: ChatInputProps) {
       }
 
       const transcript = await transcribeRecording(uri);
+      // If user cancelled while transcription was in-flight, discard result
+      if (isCancelledRef.current) return;
       if (!transcript) {
         throw new Error("No speech was detected. Please try again.");
       }
@@ -254,7 +259,9 @@ export default function ChatInput({ onSend }: ChatInputProps) {
         setSelectedFile(null);
       }
     } catch (error: any) {
-      showErrorMessage(getVoiceErrorMessage(error), "Voice Input");
+      if (!isCancelledRef.current) {
+        showErrorMessage(getVoiceErrorMessage(error), "Voice Input");
+      }
     } finally {
       isStoppingRecordingRef.current = false;
       setIsTranscribing(false);
@@ -418,16 +425,14 @@ export default function ChatInput({ onSend }: ChatInputProps) {
             <Text style={styles.listeningText}>
               {isTranscribing ? "Converting voice to text..." : "Recording voice..."}
             </Text>
-            {!isTranscribing && (
-              <TouchableOpacity
-                style={styles.voiceCancelButton}
-                onPress={cancelRecording}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel voice recording"
-              >
-                <Feather name="x" size={moderateScale(14)} color="#EF4444" />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.voiceCancelButton}
+              onPress={cancelRecording}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel voice recording"
+            >
+              <Feather name="x" size={moderateScale(14)} color="#EF4444" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.waveform} accessibilityLabel="Voice frequency indicator">
