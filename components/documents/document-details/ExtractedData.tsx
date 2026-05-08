@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useTranslation } from '../../../utils/i18n';
 
@@ -9,6 +9,8 @@ interface ExtractedItem {
   qty: number;
   unitPrice: string;
   totalPrice: string;
+  vatRate?: number;
+  vatAmount?: number;
 }
 
 interface ExtractedDataProps {
@@ -17,12 +19,14 @@ interface ExtractedDataProps {
   onItemChange?: (index: number, key: string, value: string) => void;
 }
 
+const RECOMMENDED_VAT_RATES = [4, 5, 10, 22];
+
 export default function ExtractedData({ items, isEditing, onItemChange }: ExtractedDataProps) {
   const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>{t('extracted_data')}</Text>
-      
+
       <View style={styles.card}>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
@@ -45,19 +49,41 @@ export default function ExtractedData({ items, isEditing, onItemChange }: Extrac
                         keyboardType="numeric"
                         onChangeText={(text) => onItemChange?.(index, 'quantity', text)}
                       />
-                      <Text style={styles.itemMeta}> × </Text>
+                      <Text style={styles.itemMeta}> x </Text>
                       <TextInput
                         style={styles.inputSmall}
-                        value={item.unitPrice.replace('€', '').trim()}
+                        value={item.unitPrice.replace('EUR', '').replace('€', '').trim()}
                         keyboardType="numeric"
                         onChangeText={(text) => onItemChange?.(index, 'unit_price', text)}
+                      />
+                    </View>
+                    <View style={styles.vatRateGroup}>
+                      {RECOMMENDED_VAT_RATES.map((rate) => {
+                        const active = Number(item.vatRate || 10) === rate;
+                        return (
+                          <TouchableOpacity
+                            key={rate}
+                            style={[styles.vatRateButton, active && styles.vatRateButtonActive]}
+                            onPress={() => onItemChange?.(index, 'vat_rate', String(rate))}
+                          >
+                            <Text style={[styles.vatRateText, active && styles.vatRateTextActive]}>{rate}% IVA</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                      <TextInput
+                        style={styles.vatCustomInput}
+                        value={String(item.vatRate || '')}
+                        keyboardType="numeric"
+                        onChangeText={(text) => onItemChange?.(index, 'vat_rate', text)}
+                        placeholder="%"
                       />
                     </View>
                   </>
                 ) : (
                   <>
                     <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemMeta}>{t('qty')}: {item.qty} × {item.unitPrice}</Text>
+                    <Text style={styles.itemMeta}>{t('qty')}: {item.qty} x {item.unitPrice}</Text>
+                    <Text style={styles.itemMeta}>IVA {item.vatRate || 10}%: EUR {Number(item.vatAmount || 0).toFixed(2)}</Text>
                   </>
                 )}
               </View>
@@ -136,5 +162,41 @@ const styles = StyleSheet.create({
   editMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  vatRateGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: scale(6),
+    marginTop: verticalScale(8),
+  },
+  vatRateButton: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: scale(7),
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(4),
+  },
+  vatRateButtonActive: {
+    borderColor: '#FA8C4C',
+    backgroundColor: '#FFF2EA',
+  },
+  vatRateText: {
+    fontSize: moderateScale(10, 0.3),
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  vatRateTextActive: {
+    color: '#FA8C4C',
+  },
+  vatCustomInput: {
+    minWidth: scale(44),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: scale(7),
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(4),
+    fontSize: moderateScale(10, 0.3),
+    color: '#374151',
+    textAlign: 'center',
   },
 });

@@ -29,6 +29,13 @@ type UploadFile = {
   mimeType: string;
 };
 
+const calculateLineVat = (total: unknown, rate: unknown) => {
+  const netTotal = Number(total) || 0;
+  const rawRate = Number(rate);
+  const vatRate = Number.isFinite(rawRate) ? Math.min(Math.max(rawRate, 0), 100) : 10;
+  return netTotal * (vatRate / 100);
+};
+
 export default function UploadInvoiceScreen() {
   const navigation = useNavigation();
   const router = useRouter();
@@ -86,6 +93,8 @@ export default function UploadInvoiceScreen() {
             qty: String(item.quantity || ""),
             price: String(item.unit_price || ""),
             total: String(item.total_price || ""),
+            vatRate: String(item.vat_rate || 10),
+            vatAmount: String(item.vat_amount || calculateLineVat(item.total_price, item.vat_rate || 10)),
           }),
         );
         setLineItems(mapped);
@@ -103,7 +112,10 @@ export default function UploadInvoiceScreen() {
     (acc, item) => acc + (parseFloat(item.total) || 0),
     0,
   );
-  const vat = subtotal * 0.1;
+  const vat = lineItems.reduce(
+    (acc, item) => acc + calculateLineVat(item.total, item.vatRate),
+    0,
+  );
   const totalAmount = subtotal + vat;
   const saveTotalAmount =
     totalAmount > 0 ? totalAmount : Number(extractionData?.total_amount || 0);
@@ -140,6 +152,8 @@ export default function UploadInvoiceScreen() {
           quantity: parseFloat(item.qty) || 0,
           unit_price: parseFloat(item.price) || 0,
           total_price: parseFloat(item.total) || 0,
+          vat_rate: Math.min(Math.max(parseFloat(item.vatRate) || 10, 0), 100),
+          vat_amount: calculateLineVat(item.total, item.vatRate),
         })),
         source_file_name: selectedFile?.name || "unnamed_file",
         ai_provider: extractionData.ai_provider || "openai",

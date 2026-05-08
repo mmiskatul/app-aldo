@@ -27,6 +27,23 @@ import { useTranslation } from "../../../utils/i18n";
 import { showDialog, showErrorMessage, showInfoMessage, showSuccessMessage } from "../../../utils/feedback";
 const { StorageAccessFramework } = FileSystem;
 
+const calculateLineVat = (item: any) => {
+  const total = Number(item?.total_price) || 0;
+  const rawRate = Number(item?.vat_rate);
+  const rate = Number.isFinite(rawRate) ? Math.min(Math.max(rawRate, 0), 100) : 10;
+  return total * (rate / 100);
+};
+
+const calculateInvoiceTotals = (items: any[] = []) => {
+  const subtotal = items.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
+  const vatAmount = items.reduce((sum, item) => sum + calculateLineVat(item), 0);
+  return {
+    subtotal,
+    vatAmount,
+    totalAmount: subtotal + vatAmount,
+  };
+};
+
 export default function DocumentDetailsScreen() {
   const { t } = useTranslation();
   const { id, edit } = useLocalSearchParams();
@@ -65,16 +82,9 @@ export default function DocumentDetailsScreen() {
       return;
     }
 
-    const subtotal = (data.line_items || []).reduce(
-      (sum: number, item: any) => sum + (item.total_price || 0),
-      0,
-    );
-    const vatAmount =
-      data.vat_amount !== undefined ? data.vat_amount : subtotal * 0.1;
-    const totalAmount =
-      data.total_amount !== undefined
-        ? data.total_amount
-        : subtotal + vatAmount;
+    const totals = calculateInvoiceTotals(data.line_items || []);
+    const vatAmount = data.vat_amount !== undefined ? data.vat_amount : totals.vatAmount;
+    const totalAmount = data.total_amount !== undefined ? data.total_amount : totals.totalAmount;
 
     setEditableData({
       ...data,
@@ -108,14 +118,6 @@ export default function DocumentDetailsScreen() {
             : value,
       };
 
-      // If user manually updates total, we'll let them, but usually it's driven by items
-      // If we must 'calculate and add' from a base:
-      if (key === "total_amount") {
-        const baseAmount = parseFloat(value) || 0;
-        newData.vat_amount = baseAmount * 0.1;
-        newData.total_amount = baseAmount + newData.vat_amount;
-      }
-
       return newData;
     });
   };
@@ -126,30 +128,26 @@ export default function DocumentDetailsScreen() {
       newItems[index] = {
         ...newItems[index],
         [key]:
-          key === "quantity" || key === "unit_price"
+          key === "quantity" || key === "unit_price" || key === "vat_rate"
             ? parseFloat(value) || 0
             : value,
       };
 
-      // Re-calculate total price for the item if quantity or unit_price changed
       if (key === "quantity" || key === "unit_price") {
         newItems[index].total_price =
           newItems[index].quantity * newItems[index].unit_price;
       }
+      if (key === "quantity" || key === "unit_price" || key === "total_price" || key === "vat_rate") {
+        newItems[index].vat_amount = calculateLineVat(newItems[index]);
+      }
 
-      // Re-calculate overall amounts
-      const subtotal = newItems.reduce(
-        (sum, item) => sum + (item.total_price || 0),
-        0,
-      );
-      const newVatAmount = subtotal * 0.1;
-      const newTotalAmount = subtotal + newVatAmount;
+      const totals = calculateInvoiceTotals(newItems);
 
       return {
         ...prev,
         line_items: newItems,
-        total_amount: newTotalAmount,
-        vat_amount: newVatAmount,
+        total_amount: totals.totalAmount,
+        vat_amount: totals.vatAmount,
       };
     });
   };
@@ -169,6 +167,8 @@ export default function DocumentDetailsScreen() {
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
+            vat_rate: Math.min(Math.max(Number(item.vat_rate) || 10, 0), 100),
+            vat_amount: calculateLineVat(item),
           })),
         },
       );
@@ -346,7 +346,7 @@ export default function DocumentDetailsScreen() {
           vatAmount={
             data.vat_amount !== undefined
               ? data.vat_amount
-              : (data.line_items || []).reduce((sum: number, item: any) => sum + (item.total_price || 0), 0) * 0.1
+              : calculateInvoiceTotals(data.line_items || []).vatAmount
           }
           lineItems={data.line_items || []}
         />
@@ -370,7 +370,7 @@ export default function DocumentDetailsScreen() {
           totalAmount={
             isEditing
               ? String(editableData.total_amount)
-              : `€${(data.total_amount !== undefined ? data.total_amount : (data.line_items || []).reduce((sum: number, item: any) => sum + (item.total_price || 0), 0) * 1.1).toFixed(2)}`
+              : `€${(data.total_amount !== undefined ? data.total_amount : calculateInvoiceTotals(data.line_items || []).totalAmount).toFixed(2)}`
           }
           invoiceDate={
             isEditing
@@ -385,7 +385,7 @@ export default function DocumentDetailsScreen() {
           vatAmount={
             isEditing
               ? String(editableData.vat_amount?.toFixed(2))
-              : `€${(data.vat_amount !== undefined ? data.vat_amount : (data.line_items || []).reduce((sum: number, item: any) => sum + (item.total_price || 0), 0) * 0.1).toFixed(2)}`
+              : `€${(data.vat_amount !== undefined ? data.vat_amount : calculateInvoiceTotals(data.line_items || []).vatAmount).toFixed(2)}`
           }
           isEditing={isEditing}
           onChange={handleInfoChange}
@@ -399,6 +399,8 @@ export default function DocumentDetailsScreen() {
             id: String(idx),
             name: item.product_name,
             qty: item.quantity,
+            vatRate: item.vat_rate || 10,
+            vatAmount: calculateLineVat(item),
             unitPrice: isEditing
               ? String(item.unit_price)
               : `€${item.unit_price.toFixed(2)}`,

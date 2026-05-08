@@ -8,6 +8,8 @@ type DocumentPreviewLineItem = {
   quantity?: number;
   unit_price?: number;
   total_price?: number;
+  vat_rate?: number;
+  vat_amount?: number;
 };
 
 interface DocumentPreviewProps {
@@ -37,7 +39,18 @@ export default function DocumentPreview({
   const subtotal =
     typeof totalAmount === "number" && typeof vatAmount === "number"
       ? Math.max(totalAmount - vatAmount, 0)
-      : previewItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0);
+      : lineItems.reduce((sum, item) => sum + Number(item.total_price || 0), 0);
+  const resolvedVatAmount =
+    typeof vatAmount === "number"
+      ? vatAmount
+      : lineItems.reduce(
+          (sum, item) => {
+            const rawRate = Number(item.vat_rate);
+            const rate = Number.isFinite(rawRate) ? Math.min(Math.max(rawRate, 0), 100) : 10;
+            return sum + (Number(item.vat_amount) || (Number(item.total_price) || 0) * (rate / 100));
+          },
+          0,
+        );
 
   return (
     <View style={styles.container}>
@@ -67,6 +80,7 @@ export default function DocumentPreview({
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderText, styles.itemColumn]}>{t("item")}</Text>
             <Text style={styles.tableHeaderText}>{t("qty")}</Text>
+            <Text style={styles.tableHeaderText}>IVA</Text>
             <Text style={styles.tableHeaderText}>{t("total")}</Text>
           </View>
 
@@ -77,6 +91,7 @@ export default function DocumentPreview({
                   {item.product_name || t("line_item")}
                 </Text>
                 <Text style={styles.tableCell}>{item.quantity ?? 0}</Text>
+                <Text style={styles.tableCell}>{item.vat_rate ?? 10}%</Text>
                 <Text style={styles.tableCell}>{formatCurrency(item.total_price)}</Text>
               </View>
             ))
@@ -93,7 +108,7 @@ export default function DocumentPreview({
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>{t("vat")}</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(vatAmount)}</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(resolvedVatAmount)}</Text>
             </View>
             <View style={[styles.summaryRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>{t("total")}</Text>
