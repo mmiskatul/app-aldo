@@ -387,24 +387,28 @@ export default function ChatScreen() {
               <QuickPrompts onSelectPrompt={(text) => handleSendMessage(text)} />
             )}
 
-            {messages.map((msg, index) => {
-              const currentSender = msg.role === "assistant" ? "ai" : msg.role;
-              const prevMsg = index > 0 ? messages[index - 1] : null;
-              const prevSender = prevMsg ? (prevMsg.role === "assistant" ? "ai" : prevMsg.role) : null;
-              const hideAvatar = currentSender === prevSender;
+            {messages
+              .filter((msg) => msg.role === "user" || msg.role === "assistant")
+              .map((msg, index, filtered) => {
+                const currentSender = msg.role === "assistant" ? "ai" : "user";
+                const prevMsg = index > 0 ? filtered[index - 1] : null;
+                const prevSender = prevMsg
+                  ? prevMsg.role === "assistant" ? "ai" : "user"
+                  : null;
+                const hideAvatar = currentSender === prevSender;
 
-              return (
-                <ChatMessage
-                  key={msg.id || index}
-                  sender={currentSender}
-                  message={resolveLocalizedText(appLanguage, msg.message_translations, msg.message)}
-                  attachment_name={msg.attachment_name}
-                  attachment_source={msg.attachment_source}
-                  hideAvatar={hideAvatar}
-                />
-              );
-            })}
-            {isAiTyping && <ChatMessage sender="ai" isTyping={true} hideAvatar={messages.length > 0 && (messages[messages.length - 1].role === "assistant")} />}
+                return (
+                  <ChatMessage
+                    key={msg.id || index}
+                    sender={currentSender}
+                    message={resolveLocalizedText(appLanguage, msg.message_translations, msg.message)}
+                    attachment_name={msg.attachment_name}
+                    attachment_source={msg.attachment_source}
+                    hideAvatar={hideAvatar}
+                  />
+                );
+              })}
+            {isAiTyping && <ChatMessage sender="ai" isTyping={true} hideAvatar={messages.filter((m) => m.role === "assistant" || m.role === "user").slice(-1)[0]?.role === "assistant"} />}
           </ScrollView>
         )}
 
