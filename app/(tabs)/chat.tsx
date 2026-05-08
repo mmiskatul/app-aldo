@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -292,20 +292,59 @@ export default function ChatScreen() {
       }
 
       try {
-        const response = await apiClient.post("/api/v1/restaurant/chat/messages", {
-          message: text.trim(),
-          language: chatLanguage,
-        });
+        // Use a long timeout (60 s) so Vercel serverless AI response is not cut off.
+        const response = await apiClient.post(
+          "/api/v1/restaurant/chat/messages",
+          { message: text.trim(), language: chatLanguage },
+          { timeout: 60_000 },
+        );
         setIsAiTyping(false);
         setMessages(response.data.messages || []);
         setChatMessagesCache(response.data.messages || []);
         scrollToBottom();
-      } catch (error) {
-        setIsAiTyping(false);
-        const revertedMessages = nextOptimisticMessages.filter((item) => item.id !== optimisticMessage.id);
-        setMessages(revertedMessages);
-        setChatMessagesCache(revertedMessages);
-        showApiError("chat.send_message", error, "Unable to send message.", "Send failed");
+      } catch (error: any) {
+        // If timed-out / Vercel gateway cut the connection, poll for the AI reply.
+        const isTimeout =
+          error?.code === "ECONNABORTED" ||
+          String(error?.message || "").toLowerCase().includes("timeout") ||
+          error?.response?.status === 504 ||
+          error?.response?.status === 524;
+
+        if (isTimeout) {
+          let recovered = false;
+          for (let attempt = 0; attempt < 10; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            try {
+              const pollRes = await apiClient.get("/api/v1/restaurant/chat/messages");
+              const polledMessages: any[] = pollRes.data.messages || [];
+              const hasAiReply = polledMessages.some(
+                (m: any) =>
+                  m.role === "assistant" &&
+                  new Date(m.created_at).getTime() > Date.now() - 90_000,
+              );
+              if (hasAiReply) {
+                setIsAiTyping(false);
+                setMessages(polledMessages);
+                setChatMessagesCache(polledMessages);
+                scrollToBottom();
+                recovered = true;
+                break;
+              }
+            } catch {
+              // ignore poll errors
+            }
+          }
+          if (!recovered) {
+            setIsAiTyping(false);
+            showApiError("chat.send_message", error, "The AI is taking too long. Please try again.", "Send failed");
+          }
+        } else {
+          setIsAiTyping(false);
+          const revertedMessages = nextOptimisticMessages.filter((item) => item.id !== optimisticMessage.id);
+          setMessages(revertedMessages);
+          setChatMessagesCache(revertedMessages);
+          showApiError("chat.send_message", error, "Unable to send message.", "Send failed");
+        }
       }
     }
   };

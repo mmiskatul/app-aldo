@@ -250,7 +250,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
   const handleVoicePress = async () => {
     if (isTranscribing) return;
     if (isRecording) {
-      await stopRecording(true);
+      await stopRecording(false);
       return;
     }
     await startRecording();
