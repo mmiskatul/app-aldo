@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -122,6 +122,7 @@ export default function AddDailyDataScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(false);
   const [isMethodsModalVisible, setIsMethodsModalVisible] = useState(false);
+  const appliedEditRecordRef = useRef<string | null>(null);
   const [inventoryItems, setInventoryItems] = useState<InventorySuggestionItem[]>([]);
   const [inventoryUsage, setInventoryUsage] = useState<InventoryUsageItem[]>([
     {
@@ -260,11 +261,21 @@ export default function AddDailyDataScreen() {
 
   useEffect(() => {
     if (!editingRecordId) {
+      appliedEditRecordRef.current = null;
+      return;
+    }
+
+    if (appliedEditRecordRef.current === editingRecordId) {
+      return;
+    }
+
+    if (!editingRecordId) {
       return;
     }
 
     if (cachedEditableRecord) {
       applyRecordToForm(cachedEditableRecord);
+      appliedEditRecordRef.current = editingRecordId;
       return;
     }
 
@@ -275,6 +286,7 @@ export default function AddDailyDataScreen() {
           `/api/v1/restaurant/daily-data/${encodeURIComponent(editingRecordId)}`,
         );
         applyRecordToForm(response.data);
+        appliedEditRecordRef.current = editingRecordId;
       } catch (error: any) {
         console.error("Error loading daily record for edit:", error?.response?.data || error?.message);
         showErrorMessage(t("unable_to_load_daily_record"));
