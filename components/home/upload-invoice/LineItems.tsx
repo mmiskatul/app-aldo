@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { useTranslation } from '../../../utils/i18n';
 
 interface LineItemsProps {
   isEditing?: boolean;
@@ -21,6 +22,7 @@ export default function LineItems({
   vat: propsVat,
   total: propsTotal,
 }: LineItemsProps) {
+  const { t } = useTranslation();
   const updateItem = (index: number, field: string, value: string) => {
     const newItems = [...items];
     const item = { ...newItems[index], [field]: value };
@@ -95,15 +97,15 @@ export default function LineItems({
       })}
 
       <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>Subtotal</Text>
+        <Text style={styles.summaryLabel}>{t('invoice_net_total')}</Text>
         <Text style={styles.summaryValueMain}>EUR {propsSubtotal?.toFixed(2) || '0.00'}</Text>
       </View>
       <View style={styles.summaryRow}>
-        <Text style={styles.summaryLabel}>VAT / IVA by line</Text>
+        <Text style={styles.summaryLabel}>{t('invoice_vat_total')}</Text>
         <Text style={styles.summaryValueMain}>EUR {propsVat?.toFixed(2) || '0.00'}</Text>
       </View>
       <View style={[styles.summaryRow, { marginTop: verticalScale(8) }]}>
-        <Text style={styles.grandTotalLabel}>Total</Text>
+        <Text style={styles.grandTotalLabel}>{t('invoice_final_total')}</Text>
         <Text style={styles.grandTotalValue}>EUR {propsTotal?.toFixed(2) || '0.00'}</Text>
       </View>
     </View>

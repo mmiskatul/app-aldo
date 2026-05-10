@@ -44,7 +44,7 @@ export default function UploadInvoiceScreen() {
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
 
   const [selectedFile, setSelectedFile] = useState<UploadFile | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
   const [isExtracting, setIsExtracting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [extractionData, setExtractionData] = useState<any>(null);
@@ -99,6 +99,7 @@ export default function UploadInvoiceScreen() {
         );
         setLineItems(mapped);
       }
+      setIsEditing(true);
       setUploadProgress(100);
       setIsExtracting(false);
     } catch (error: any) {
@@ -182,6 +183,8 @@ export default function UploadInvoiceScreen() {
   ) => {
     setSelectedFile(file);
     setExtractionData(null);
+    setLineItems([]);
+    setIsEditing(true);
     if (file) {
       handleFileUpload(file);
     }
@@ -287,9 +290,7 @@ export default function UploadInvoiceScreen() {
                 <View style={styles.spacer} />
 
                 <BottomActions
-                  isEditing={isEditing}
                   isLoading={isSaving}
-                  onEditPress={() => setIsEditing(!isEditing)}
                   onConfirmPress={handleConfirmSave}
                 />
               </>
