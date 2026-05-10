@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from '../../../utils/i18n';
 
 export interface Method1Data {
   pos_payments: string;
@@ -23,10 +24,12 @@ interface Props {
 }
 
 export default function Method1Form({ data, onChange, onInfoPress }: Props) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>CASH TRACKING</Text>
+        <Text style={styles.sectionTitle}>{t('cash_tracking')}</Text>
         <TouchableOpacity
           style={styles.infoIconContainer}
           onPress={onInfoPress}
@@ -39,7 +42,7 @@ export default function Method1Form({ data, onChange, onInfoPress }: Props) {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>POS Payments (+)</Text>
+        <Text style={styles.label}>{t('pos_payments')} (+)</Text>
         <View style={styles.inputContainer}>
           <Feather name="credit-card" size={moderateScale(20)} color="#FA8C4C" style={styles.icon} />
           <TextInput style={styles.input} placeholder="0.00" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.pos_payments} onChangeText={(val) => onChange('pos_payments', val)} />
@@ -48,7 +51,7 @@ export default function Method1Form({ data, onChange, onInfoPress }: Props) {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Cash Withdrawals (+)</Text>
+        <Text style={styles.label}>{t('cash_withdrawals')} (+)</Text>
         <View style={styles.inputContainer}>
           <Feather name="briefcase" size={moderateScale(20)} color="#FA8C4C" style={styles.icon} />
           <TextInput style={styles.input} placeholder="0.00" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.cash_withdrawals} onChangeText={(val) => onChange('cash_withdrawals', val)} />
@@ -58,13 +61,13 @@ export default function Method1Form({ data, onChange, onInfoPress }: Props) {
 
       <View style={styles.row}>
         <View style={[styles.inputGroup, { flex: 1, marginRight: scale(8) }]}>
-          <Text style={styles.label}>Cash In (-)</Text>
+          <Text style={styles.label}>{t('cash_in')} (-)</Text>
           <View style={styles.inputContainer}>
             <TextInput style={[styles.input, { paddingLeft: scale(16) }]} placeholder="0.00" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.cash_in} onChangeText={(val) => onChange('cash_in', val)} />
           </View>
         </View>
         <View style={[styles.inputGroup, { flex: 1, marginLeft: scale(8) }]}>
-          <Text style={styles.label}>Cash Out (+)</Text>
+          <Text style={styles.label}>{t('cash_out')} (+)</Text>
           <View style={styles.inputContainer}>
             <TextInput style={[styles.input, { paddingLeft: scale(16) }]} placeholder="0.00" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.cash_out} onChangeText={(val) => onChange('cash_out', val)} />
           </View>
@@ -73,10 +76,10 @@ export default function Method1Form({ data, onChange, onInfoPress }: Props) {
 
       <View style={styles.inputGroup}>
         <View style={styles.labelRow}>
-          <Text style={styles.label}>Expenses in Cash (+)</Text>
+          <Text style={styles.label}>{t('expenses_in_cash')} (+)</Text>
           <TouchableOpacity style={styles.addNoteBtn}>
             <Feather name="align-left" size={moderateScale(12)} color="#FA8C4C" />
-            <Text style={styles.addNoteText}>Add note</Text>
+            <Text style={styles.addNoteText}>{t('add_note')}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.inputContainer}>
@@ -87,7 +90,7 @@ export default function Method1Form({ data, onChange, onInfoPress }: Props) {
         <TextInput 
           style={[styles.inputContainer, { height: verticalScale(80), paddingTop: verticalScale(12), paddingHorizontal: scale(16), marginTop: verticalScale(8) }]} 
           multiline 
-          placeholder="Notes..." 
+          placeholder={t('notes_placeholder')} 
           placeholderTextColor="#9CA3AF"
           value={data.notes}
           onChangeText={(val) => onChange('notes', val)}
@@ -97,19 +100,19 @@ export default function Method1Form({ data, onChange, onInfoPress }: Props) {
       <View style={[styles.sectionHeader, { marginTop: verticalScale(16) }]}>
         <View style={styles.titleRow}>
           <Feather name="users" size={moderateScale(18)} color="#FA8C4C" style={styles.sectionIcon} />
-          <Text style={styles.sectionTitleLarge}>Coperti</Text>
+          <Text style={styles.sectionTitleLarge}>{t('covers_section')}</Text>
         </View>
       </View>
 
       <View style={styles.row}>
         <View style={[styles.inputGroup, { flex: 1, marginRight: scale(8) }]}>
-          <Text style={styles.label}>Lunch Coperti</Text>
+          <Text style={styles.label}>{t('lunch_coperti')}</Text>
           <View style={styles.inputContainer}>
             <TextInput style={[styles.input, { paddingLeft: scale(16) }]} placeholder="0" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.lunch_covers} onChangeText={(val) => onChange('lunch_covers', val)} />
           </View>
         </View>
         <View style={[styles.inputGroup, { flex: 1, marginLeft: scale(8) }]}>
-          <Text style={styles.label}>Dinner Coperti</Text>
+          <Text style={styles.label}>{t('dinner_coperti')}</Text>
           <View style={styles.inputContainer}>
             <TextInput style={[styles.input, { paddingLeft: scale(16) }]} placeholder="0" placeholderTextColor="#9CA3AF" keyboardType="numeric" value={data.dinner_covers} onChangeText={(val) => onChange('dinner_covers', val)} />
           </View>
@@ -121,13 +124,13 @@ export default function Method1Form({ data, onChange, onInfoPress }: Props) {
           <View style={styles.balanceIconBg}>
             <Feather name="inbox" size={moderateScale(16)} color="#FA8C4C" />
           </View>
-          <Text style={styles.sectionTitleLarge}>Cash Register Balance</Text>
+          <Text style={styles.sectionTitleLarge}>{t('cash_register_balance')}</Text>
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.labelDark}>Opening Cash</Text>
+          <Text style={styles.labelDark}>{t('opening_cash')}</Text>
           <Text style={styles.subLabel}>
-            Amount of cash in the register at the beginning of the day
+            {t('opening_cash_description')}
           </Text>
           <View style={styles.inputContainer}>
             <Text style={styles.prefixSign}>€</Text>
@@ -136,9 +139,9 @@ export default function Method1Form({ data, onChange, onInfoPress }: Props) {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.labelDark}>Closing Cash</Text>
+          <Text style={styles.labelDark}>{t('closing_cash')}</Text>
           <Text style={styles.subLabel}>
-            Amount of cash counted in the register at the end of the day
+            {t('closing_cash_description')}
           </Text>
           <View style={styles.inputContainer}>
             <Text style={styles.prefixSign}>€</Text>

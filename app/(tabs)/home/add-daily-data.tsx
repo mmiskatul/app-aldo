@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -43,6 +43,32 @@ interface InventoryUsageItem {
   unitType: string;
 }
 
+interface DailyDataInventoryUsageEntry {
+  inventory_item_id: string;
+  product_name: string;
+  quantity_used: number;
+  unit_type: string;
+}
+
+interface DailyDataEditResponse {
+  id: string;
+  business_date: string;
+  method: "method_1" | "method_2";
+  pos_payments: number;
+  cash_withdrawals: number;
+  cash_in: number;
+  cash_out: number;
+  cash_payments: number;
+  bank_transfer_payments: number;
+  expenses_in_cash: number;
+  lunch_covers: number;
+  dinner_covers: number;
+  opening_cash: number;
+  closing_cash: number;
+  notes?: string;
+  inventory_usage: DailyDataInventoryUsageEntry[];
+}
+
 const parseNumberInput = (value: string) => {
   const normalized = value.trim().replace(/,/g, ".");
   const parsed = parseFloat(normalized);
@@ -84,6 +110,7 @@ const getLocalBusinessDate = () => {
 export default function AddDailyDataScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { recordId } = useLocalSearchParams<{ recordId?: string | string[] }>();
   const insets = useSafeAreaInsets();
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
@@ -91,6 +118,7 @@ export default function AddDailyDataScreen() {
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
   const [selectedMethod, setSelectedMethod] = useState<"method1" | "method2">("method1");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingRecord, setIsLoadingRecord] = useState(false);
   const [isMethodsModalVisible, setIsMethodsModalVisible] = useState(false);
   const [inventoryItems, setInventoryItems] = useState<InventorySuggestionItem[]>([]);
   const [inventoryUsage, setInventoryUsage] = useState<InventoryUsageItem[]>([
@@ -137,7 +165,15 @@ export default function AddDailyDataScreen() {
     setMethod2Data((prev) => ({ ...prev, [key]: val }));
   };
 
-  const currentBusinessDate = getLocalBusinessDate();
+  const editingRecordId = typeof recordId === "string" && recordId.length > 0 ? recordId : null;
+  const [businessDate, setBusinessDate] = useState(getLocalBusinessDate());
+  const currentBusinessDate = businessDate;
+  const fallbackRoute = "/(tabs)/home/data-management" as const;
+
+  const formatNumberForInput = (value: number) => {
+    const numericValue = Number(value || 0);
+    return numericValue === 0 ? "" : String(numericValue);
+  };
 
   useEffect(() => {
     const fetchInventoryItems = async () => {
@@ -156,6 +192,101 @@ export default function AddDailyDataScreen() {
 
     void fetchInventoryItems();
   }, []);
+
+  useEffect(() => {
+    if (!editingRecordId) {
+      return;
+    }
+
+    const fetchRecord = async () => {
+      setIsLoadingRecord(true);
+      try {
+        const response = await apiClient.get<DailyDataEditResponse>(
+          `/api/v1/restaurant/daily-data/${encodeURIComponent(editingRecordId)}`,
+        );
+        const record = response.data;
+        setBusinessDate(record.business_date || getLocalBusinessDate());
+        setSelectedMethod(record.method === "method_2" ? "method2" : "method1");
+        setMethod1Data({
+          pos_payments: formatNumberForInput(record.pos_payments),
+          cash_withdrawals: formatNumberForInput(record.cash_withdrawals),
+          cash_in: formatNumberForInput(record.cash_in),
+          cash_out: formatNumberForInput(record.cash_out),
+          expenses_in_cash: formatNumberForInput(record.expenses_in_cash),
+          lunch_covers: formatNumberForInput(record.lunch_covers),
+          dinner_covers: formatNumberForInput(record.dinner_covers),
+          opening_cash: formatNumberForInput(record.opening_cash),
+          closing_cash: formatNumberForInput(record.closing_cash),
+          notes: record.notes || "",
+        });
+        setMethod2Data({
+          pos_payments: formatNumberForInput(record.pos_payments),
+          cash_payments: formatNumberForInput(record.cash_payments),
+          bank_transfer_payments: formatNumberForInput(record.bank_transfer_payments),
+          expenses_in_cash: formatNumberForInput(record.expenses_in_cash),
+          lunch_covers: formatNumberForInput(record.lunch_covers),
+          dinner_covers: formatNumberForInput(record.dinner_covers),
+          opening_cash: formatNumberForInput(record.opening_cash),
+          closing_cash: formatNumberForInput(record.closing_cash),
+        });
+        setInventoryUsage(
+          record.inventory_usage?.length
+            ? record.inventory_usage.map((item, index) => ({
+                rowId: `${item.inventory_item_id}-${index}`,
+                inventoryItemId: item.inventory_item_id,
+                productName: item.product_name,
+                query: item.product_name,
+                quantityUsed: formatNumberForInput(item.quantity_used),
+                availableQuantity: 0,
+                unitType: item.unit_type,
+              }))
+            : [
+                {
+                  rowId: String(Date.now()),
+                  inventoryItemId: "",
+                  productName: "",
+                  query: "",
+                  quantityUsed: "",
+                  availableQuantity: 0,
+                  unitType: "",
+                },
+              ],
+        );
+      } catch (error: any) {
+        console.error("Error loading daily record for edit:", error?.response?.data || error?.message);
+        showErrorMessage(t("unable_to_load_daily_record"));
+      } finally {
+        setIsLoadingRecord(false);
+      }
+    };
+
+    void fetchRecord();
+  }, [editingRecordId, t]);
+
+  useEffect(() => {
+    if (!inventoryItems.length) {
+      return;
+    }
+
+    setInventoryUsage((current) =>
+      current.map((item) => {
+        if (!item.inventoryItemId) {
+          return item;
+        }
+        const matchedItem = inventoryItems.find((inventoryItem) => inventoryItem.id === item.inventoryItemId);
+        if (!matchedItem) {
+          return item;
+        }
+        return {
+          ...item,
+          productName: matchedItem.product_name,
+          query: item.query || matchedItem.product_name,
+          availableQuantity: Number(matchedItem.stock_quantity || 0),
+          unitType: matchedItem.unit_type,
+        };
+      }),
+    );
+  }, [inventoryItems]);
 
   const usedInventoryPayload = useMemo(
     () =>
@@ -361,14 +492,20 @@ export default function AddDailyDataScreen() {
             }),
       };
 
-      const res = await apiClient.post("/api/v1/restaurant/manual-entry", payload);
+      const res = editingRecordId
+        ? await apiClient.patch(`/api/v1/restaurant/manual-entry/${encodeURIComponent(editingRecordId)}`, payload)
+        : await apiClient.post("/api/v1/restaurant/manual-entry", payload);
       console.log("Manual Entry Response:", res.data);
       clearHomeScreenCache();
       clearDailyDataScreenCache();
       bumpInventoryRefreshToken();
       setCashOverviewData(null);
-      showSuccessMessage("Daily data has been saved successfully.");
-      router.back();
+      showSuccessMessage(t(editingRecordId ? "daily_data_updated_successfully" : "daily_data_saved_successfully"));
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace(fallbackRoute);
+      }
     } catch (error: any) {
       console.error(
         "Error saving manual entry:",
@@ -382,146 +519,164 @@ export default function AddDailyDataScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Add Daily Data" showBack={true} showBell={true} />
+      <Header
+        title={t(editingRecordId ? "edit_daily_data" : "add_daily_data")}
+        showBack={true}
+        showBell={true}
+        fallbackHref={fallbackRoute}
+      />
 
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.pageTitle}>Add Daily Business Data</Text>
-          <Text style={styles.pageSubtitle}>
-            Enter today&apos;s revenue and expenses to track your restaurant performance.
-          </Text>
+        {isLoadingRecord ? (
+          <View style={styles.loadingRecordContainer}>
+            <ActivityIndicator size="small" color="#FA8C4C" />
+            <Text style={styles.loadingRecordText}>{t("loading_collection")}</Text>
+          </View>
+        ) : (
+          <>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={styles.pageTitle}>
+                {t(editingRecordId ? "edit_daily_business_data" : "add_daily_business_data")}
+              </Text>
+              <Text style={styles.pageSubtitle}>
+                {t(editingRecordId ? "edit_daily_business_data_subtitle" : "add_daily_business_data_subtitle")}
+              </Text>
 
-          <MethodSelector selected={selectedMethod} onSelect={setSelectedMethod} />
+              <MethodSelector selected={selectedMethod} onSelect={setSelectedMethod} />
 
-          {selectedMethod === "method1" ? (
-            <Method1Form
-              data={method1Data}
-              onChange={handleMethod1Change}
-              onInfoPress={() => setIsMethodsModalVisible(true)}
-            />
-          ) : (
-            <Method2Form
-              data={method2Data}
-              onChange={handleMethod2Change}
-              onInfoPress={() => setIsMethodsModalVisible(true)}
-            />
-          )}
+              {selectedMethod === "method1" ? (
+                <Method1Form
+                  data={method1Data}
+                  onChange={handleMethod1Change}
+                  onInfoPress={() => setIsMethodsModalVisible(true)}
+                />
+              ) : (
+                <Method2Form
+                  data={method2Data}
+                  onChange={handleMethod2Change}
+                  onInfoPress={() => setIsMethodsModalVisible(true)}
+                />
+              )}
 
-          <View style={styles.inventoryUsageCard}>
-            <Text style={styles.inventoryUsageTitle}>{t("inventory_used")}</Text>
-            <Text style={styles.inventoryUsageSubtitle}>{t("inventory_used_subtitle")}</Text>
+              <View style={styles.inventoryUsageCard}>
+                <Text style={styles.inventoryUsageTitle}>{t("inventory_used")}</Text>
+                <Text style={styles.inventoryUsageSubtitle}>{t("inventory_used_subtitle")}</Text>
 
-            {inventoryUsage.map((usageItem) => {
-              const query = usageItem.query.trim().toLowerCase();
-              const suggestions =
-                query.length >= 2 && usageItem.query !== usageItem.productName
-                  ? inventoryItems
-                      .filter((item) => item.product_name.toLowerCase().includes(query))
-                      .slice(0, 4)
-                  : [];
-              const quantityUsed = parseNumberInput(usageItem.quantityUsed);
-              const remainingQuantity = Math.max(Number(usageItem.availableQuantity || 0) - quantityUsed, 0);
+                {inventoryUsage.map((usageItem) => {
+                  const query = usageItem.query.trim().toLowerCase();
+                  const suggestions =
+                    query.length >= 2 && usageItem.query !== usageItem.productName
+                      ? inventoryItems
+                          .filter((item) => item.product_name.toLowerCase().includes(query))
+                          .slice(0, 4)
+                      : [];
+                  const quantityUsed = parseNumberInput(usageItem.quantityUsed);
+                  const remainingQuantity = Math.max(Number(usageItem.availableQuantity || 0) - quantityUsed, 0);
 
-              return (
-                <View key={usageItem.rowId} style={styles.usageRowCard}>
-                  <View style={styles.usageRowHeader}>
-                    <Text style={styles.usageLabel}>{t("product_used")}</Text>
-                    <TouchableOpacity onPress={() => removeUsageRow(usageItem.rowId)} hitSlop={styles.iconHitSlop}>
-                      <Feather name="x" size={moderateScale(16)} color="#9CA3AF" />
-                    </TouchableOpacity>
-                  </View>
-                  <TextInput
-                    style={styles.usageInput}
-                    value={usageItem.query}
-                    onChangeText={(text) =>
-                      updateUsageRow(usageItem.rowId, {
-                        query: text,
-                        inventoryItemId: "",
-                        productName: "",
-                        availableQuantity: 0,
-                        unitType: "",
-                      })
-                    }
-                    placeholder={t("select_inventory_item")}
-                    placeholderTextColor="#9CA3AF"
-                  />
-
-                  {suggestions.length > 0 ? (
-                    <View style={styles.suggestionBox}>
-                      {suggestions.map((item) => (
-                        <TouchableOpacity
-                          key={item.id}
-                          style={styles.suggestionItem}
-                          onPress={() => selectInventoryItem(usageItem.rowId, item)}
-                        >
-                          <Text style={styles.suggestionName}>{item.product_name}</Text>
-                          <Text style={styles.suggestionMeta}>
-                            {t("available")}: {Number(item.stock_quantity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {item.unit_type}
-                          </Text>
+                  return (
+                    <View key={usageItem.rowId} style={styles.usageRowCard}>
+                      <View style={styles.usageRowHeader}>
+                        <Text style={styles.usageLabel}>{t("product_used")}</Text>
+                        <TouchableOpacity onPress={() => removeUsageRow(usageItem.rowId)} hitSlop={styles.iconHitSlop}>
+                          <Feather name="x" size={moderateScale(16)} color="#9CA3AF" />
                         </TouchableOpacity>
-                      ))}
-                    </View>
-                  ) : null}
-
-                  <View style={styles.quantityRow}>
-                    <View style={styles.quantityInputWrap}>
-                      <Text style={styles.usageLabel}>{t("quantity_used")}</Text>
+                      </View>
                       <TextInput
                         style={styles.usageInput}
-                        value={usageItem.quantityUsed}
-                        onChangeText={(text) => updateUsageRow(usageItem.rowId, { quantityUsed: text })}
-                        placeholder="0"
+                        value={usageItem.query}
+                        onChangeText={(text) =>
+                          updateUsageRow(usageItem.rowId, {
+                            query: text,
+                            inventoryItemId: "",
+                            productName: "",
+                            availableQuantity: 0,
+                            unitType: "",
+                          })
+                        }
+                        placeholder={t("select_inventory_item")}
                         placeholderTextColor="#9CA3AF"
-                        keyboardType="numeric"
                       />
-                    </View>
-                    <View style={styles.availableBox}>
-                      <Text style={styles.availableLabel}>{t("available")}</Text>
-                      <Text style={styles.availableValue}>
-                        {Number(usageItem.availableQuantity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {usageItem.unitType}
-                      </Text>
-                      <Text style={styles.remainingText}>
-                        {t("remaining")}: {remainingQuantity.toLocaleString(undefined, { maximumFractionDigits: 2 })} {usageItem.unitType}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              );
-            })}
 
-            <TouchableOpacity style={styles.addUsageButton} onPress={addUsageRow}>
-              <Feather name="plus" size={moderateScale(16)} color="#FA8C4C" />
-              <Text style={styles.addUsageText}>{t("add_used_item")}</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+                      {suggestions.length > 0 ? (
+                        <View style={styles.suggestionBox}>
+                          {suggestions.map((item) => (
+                            <TouchableOpacity
+                              key={item.id}
+                              style={styles.suggestionItem}
+                              onPress={() => selectInventoryItem(usageItem.rowId, item)}
+                            >
+                              <Text style={styles.suggestionName}>{item.product_name}</Text>
+                              <Text style={styles.suggestionMeta}>
+                                {t("available")}: {Number(item.stock_quantity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {item.unit_type}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ) : null}
 
-        <View style={[styles.bottomFooter, { paddingBottom: Math.max(insets.bottom, verticalScale(16)) }]}>
-          <TouchableOpacity
-            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={isSaving}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="Confirm daily data"
-          >
-            {isSaving ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Feather name="check-circle" size={moderateScale(20)} color="#FFFFFF" style={styles.saveIcon} />
-                <Text style={styles.saveButtonText}>Confirm Daily Data</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+                      <View style={styles.quantityRow}>
+                        <View style={styles.quantityInputWrap}>
+                          <Text style={styles.usageLabel}>{t("quantity_used")}</Text>
+                          <TextInput
+                            style={styles.usageInput}
+                            value={usageItem.quantityUsed}
+                            onChangeText={(text) => updateUsageRow(usageItem.rowId, { quantityUsed: text })}
+                            placeholder="0"
+                            placeholderTextColor="#9CA3AF"
+                            keyboardType="numeric"
+                          />
+                        </View>
+                        <View style={styles.availableBox}>
+                          <Text style={styles.availableLabel}>{t("available")}</Text>
+                          <Text style={styles.availableValue}>
+                            {Number(usageItem.availableQuantity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {usageItem.unitType}
+                          </Text>
+                          <Text style={styles.remainingText}>
+                            {t("remaining")}: {remainingQuantity.toLocaleString(undefined, { maximumFractionDigits: 2 })} {usageItem.unitType}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+
+                <TouchableOpacity style={styles.addUsageButton} onPress={addUsageRow}>
+                  <Feather name="plus" size={moderateScale(16)} color="#FA8C4C" />
+                  <Text style={styles.addUsageText}>{t("add_used_item")}</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+
+            <View style={[styles.bottomFooter, { paddingBottom: Math.max(insets.bottom, verticalScale(16)) }]}>
+              <TouchableOpacity
+                style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={isSaving}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm daily data"
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Feather name="check-circle" size={moderateScale(20)} color="#FFFFFF" style={styles.saveIcon} />
+                    <Text style={styles.saveButtonText}>
+                      {editingRecordId ? t("save_changes") : t("confirm_daily_data")}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </KeyboardAvoidingView>
       <RevenueInputMethodsModal
         visible={isMethodsModalVisible}
@@ -596,6 +751,17 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: verticalScale(24),
     lineHeight: moderateScale(20),
+  },
+  loadingRecordContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: verticalScale(10),
+    paddingHorizontal: scale(24),
+  },
+  loadingRecordText: {
+    fontSize: moderateScale(13, 0.3),
+    color: "#6B7280",
   },
   inventoryUsageCard: {
     borderWidth: 1,

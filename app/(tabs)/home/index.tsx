@@ -703,6 +703,19 @@ export default function TabsIndex() {
     }
   }, [navigateFromHome]);
 
+  const handleMetricPress = useCallback((metric: MetricCard) => {
+    router.push({
+      pathname: "/(tabs)/home/metric-details",
+      params: {
+        label: metric.label,
+        period: activePeriod,
+        value: String(metric.value),
+        changePercent: String(metric.change_percent),
+        currency: metric.currency,
+      },
+    } as any);
+  }, [activePeriod, router]);
+
   return (
     <View style={styles.container}>
       <View
@@ -738,7 +751,11 @@ export default function TabsIndex() {
           onPeriodChange={(period) => setActivePeriod(period as PeriodKey)}
           onExport={handleExport}
         />
-        <KPIGrid metrics={currentMetrics} loading={metricsSectionLoading || topCardsRefreshing} />
+        <KPIGrid
+          metrics={currentMetrics}
+          loading={metricsSectionLoading || topCardsRefreshing}
+          onMetricPress={handleMetricPress}
+        />
         <CashManagement
           cashData={currentCashManagement}
           loading={cashSectionLoading}

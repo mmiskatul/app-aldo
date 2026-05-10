@@ -22,6 +22,39 @@ export interface AnalyticsExportDataProps {
   period: string;
 }
 
+export interface DailyDataExportSummary {
+  revenue: number;
+  expenses: number;
+  profit: number;
+  covers: number;
+  averagePerCover: number;
+  currency?: string;
+}
+
+export interface DailyDataExportRow {
+  primaryLabel: string;
+  secondaryLabel?: string;
+  revenue?: number;
+  expenses?: number;
+  covers?: number;
+  averagePerCover?: number;
+}
+
+export interface DailyDataExportSectionRow {
+  section: string;
+  field: string;
+  value: string;
+}
+
+export interface DailyDataExportProps {
+  reportTitle: string;
+  reportSubtitle: string;
+  periodLabel: string;
+  summary: DailyDataExportSummary;
+  rows?: DailyDataExportRow[];
+  sectionRows?: DailyDataExportSectionRow[];
+}
+
 const BRAND_PRIMARY = '#FA8C4C';
 const BRAND_SOFT = '#FFF4EC';
 const TEXT_PRIMARY = '#172033';
@@ -1352,5 +1385,213 @@ export const generateAnalyticsExcelExport = async (data: AnalyticsExportDataProp
   } catch (error) {
     console.error('Error exporting Excel analytics:', error);
     showErrorMessage('Failed to export the analytics spreadsheet.');
+  }
+};
+
+export const generateDailyDataPdfExport = async (data: DailyDataExportProps) => {
+  const currency = data.summary.currency || 'EUR';
+  const summaryCards = [
+    {
+      label: 'Revenue',
+      value: formatMoney(data.summary.revenue, currency),
+      note: 'Total saved revenue in this export.',
+      toneClass: metricToneClass('revenue'),
+    },
+    {
+      label: 'Expenses',
+      value: formatMoney(data.summary.expenses, currency),
+      note: 'Total saved expenses in this export.',
+      toneClass: metricToneClass('expenses'),
+    },
+    {
+      label: 'Profit',
+      value: formatMoney(data.summary.profit, currency),
+      note: 'Revenue minus expenses.',
+      toneClass: metricToneClass('profit'),
+    },
+    {
+      label: 'Covers',
+      value: formatNumber(data.summary.covers, 0),
+      note: `Average per cover ${formatMoney(data.summary.averagePerCover, currency)}`,
+      toneClass: metricToneClass('food cost'),
+    },
+  ];
+
+  const historyRows =
+    data.rows?.map((row) => [
+      row.primaryLabel,
+      row.secondaryLabel || 'N/A',
+      formatMoney(row.revenue ?? 0, currency),
+      formatMoney(row.expenses ?? 0, currency),
+      formatNumber(row.covers ?? 0, 0),
+      formatMoney(row.averagePerCover ?? 0, currency),
+    ]) || [];
+
+  const sectionRows =
+    data.sectionRows?.map((row) => [row.section, row.field, row.value]) || [];
+
+  const html = `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>${pdfStyles}</style>
+      </head>
+      <body>
+        <div class="report-shell home-report">
+          <div class="hero">
+            <div class="eyebrow">Aldo Daily Data</div>
+            <div class="hero-grid">
+              <div class="hero-main">
+                <h1>${escapeHtml(data.reportTitle)}</h1>
+                <div class="hero-subtitle">${escapeHtml(data.reportSubtitle)}</div>
+              </div>
+              <div class="hero-meta">
+                <div class="meta-chip">${escapeHtml(data.periodLabel)}</div>
+                <div class="meta-chip">Generated ${escapeHtml(formatGeneratedAt())}</div>
+              </div>
+            </div>
+          </div>
+          <div class="content">
+            <div class="section">
+              <div class="section-title">Summary</div>
+              <div class="section-copy">Daily data summary for the selected screen.</div>
+              ${renderMetricCards(summaryCards)}
+            </div>
+
+            ${
+              historyRows.length > 0
+                ? `
+            <div class="section">
+              <div class="section-title">Daily Data Rows</div>
+              <div class="section-copy">The rows currently visible in the dashboard export.</div>
+              ${renderTable({
+                headers: [
+                  { label: 'Label' },
+                  { label: 'Date' },
+                  { label: 'Revenue', align: 'right' },
+                  { label: 'Expenses', align: 'right' },
+                  { label: 'Covers', align: 'right' },
+                  { label: 'Avg / Cover', align: 'right' },
+                ],
+                rows: historyRows,
+                emptyMessage: 'No daily data rows are available to export.',
+              })}
+            </div>`
+                : ''
+            }
+
+            ${
+              sectionRows.length > 0
+                ? `
+            <div class="section">
+              <div class="section-title">Section Breakdown</div>
+              <div class="section-copy">Detailed section values captured in this daily record or collection.</div>
+              ${renderTable({
+                headers: [
+                  { label: 'Section' },
+                  { label: 'Field' },
+                  { label: 'Value', align: 'right' },
+                ],
+                rows: sectionRows,
+                emptyMessage: 'No section breakdown is available to export.',
+              })}
+            </div>`
+                : ''
+            }
+
+            ${renderAppPromotion()}
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  try {
+    const fileName = `Daily_Data_Report_${buildTimestamp()}.pdf`;
+    const { uri } = await Print.printToFileAsync({ html, base64: false });
+    const savedUri = await persistTempFile(uri, fileName);
+    await shareOrNotify({
+      uri: savedUri,
+      fileName,
+      mimeType: 'application/pdf',
+      dialogTitle: 'Share Daily Data Report',
+      uti: '.pdf',
+      successMessage: 'Daily data PDF ready to share.',
+    });
+  } catch (error) {
+    console.error('Error exporting daily data PDF:', error);
+    showErrorMessage('Failed to export the daily data PDF.');
+  }
+};
+
+export const generateDailyDataExcelExport = async (data: DailyDataExportProps) => {
+  try {
+    const currency = data.summary.currency || 'EUR';
+    const workbook = XLSX.utils.book_new();
+    setWorkbookProps(workbook, data.reportTitle, 'Aldo daily data export');
+
+    const overviewSheet = createWorksheet([
+      [data.reportTitle],
+      [],
+      ['Subtitle', data.reportSubtitle],
+      ['Period', data.periodLabel],
+      ['Generated At', formatGeneratedAt()],
+      ['Revenue', formatMoney(data.summary.revenue, currency)],
+      ['Expenses', formatMoney(data.summary.expenses, currency)],
+      ['Profit', formatMoney(data.summary.profit, currency)],
+      ['Covers', formatNumber(data.summary.covers, 0)],
+      ['Average Per Cover', formatMoney(data.summary.averagePerCover, currency)],
+    ]);
+    setSheetColumns(overviewSheet, [24, 48]);
+    XLSX.utils.book_append_sheet(workbook, overviewSheet, 'Overview');
+
+    const rowsSheet = createWorksheet([
+      ['Daily Data Rows'],
+      [],
+      ['Label', 'Date', 'Revenue', 'Expenses', 'Covers', 'Avg Per Cover'],
+    ]);
+    const rowValues =
+      data.rows?.map((row) => [
+        row.primaryLabel,
+        row.secondaryLabel || '',
+        row.revenue ?? 0,
+        row.expenses ?? 0,
+        row.covers ?? 0,
+        row.averagePerCover ?? 0,
+      ]) || [];
+    appendTable(rowsSheet, ['Label', 'Date', 'Revenue', 'Expenses', 'Covers', 'Avg Per Cover'], rowValues, 2);
+    setSheetColumns(rowsSheet, [24, 20, 16, 16, 12, 18]);
+    XLSX.utils.book_append_sheet(workbook, rowsSheet, 'Rows');
+
+    const sectionSheet = createWorksheet([
+      ['Section Breakdown'],
+      [],
+      ['Section', 'Field', 'Value'],
+    ]);
+    const sectionValues =
+      data.sectionRows?.map((row) => [row.section, row.field, row.value]) || [];
+    appendTable(sectionSheet, ['Section', 'Field', 'Value'], sectionValues, 2);
+    setSheetColumns(sectionSheet, [22, 28, 24]);
+    XLSX.utils.book_append_sheet(workbook, sectionSheet, 'Sections');
+
+    const base64 = XLSX.write(workbook, { type: 'base64', bookType: 'xlsx' });
+    const fileName = `Daily_Data_Report_${buildTimestamp()}.xlsx`;
+    const uri = buildExportUri(fileName);
+
+    await FileSystem.writeAsStringAsync(uri, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    await shareOrNotify({
+      uri,
+      fileName,
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      dialogTitle: 'Share Daily Data Spreadsheet',
+      successMessage: 'Daily data spreadsheet ready to share.',
+    });
+  } catch (error) {
+    console.error('Error exporting daily data spreadsheet:', error);
+    showErrorMessage('Failed to export the daily data spreadsheet.');
   }
 };

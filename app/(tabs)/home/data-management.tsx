@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
+import ActionFilterBar from "../../../components/home/ActionFilterBar";
 import DatePicker from "../../../components/ui/DatePicker";
 import DataHistoryList, {
   DataHistoryEntry,
@@ -24,6 +25,7 @@ import { showErrorMessage, showInfoMessage, showSuccessMessage } from "../../../
 import { useTranslation } from "../../../utils/i18n";
 import { useAppStore } from "../../../store/useAppStore";
 import { formatApiDate, formatEuropeanDate } from "../../../utils/date";
+import { generateDailyDataExcelExport, generateDailyDataPdfExport } from "../../../utils/exportData";
 
 interface DailyDataListItem {
   id: string;
@@ -246,6 +248,45 @@ export default function DataManagementScreen() {
     [items, selectedSegment],
   );
 
+  const handleExport = useCallback(async (format: "pdf" | "excel") => {
+    if (items.length === 0) {
+      showErrorMessage("No daily data is available to export.");
+      return;
+    }
+
+    const exportPayload = {
+      reportTitle: t("daily_data_dashboard"),
+      reportSubtitle: "Daily data dashboard export for the current selected view.",
+      periodLabel: `${selectedSegment.toUpperCase()} · ${formatEuropeanDate(selectedReferenceDateKey)}`,
+      summary: {
+        revenue: items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0),
+        expenses: items.reduce((sum, item) => sum + Number(item.total_expenses || 0), 0),
+        profit: items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0) - items.reduce((sum, item) => sum + Number(item.total_expenses || 0), 0),
+        covers: items.reduce((sum, item) => sum + Number(item.total_covers || 0), 0),
+        averagePerCover:
+          items.reduce((sum, item) => sum + Number(item.total_covers || 0), 0) > 0
+            ? items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0) / items.reduce((sum, item) => sum + Number(item.total_covers || 0), 0)
+            : 0,
+        currency: "EUR",
+      },
+      rows: items.map((item) => ({
+        primaryLabel: labelForSegment(selectedSegment, item.business_date),
+        secondaryLabel: formatBusinessDate(item.business_date),
+        revenue: Number(item.total_revenue || 0),
+        expenses: Number(item.total_expenses || 0),
+        covers: Number(item.total_covers || 0),
+        averagePerCover: Number(item.avg_revenue_per_cover || 0),
+      })),
+    };
+
+    if (format === "pdf") {
+      await generateDailyDataPdfExport(exportPayload);
+      return;
+    }
+
+    await generateDailyDataExcelExport(exportPayload);
+  }, [items, selectedReferenceDateKey, selectedSegment, t]);
+
   return (
     <View style={styles.safeArea}>
       <Header title={t("daily_data_dashboard")} showBack={true} showBell={true} />
@@ -264,6 +305,13 @@ export default function DataManagementScreen() {
           />
         }
       >
+        <ActionFilterBar
+          activePeriod={selectedSegment}
+          availablePeriods={[]}
+          onPeriodChange={() => {}}
+          onExport={handleExport}
+          dropdownTop={verticalScale(150)}
+        />
         <Text style={styles.pageTitle}>{t("daily_data_dashboard")}</Text>
         <Text style={styles.pageSubtitle}>
           Track and manage your restaurant performance
@@ -288,6 +336,9 @@ export default function DataManagementScreen() {
           loading={loading}
           selectedSegment={selectedSegment}
           onSegmentChange={setSelectedSegment}
+          onEdit={(recordId) =>
+            router.push(`/(tabs)/home/add-daily-data?recordId=${encodeURIComponent(recordId)}` as any)
+          }
           onDelete={handleDeleteRequest}
           onDeleteUnavailable={() => showInfoMessage("Only date cards can be deleted from this dashboard.")}
         />

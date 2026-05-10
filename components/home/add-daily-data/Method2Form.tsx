@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from "react-native";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "../../../utils/i18n";
 
 export interface Method2Data {
   pos_payments: string;
@@ -21,6 +22,8 @@ interface Props {
 }
 
 export default function Method2Form({ data, onChange, onInfoPress }: Props) {
+  const { t } = useTranslation();
+
   const toAmount = (value: string) => {
     const parsed = Number.parseFloat(value.trim().replace(/,/g, "."));
     return Number.isFinite(parsed) ? parsed : 0;
@@ -46,7 +49,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
             color="#FA8C4C"
             style={styles.sectionIcon}
           />
-          <Text style={styles.sectionTitle}>Payment Inputs</Text>
+          <Text style={styles.sectionTitle}>{t("payment_inputs")}</Text>
         </View>
         <TouchableOpacity
           style={styles.infoIconContainer}
@@ -60,7 +63,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>POS Payments (+)</Text>
+        <Text style={styles.label}>{t("pos_payments")} (+)</Text>
         <View style={styles.inputContainer}>
           <Text style={styles.prefixSign}>€</Text>
           <TextInput
@@ -75,7 +78,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Cash Payments (+)</Text>
+        <Text style={styles.label}>{t("cash_payments")} (+)</Text>
         <View style={styles.inputContainer}>
           <Text style={styles.prefixSign}>€</Text>
           <TextInput
@@ -90,7 +93,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Invoices Paid by Bank Transfer (+)</Text>
+        <Text style={styles.label}>{t("bank_transfer_payments")} (+)</Text>
         <View style={styles.inputContainer}>
           <Text style={styles.prefixSign}>€</Text>
           <TextInput
@@ -105,7 +108,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Expenses in Cash (-)</Text>
+        <Text style={styles.label}>{t("expenses_in_cash")} (-)</Text>
         <View style={styles.inputContainer}>
           <Text style={styles.prefixSign}>€</Text>
           <TextInput
@@ -127,13 +130,13 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
             color="#FA8C4C"
             style={styles.sectionIcon}
           />
-          <Text style={styles.sectionTitle}>Coperti</Text>
+          <Text style={styles.sectionTitle}>{t("covers_section")}</Text>
         </View>
       </View>
 
       <View style={styles.row}>
         <View style={[styles.inputGroup, { flex: 1, marginRight: scale(8) }]}>
-          <Text style={styles.label}>Lunch Coperti</Text>
+          <Text style={styles.label}>{t("lunch_coperti")}</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={[styles.input, { paddingLeft: scale(16) }]}
@@ -146,7 +149,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
           </View>
         </View>
         <View style={[styles.inputGroup, { flex: 1, marginLeft: scale(8) }]}>
-          <Text style={styles.label}>Dinner Coperti</Text>
+          <Text style={styles.label}>{t("dinner_coperti")}</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={[styles.input, { paddingLeft: scale(16) }]}
@@ -165,13 +168,13 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
           <View style={styles.balanceIconBg}>
             <Feather name="inbox" size={moderateScale(16)} color="#FA8C4C" />
           </View>
-          <Text style={styles.sectionTitle}>Cash Register Balance</Text>
+          <Text style={styles.sectionTitle}>{t("cash_register_balance")}</Text>
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.labelDark}>Opening Cash</Text>
+          <Text style={styles.labelDark}>{t("opening_cash")}</Text>
           <Text style={styles.subLabel}>
-            Amount of cash in the register at the beginning of the day
+            {t("opening_cash_description")}
           </Text>
           <View style={styles.inputContainerBgWhite}>
             <Text style={styles.prefixSign}>€</Text>
@@ -187,9 +190,9 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.labelDark}>Closing Cash</Text>
+          <Text style={styles.labelDark}>{t("closing_cash")}</Text>
           <Text style={styles.subLabel}>
-            Amount of cash counted in the register at the end of the day
+            {t("closing_cash_description")}
           </Text>
           <View style={styles.inputContainerBgWhite}>
             <Text style={styles.prefixSign}>€</Text>
@@ -206,9 +209,9 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
 
         <View style={styles.differenceCard}>
           <View style={styles.differenceTextGroup}>
-            <Text style={styles.differenceLabel}>Daily Cash Difference</Text>
+            <Text style={styles.differenceLabel}>{t("daily_cash_difference")}</Text>
             <Text style={styles.differenceSubLabel}>
-              Closing cash minus expected register balance
+              {t("daily_cash_difference_subtitle")}
             </Text>
           </View>
           <Text style={[styles.differenceValue, { color: cashDifferenceColor }]}>

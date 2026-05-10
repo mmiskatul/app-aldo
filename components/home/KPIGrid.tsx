@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import {
   EyeIcon,
@@ -13,6 +13,7 @@ import Skeleton, { SkeletonCard } from '../ui/Skeleton';
 import { useTranslation } from '../../utils/i18n';
 
 interface KPIItemProps {
+  rawLabel: string;
   title: string;
   value: string;
   trend: string;
@@ -20,6 +21,7 @@ interface KPIItemProps {
   IconComponent: any;
   iconColor: string;
   iconBgColor: string;
+  onPress?: (label: string) => void;
 }
 
 const KPICard = ({
@@ -30,9 +32,16 @@ const KPICard = ({
   IconComponent,
   iconColor,
   iconBgColor,
+  rawLabel,
+  onPress,
 }: KPIItemProps) => {
   return (
-    <View style={styles.cardContainer}>
+    <TouchableOpacity
+      style={styles.cardContainer}
+      activeOpacity={0.85}
+      onPress={() => onPress?.(rawLabel)}
+      disabled={!onPress}
+    >
       <View style={styles.cardHeader}>
         <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
           <IconComponent size={moderateScale(14)} color={iconColor} />
@@ -55,7 +64,7 @@ const KPICard = ({
       </View>
       <Text style={styles.cardTitle}>{title}</Text>
       <Text style={styles.cardValue}>{value}</Text>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -67,9 +76,10 @@ interface KPIGridProps {
     currency: string;
   }[];
   loading?: boolean;
+  onMetricPress?: (metric: { label: string; value: number; change_percent: number; currency: string }) => void;
 }
 
-export default function KPIGrid({ metrics, loading = false }: KPIGridProps) {
+export default function KPIGrid({ metrics, loading = false, onMetricPress }: KPIGridProps) {
   const { t } = useTranslation();
 
   const getIconData = (label: string) => {
@@ -132,12 +142,14 @@ export default function KPIGrid({ metrics, loading = false }: KPIGridProps) {
     metrics && metrics.length > 0
       ? metrics.map((metric) => ({
           title: getTranslatedMetricTitle(metric.label),
+          rawLabel: metric.label,
           value: `${parseCurrency(metric.currency)}${metric.value.toLocaleString(
             undefined,
             { minimumFractionDigits: 1, maximumFractionDigits: 1 }
           )}`,
           trend: `${Math.abs(metric.change_percent)}%`,
           isPositive: metric.change_percent >= 0,
+          onPress: () => onMetricPress?.(metric),
           ...getIconData(metric.label),
         }))
       : [];

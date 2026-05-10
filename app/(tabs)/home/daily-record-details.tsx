@@ -3,6 +3,7 @@ import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +18,8 @@ import SectionDataCard, {
 } from "../../../components/home/data-management/daily-record-details/SectionDataCard";
 import Header from "../../../components/ui/Header";
 import { getLocale, useTranslation } from "../../../utils/i18n";
+import { generateDailyDataExcelExport, generateDailyDataPdfExport } from "../../../utils/exportData";
+import { showErrorMessage } from "../../../utils/feedback";
 
 type DetailSegment = "date" | "week" | "month";
 
@@ -159,6 +162,7 @@ export default function DailyRecordDetailsScreen() {
   const resolvedRecordId = resolvedRoute.recordId;
   const [record, setRecord] = useState<DailyRecordDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [showGroupedHeader, setShowGroupedHeader] = useState(
     typeof dataId === "string" && /^(date|week|month):/.test(dataId),
   );
@@ -243,6 +247,48 @@ export default function DailyRecordDetailsScreen() {
     };
   }, [locale, record]);
 
+  const handleExport = async (format: "pdf" | "excel") => {
+    if (!record) {
+      showErrorMessage("No daily data is available to export.");
+      return;
+    }
+
+    const exportPayload = {
+      reportTitle: t("daily_record_details"),
+      reportSubtitle: showGroupedHeader
+        ? "Grouped daily data collection export."
+        : "Single daily record export.",
+      periodLabel: formatBusinessDate(record.business_date, selectedSegment, locale, (date) => t("week_of", { date })),
+      summary: {
+        revenue: Number(record.total_revenue || 0),
+        expenses: Number((record.total_expenses || 0) + (record.invoice_document_total || 0)),
+        profit: Number(record.total_revenue || 0) - Number((record.total_expenses || 0) + (record.invoice_document_total || 0)),
+        covers: Number(record.total_covers || 0),
+        averagePerCover: Number(record.avg_revenue_per_cover || 0),
+        currency: "EUR",
+      },
+      sectionRows: (record.method_sections || []).flatMap((section) =>
+        (section.fields || []).map((field) => ({
+          section: section.title,
+          field: field.label,
+          value:
+            field.value == null
+              ? "-"
+              : field.value_type === "currency"
+                ? formatCurrency(Number(field.value || 0), locale)
+                : String(field.value),
+        })),
+      ),
+    };
+
+    if (format === "pdf") {
+      await generateDailyDataPdfExport(exportPayload);
+      return;
+    }
+
+    await generateDailyDataExcelExport(exportPayload);
+  };
+
   return (
     <View style={styles.safeArea}>
       <Header title={t("daily_record_details")} showBack={true} />
@@ -301,7 +347,10 @@ export default function DailyRecordDetailsScreen() {
               />
             ))}
 
-            <TouchableOpacity style={styles.exportButton}>
+            <TouchableOpacity
+              style={styles.exportButton}
+              onPress={() => setIsExportMenuOpen(true)}
+            >
               <Feather
                 name="download"
                 size={moderateScale(16)}
@@ -313,6 +362,40 @@ export default function DailyRecordDetailsScreen() {
           </>
         )}
       </ScrollView>
+
+      <Modal
+        visible={isExportMenuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsExportMenuOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPressOut={() => setIsExportMenuOpen(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.exportMenu}>
+            <TouchableOpacity
+              style={styles.exportOption}
+              onPress={() => {
+                setIsExportMenuOpen(false);
+                void handleExport("pdf");
+              }}
+            >
+              <Text style={styles.exportOptionText}>PDF</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.exportOption}
+              onPress={() => {
+                setIsExportMenuOpen(false);
+                void handleExport("excel");
+              }}
+            >
+              <Text style={styles.exportOptionText}>Excel</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -396,6 +479,37 @@ const styles = StyleSheet.create({
   },
   exportButtonText: {
     fontSize: moderateScale(15, 0.3),
+    fontWeight: "600",
+    color: "#111827",
+  },
+  modalOverlay: {
+    flex: 1,
+  },
+  exportMenu: {
+    position: "absolute",
+    right: scale(20),
+    bottom: verticalScale(120),
+    backgroundColor: "#E5E7EB",
+    borderRadius: scale(10),
+    padding: scale(6),
+    width: scale(108),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  exportOption: {
+    paddingVertical: verticalScale(8),
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#111827",
+    borderRadius: scale(6),
+    marginBottom: verticalScale(6),
+    backgroundColor: "#FFFFFF",
+  },
+  exportOptionText: {
+    fontSize: moderateScale(12, 0.3),
     fontWeight: "600",
     color: "#111827",
   },

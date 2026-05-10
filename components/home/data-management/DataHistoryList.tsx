@@ -27,6 +27,7 @@ interface DataHistoryListProps {
   selectedSegment: DataHistorySegment;
   onSegmentChange: (segment: DataHistorySegment) => void;
   onDelete: (recordId: string) => void;
+  onEdit?: (recordId: string) => void;
   onDeleteUnavailable?: () => void;
 }
 
@@ -47,6 +48,7 @@ export default function DataHistoryList({
   selectedSegment,
   onSegmentChange,
   onDelete,
+  onEdit,
   onDeleteUnavailable,
 }: DataHistoryListProps) {
   const router = useRouter();
@@ -126,6 +128,14 @@ export default function DataHistoryList({
                 >
                   <Feather name="eye" size={moderateScale(16)} color="#374151" />
                 </TouchableOpacity>
+                {selectedSegment === 'date' && entry.recordId ? (
+                  <TouchableOpacity
+                    style={styles.actionIcon}
+                    onPress={() => onEdit?.(entry.recordId as string)}
+                  >
+                    <Feather name="edit-2" size={moderateScale(16)} color="#FA8C4C" />
+                  </TouchableOpacity>
+                ) : null}
                 {selectedSegment === 'date' ? (
                   <TouchableOpacity
                     style={styles.actionIcon}
