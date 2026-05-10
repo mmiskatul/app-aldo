@@ -21,6 +21,7 @@ import Header from "../../../components/ui/Header";
 import { useAppStore } from "../../../store/useAppStore";
 import { inferMimeType } from "../../../utils/fileMetadata";
 import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
+import { useTranslation } from "../../../utils/i18n";
 
 type UploadFile = {
   uri: string;
@@ -36,12 +37,20 @@ const calculateLineVat = (total: unknown, rate: unknown) => {
   return netTotal * (vatRate / 100);
 };
 
+const hasTextValue = (value: unknown) =>
+  typeof value === "string" && value.trim().length > 0;
+
+const hasPositiveValue = (value: unknown) => (Number(value) || 0) > 0;
+
 export default function UploadInvoiceScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const router = useRouter();
   const tokens = useAppStore((state) => state.tokens);
   const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
+  const clearAnalyticsScreenCache = useAppStore((state) => state.clearAnalyticsScreenCache);
+  const clearExpensesScreenCache = useAppStore((state) => state.clearExpensesScreenCache);
 
   const [selectedFile, setSelectedFile] = useState<UploadFile | null>(null);
   const [isEditing, setIsEditing] = useState(true);
@@ -130,8 +139,44 @@ export default function UploadInvoiceScreen() {
     return optionalText(value) || fallback;
   };
 
+  const hasMeaningfulInvoiceData = () => {
+    const headerFields = [
+      extractionData?.counterparty_name,
+      extractionData?.supplier_name,
+      extractionData?.document_number,
+      extractionData?.ai_summary,
+    ];
+
+    const amountFields = [
+      extractionData?.expense_amount,
+      extractionData?.cash_amount,
+      extractionData?.revenue_amount,
+      extractionData?.profit_amount,
+      extractionData?.total_amount,
+      saveTotalAmount,
+    ];
+
+    const hasMeaningfulLineItem = lineItems.some((item) =>
+      hasTextValue(item.product) ||
+      hasPositiveValue(item.qty) ||
+      hasPositiveValue(item.price) ||
+      hasPositiveValue(item.total),
+    );
+
+    return (
+      headerFields.some(hasTextValue) ||
+      amountFields.some(hasPositiveValue) ||
+      hasMeaningfulLineItem
+    );
+  };
+
   const handleConfirmSave = async () => {
     if (!extractionData || !tokens?.access_token) return;
+
+    if (!hasMeaningfulInvoiceData()) {
+      showErrorMessage(t("invoice_requires_one_field"), t("missing_fields"));
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -168,6 +213,8 @@ export default function UploadInvoiceScreen() {
 
       bumpInventoryRefreshToken();
       clearHomeScreenCache();
+      clearAnalyticsScreenCache();
+      clearExpensesScreenCache();
       showSuccessMessage("Invoice saved successfully!");
       router.replace("/(tabs)/documents");
     } catch (error: any) {

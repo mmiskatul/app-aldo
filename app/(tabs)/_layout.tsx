@@ -176,6 +176,12 @@ export default function TabLayout() {
             />
           ),
         }}
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace("/(tabs)/documents" as any);
+          },
+        }}
       />
       <Tabs.Screen
         name="chat"

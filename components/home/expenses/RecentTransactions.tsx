@@ -13,6 +13,7 @@ interface ExpenseItem {
   notes: string;
   section?: string;
   source_kind?: string | null;
+  source_id?: string | null;
   source_inventory_item_id?: string | null;
   created_at: string;
 }
@@ -43,6 +44,15 @@ const resolveTransactionType = (tx: ExpenseItem) => {
 };
 
 const resolveTransactionRoute = (tx: ExpenseItem) => {
+  if (tx.source_kind === 'document' && tx.source_id) {
+    return `/(tabs)/documents/${tx.source_id}`;
+  }
+  if (tx.source_kind === 'manual_entry' && tx.source_id) {
+    return `/(tabs)/home/daily-record-details?dataId=${tx.source_id}`;
+  }
+  if (tx.source_kind === 'inventory' && tx.source_inventory_item_id) {
+    return `/(tabs)/inventory/${tx.source_inventory_item_id}`;
+  }
   return `/(tabs)/home/expense-details?id=${tx.id}`;
 };
 

@@ -11,6 +11,7 @@ interface DetailsActionsProps {
   onEdit?: () => void;
   onCancel?: () => void;
   onUpdate?: () => void;
+  isBusy?: boolean;
 }
 
 export default function DetailsActions({ 
@@ -19,7 +20,8 @@ export default function DetailsActions({
   isEditing, 
   onEdit, 
   onCancel, 
-  onUpdate 
+  onUpdate,
+  isBusy = false,
 }: DetailsActionsProps) {
   const { t } = useTranslation();
   return (
@@ -28,6 +30,7 @@ export default function DetailsActions({
         <TouchableOpacity 
           style={styles.editButton} 
           onPress={isEditing ? onCancel : onEdit}
+          disabled={isBusy}
         >
           <Feather 
             name={isEditing ? "x" : "edit-2"} 
@@ -41,6 +44,7 @@ export default function DetailsActions({
         <TouchableOpacity 
           style={styles.downloadButton} 
           onPress={isEditing ? onUpdate : onDownload}
+          disabled={isBusy}
         >
           <Feather 
             name={isEditing ? "check" : "download"} 
@@ -53,7 +57,7 @@ export default function DetailsActions({
       </View>
 
       {!isEditing && (
-        <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+        <TouchableOpacity style={styles.deleteButton} onPress={onDelete} disabled={isBusy}>
           <Feather name="trash-2" size={moderateScale(16)} color="#EF4444" style={{ marginRight: scale(8) }}/>
           <Text style={styles.deleteText}>{t('delete_document_title')}</Text>
         </TouchableOpacity>

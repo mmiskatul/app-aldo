@@ -225,6 +225,7 @@ export default function TabsIndex() {
   const [revenueLoading, setRevenueLoading] = useState(false);
   const [insightLoading, setInsightLoading] = useState(false);
   const [recentActivityLoading, setRecentActivityLoading] = useState(false);
+  const [topCardsRefreshing, setTopCardsRefreshing] = useState(false);
 
   const triggeredSectionsRef = useRef({
     revenue: false,
@@ -604,13 +605,25 @@ export default function TabsIndex() {
     void fetchHomeShell();
   }, [appLanguage, fetchHomeShell, hasSubscription]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     if (!hasSubscription) {
       return;
     }
     setRefreshing(true);
     setLoading(true);
-    void fetchHomeData(activePeriod, false, true);
+    setTopCardsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchHomeOverview(activePeriod),
+        fetchTopPrioritySections(activePeriod, true),
+        fetchRecentActivitySection(),
+        hydrateSupportingData(true),
+      ]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      setTopCardsRefreshing(false);
+    }
   };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -653,10 +666,10 @@ export default function TabsIndex() {
       }
     : null;
   const shellLoading = loading && !shellData;
-  const metricsSectionLoading = (loading || metricsLoading) && !currentMetrics;
-  const cashSectionLoading = (loading || cashLoading) && !currentCashManagement;
-  const quickActionsLoading = (loading && !shellData?.quick_actions?.length);
-  const vatSectionLoading = (loading || vatLoading) && vatBalance === null;
+  const metricsSectionLoading = (loading || metricsLoading || topCardsRefreshing) && !currentMetrics;
+  const cashSectionLoading = refreshing || loading || cashLoading;
+  const quickActionsLoading = refreshing || (loading && !shellData?.quick_actions?.length);
+  const vatSectionLoading = (refreshing || loading || vatLoading) && vatBalance === null;
 
   const handleExport = async (format: "pdf" | "excel") => {
     const exportPayload = {
@@ -725,7 +738,7 @@ export default function TabsIndex() {
           onPeriodChange={(period) => setActivePeriod(period as PeriodKey)}
           onExport={handleExport}
         />
-        <KPIGrid metrics={currentMetrics} loading={metricsSectionLoading} />
+        <KPIGrid metrics={currentMetrics} loading={metricsSectionLoading || topCardsRefreshing} />
         <CashManagement
           cashData={currentCashManagement}
           loading={cashSectionLoading}
@@ -740,16 +753,16 @@ export default function TabsIndex() {
         <RevenueChart
           revenue={currentRevenue}
           period={activePeriod}
-          loading={(shellLoading || revenueLoading) && !currentRevenue}
+          loading={refreshing || ((shellLoading || revenueLoading) && !currentRevenue)}
         />
         <AIInsightBox
           insight={localizedCurrentInsight ?? undefined}
-          loading={(shellLoading || insightLoading) && !(activePeriod in insightByPeriod)}
+          loading={refreshing || ((shellLoading || insightLoading) && !(activePeriod in insightByPeriod))}
           onNavigate={navigateFromHome}
         />
         <RecentActivity
           activities={recentActivity ?? undefined}
-          loading={(shellLoading || recentActivityLoading) && recentActivity === null}
+          loading={refreshing || ((shellLoading || recentActivityLoading) && recentActivity === null)}
           onNavigate={navigateFromHome}
           onSeeAll={() => navigateFromHome("/(tabs)/home/recent-activity")}
         />

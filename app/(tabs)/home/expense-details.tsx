@@ -78,6 +78,8 @@ export default function ExpenseDetailsScreen() {
   const expenseId = toSingleParam(id);
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
+  const clearAnalyticsScreenCache = useAppStore((state) => state.clearAnalyticsScreenCache);
+  const clearExpensesScreenCache = useAppStore((state) => state.clearExpensesScreenCache);
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
   const [item, setItem] = useState<ExpenseDetail | null>(null);
   const [loading, setLoading] = useState(Boolean(expenseId));
@@ -108,6 +110,21 @@ export default function ExpenseDetailsScreen() {
 
   const amountLabel = useMemo(() => formatCurrency(item?.amount ?? 0), [item?.amount]);
   const isSourceControlled = Boolean(item?.source_kind);
+  const sourceRoute = useMemo(() => {
+    if (!item?.source_kind) {
+      return null;
+    }
+    if (item.source_kind === 'document' && item.source_id) {
+      return `/(tabs)/documents/${item.source_id}`;
+    }
+    if (item.source_kind === 'manual_entry' && item.source_id) {
+      return `/(tabs)/home/daily-record-details?dataId=${item.source_id}`;
+    }
+    if (item.source_kind === 'inventory' && item.source_inventory_item_id) {
+      return `/(tabs)/inventory/${item.source_inventory_item_id}`;
+    }
+    return null;
+  }, [item]);
 
   const deleteExpense = async () => {
     if (!item) {
@@ -120,6 +137,8 @@ export default function ExpenseDetailsScreen() {
       await apiClient.delete(`/api/v1/restaurant/expenses/${item.id}`);
       clearHomeScreenCache();
       clearDailyDataScreenCache();
+      clearAnalyticsScreenCache();
+      clearExpensesScreenCache();
       setCashOverviewData(null);
       showSuccessMessage(t('expense_deleted'));
       router.back();
@@ -182,6 +201,16 @@ export default function ExpenseDetailsScreen() {
               <Feather name="info" size={moderateScale(18)} color="#FA8C4C" />
               <Text style={styles.noticeText}>{sourceNoticeText(item, t)}</Text>
             </View>
+          ) : null}
+
+          {isSourceControlled && sourceRoute ? (
+            <TouchableOpacity
+              style={styles.sourceButton}
+              onPress={() => router.push(sourceRoute as any)}
+            >
+              <Feather name="external-link" size={moderateScale(16)} color="#FA8C4C" />
+              <Text style={styles.sourceButtonText}>{t('open_source_record')}</Text>
+            </TouchableOpacity>
           ) : null}
 
           <View style={styles.detailsCard}>
@@ -300,6 +329,23 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13, 0.3),
     lineHeight: moderateScale(19),
     marginLeft: scale(10),
+  },
+  sourceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF7F2',
+    borderWidth: 1,
+    borderColor: '#FCE7D6',
+    borderRadius: scale(14),
+    paddingVertical: verticalScale(13),
+    marginBottom: verticalScale(16),
+    gap: scale(8),
+  },
+  sourceButtonText: {
+    color: '#FA8C4C',
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: '700',
   },
   detailRow: {
     paddingVertical: verticalScale(16),

@@ -71,6 +71,8 @@ const isValidIntegerInput = (value: string) => {
   return /^\d+$/.test(normalized);
 };
 
+const hasTextValue = (value: string) => value.trim().length > 0;
+
 const getLocalBusinessDate = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -256,10 +258,49 @@ export default function AddDailyDataScreen() {
     ]);
   };
 
+  const hasAtLeastOneFilledField = () => {
+    const selectedFields =
+      selectedMethod === "method1"
+        ? [
+            method1Data.pos_payments,
+            method1Data.cash_withdrawals,
+            method1Data.cash_in,
+            method1Data.cash_out,
+            method1Data.expenses_in_cash,
+            method1Data.lunch_covers,
+            method1Data.dinner_covers,
+            method1Data.opening_cash,
+            method1Data.closing_cash,
+            method1Data.notes,
+          ]
+        : [
+            method2Data.pos_payments,
+            method2Data.cash_payments,
+            method2Data.bank_transfer_payments,
+            method2Data.expenses_in_cash,
+            method2Data.lunch_covers,
+            method2Data.dinner_covers,
+            method2Data.opening_cash,
+            method2Data.closing_cash,
+          ];
+
+    const hasFilledMethodField = selectedFields.some(hasTextValue);
+    const hasFilledInventoryField = inventoryUsage.some(
+      (item) => hasTextValue(item.query) || hasTextValue(item.quantityUsed),
+    );
+
+    return hasFilledMethodField || hasFilledInventoryField;
+  };
+
   const handleSave = async () => {
     const validationMessage = validateCurrentMethod();
     if (validationMessage) {
       showErrorMessage(validationMessage);
+      return;
+    }
+
+    if (!hasAtLeastOneFilledField()) {
+      showErrorMessage(t("daily_data_requires_one_field"), t("missing_fields"));
       return;
     }
 
@@ -561,7 +602,7 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     borderRadius: scale(16),
     padding: scale(16),
-    marginTop: verticalScale(18),
+    marginTop: verticalScale(8),
     marginBottom: verticalScale(22),
     backgroundColor: "#FFFFFF",
   },

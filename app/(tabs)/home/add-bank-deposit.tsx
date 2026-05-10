@@ -18,6 +18,7 @@ import apiClient from "../../../api/apiClient";
 import DatePicker from "../../../components/ui/DatePicker";
 import Header from "../../../components/ui/Header";
 import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
+import { useTranslation } from "../../../utils/i18n";
 
 interface BankAccount {
   id?: string;
@@ -27,6 +28,7 @@ interface BankAccount {
 }
 
 export default function AddBankDepositScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [date, setDate] = useState(new Date());
   const [amount, setAmount] = useState("");
@@ -37,10 +39,13 @@ export default function AddBankDepositScreen() {
   const [isSavingDeposit, setIsSavingDeposit] = useState(false);
 
   const handleSaveDeposit = async () => {
-    if (!amount || !selectedAccount) {
+    const trimmedAccount = selectedAccount.trim();
+    const parsedAmount = parseFloat(amount.trim().replace(/,/g, ".")) || 0;
+
+    if (parsedAmount <= 0 || !trimmedAccount) {
       showErrorMessage(
-        "Please enter an amount and select a bank account.",
-        "Missing Fields"
+        t("valid_amount_bank_account"),
+        t("missing_fields")
       );
       return;
     }
@@ -48,13 +53,12 @@ export default function AddBankDepositScreen() {
     setIsSavingDeposit(true);
     try {
       const depositDateString = date.toISOString().split("T")[0];
-      const parsedAmount = parseFloat(amount) || 0;
 
       const payload = {
         deposit_date: depositDateString,
         amount: parsedAmount,
         type: "bank_deposit",
-        bank_account: selectedAccount,
+        bank_account: trimmedAccount,
         notes: notes.trim(),
       };
 
@@ -158,10 +162,10 @@ export default function AddBankDepositScreen() {
           <TouchableOpacity
             style={[
               styles.saveButton,
-              (!amount || !selectedAccount) && { opacity: 0.7 },
+              (!(parseFloat(amount.trim().replace(/,/g, ".")) > 0) || !selectedAccount.trim()) && { opacity: 0.7 },
             ]}
             onPress={handleSaveDeposit}
-            disabled={isSavingDeposit || !amount || !selectedAccount}
+            disabled={isSavingDeposit || !(parseFloat(amount.trim().replace(/,/g, ".")) > 0) || !selectedAccount.trim()}
           >
             {isSavingDeposit ? (
               <ActivityIndicator size="small" color="#FFFFFF" />

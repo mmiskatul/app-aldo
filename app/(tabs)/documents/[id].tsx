@@ -2,6 +2,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   ScrollView,
   StyleSheet,
@@ -52,11 +53,14 @@ export default function DocumentDetailsScreen() {
   const tokens = useAppStore((state) => state.tokens);
   const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
+  const clearAnalyticsScreenCache = useAppStore((state) => state.clearAnalyticsScreenCache);
+  const clearExpensesScreenCache = useAppStore((state) => state.clearExpensesScreenCache);
 
   const [data, setData] = useState<any>(null);
   const [editableData, setEditableData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -154,7 +158,7 @@ export default function DocumentDetailsScreen() {
 
   const handleUpdate = async () => {
     try {
-      setLoading(true);
+      setIsUpdating(true);
       const response = await apiClient.patch(
         `/api/v1/restaurant/documents/${id}`,
         {
@@ -177,11 +181,13 @@ export default function DocumentDetailsScreen() {
       setIsEditing(false);
       bumpInventoryRefreshToken();
       clearHomeScreenCache();
+      clearAnalyticsScreenCache();
+      clearExpensesScreenCache();
       showSuccessMessage(t('document_updated'), t('success'));
     } catch (error) {
       showApiError("documents.update", error, t('document_update_failed'), t('error'));
     } finally {
-      setLoading(false);
+      setIsUpdating(false);
     }
   };
 
@@ -201,6 +207,8 @@ export default function DocumentDetailsScreen() {
               await apiClient.delete(`/api/v1/restaurant/documents/${id}`);
               bumpInventoryRefreshToken();
               clearHomeScreenCache();
+              clearAnalyticsScreenCache();
+              clearExpensesScreenCache();
               showSuccessMessage(t('success'));
               router.back();
             } catch (error) {
@@ -417,8 +425,16 @@ export default function DocumentDetailsScreen() {
           onEdit={handleEdit}
           onCancel={handleCancel}
           onUpdate={handleUpdate}
+          isBusy={isUpdating}
         />
       </ScrollView>
+
+      {isUpdating ? (
+        <View style={styles.loadingOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color="#FA8C4C" />
+          <Text style={styles.loadingOverlayText}>{t('saving')}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -484,5 +500,17 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: moderateScale(13, 0.3),
     fontWeight: "700",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(17, 24, 39, 0.22)",
+    gap: verticalScale(12),
+  },
+  loadingOverlayText: {
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: "700",
+    color: "#111827",
   },
 });

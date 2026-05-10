@@ -18,10 +18,14 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
 import DatePicker from "../../../components/ui/DatePicker";
 import apiClient from "../../../api/apiClient";
+import { useAppStore } from "../../../store/useAppStore";
 import { formatApiDate } from "../../../utils/date";
 
 export default function AddExpenseScreen() {
   const router = useRouter();
+  const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
+  const clearAnalyticsScreenCache = useAppStore((state) => state.clearAnalyticsScreenCache);
+  const clearExpensesScreenCache = useAppStore((state) => state.clearExpensesScreenCache);
   const [date, setDate] = useState(new Date());
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
@@ -68,6 +72,9 @@ export default function AddExpenseScreen() {
       });
 
       console.log("Expense API Response:", response.data);
+      clearHomeScreenCache();
+      clearAnalyticsScreenCache();
+      clearExpensesScreenCache();
 
       // Navigate back on success (as requested: no alert)
       router.back();
