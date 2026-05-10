@@ -5,6 +5,7 @@ import { scale, verticalScale, moderateScale } from "react-native-size-matters";
 import * as ImagePicker from "expo-image-picker";
 import ImagePickerModal from "../../ui/ImagePickerModal";
 import { showErrorMessage } from "../../../utils/feedback";
+import { useTranslation } from "../../../utils/i18n";
 
 interface Step3Props {
   interiorPhoto: string | null;
@@ -21,6 +22,7 @@ export default function Step3PhotoUpload({
   setExteriorPhoto,
   onNext,
 }: Step3Props) {
+  const { t } = useTranslation();
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [photoTarget, setPhotoTarget] = useState<"interior" | "exterior" | null>(
     null
@@ -33,7 +35,7 @@ export default function Step3PhotoUpload({
         const permissionResult =
           await ImagePicker.requestCameraPermissionsAsync();
         if (permissionResult.granted === false) {
-          showErrorMessage("You've refused to allow this app to access your camera!");
+          showErrorMessage(t("camera_permission_required"));
           return;
         }
         result = await ImagePicker.launchCameraAsync({
@@ -46,7 +48,7 @@ export default function Step3PhotoUpload({
         const permissionResult =
           await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) {
-          showErrorMessage("You've refused to allow this app to access your photos!");
+          showErrorMessage(t("gallery_permission_required"));
           return;
         }
         result = await ImagePicker.launchImageLibraryAsync({
@@ -81,12 +83,12 @@ export default function Step3PhotoUpload({
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.title}>Upload Restaurant Photos</Text>
+      <Text style={styles.title}>{t("onboarding_photo_title")}</Text>
       <Text style={styles.subtitle}>
-        Photos help Risto AI better understand your restaurant environment and menu.
+        {t("onboarding_photo_subtitle")}
       </Text>
 
-      <Text style={styles.uploadSectionTitle}>Interior Photo</Text>
+      <Text style={styles.uploadSectionTitle}>{t("onboarding_interior_photo_title")}</Text>
       {interiorPhoto ? (
         <View style={styles.uploadedImageContainer}>
           <Image source={{ uri: interiorPhoto }} style={styles.uploadedImage} />
@@ -95,12 +97,12 @@ export default function Step3PhotoUpload({
             onPress={() => openPicker("interior")}
           >
             <Feather name="edit-2" size={moderateScale(16)} color="#FFFFFF" />
-            <Text style={styles.changeImageText}>Change</Text>
+            <Text style={styles.changeImageText}>{t("onboarding_change_photo")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.removeImageButton}
             onPress={() => setInteriorPhoto(null)}
-            accessibilityLabel="Remove interior photo"
+            accessibilityLabel={t("onboarding_remove_interior_photo")}
           >
             <Feather name="x" size={moderateScale(18)} color="#111827" />
           </TouchableOpacity>
@@ -117,12 +119,12 @@ export default function Step3PhotoUpload({
             color="#FA8C4C"
             style={{ marginBottom: verticalScale(10) }}
           />
-          <Text style={styles.uploadMainText}>Tap to upload interior view</Text>
-          <Text style={styles.uploadSubText}>Supports JPG, PNG</Text>
+          <Text style={styles.uploadMainText}>{t("onboarding_upload_interior")}</Text>
+          <Text style={styles.uploadSubText}>{t("onboarding_upload_supports")}</Text>
         </TouchableOpacity>
       )}
 
-      <Text style={styles.uploadSectionTitle}>Exterior Photo</Text>
+      <Text style={styles.uploadSectionTitle}>{t("onboarding_exterior_photo_title")}</Text>
       {exteriorPhoto ? (
         <View style={styles.uploadedImageContainer}>
           <Image source={{ uri: exteriorPhoto }} style={styles.uploadedImage} />
@@ -131,12 +133,12 @@ export default function Step3PhotoUpload({
             onPress={() => openPicker("exterior")}
           >
             <Feather name="edit-2" size={moderateScale(16)} color="#FFFFFF" />
-            <Text style={styles.changeImageText}>Change</Text>
+            <Text style={styles.changeImageText}>{t("onboarding_change_photo")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.removeImageButton}
             onPress={() => setExteriorPhoto(null)}
-            accessibilityLabel="Remove exterior photo"
+            accessibilityLabel={t("onboarding_remove_exterior_photo")}
           >
             <Feather name="x" size={moderateScale(18)} color="#111827" />
           </TouchableOpacity>
@@ -153,9 +155,9 @@ export default function Step3PhotoUpload({
             color="#FA8C4C"
             style={{ marginBottom: verticalScale(10) }}
           />
-          <Text style={styles.uploadMainText}>Tap to upload exterior view</Text>
+          <Text style={styles.uploadMainText}>{t("onboarding_upload_exterior")}</Text>
           <Text style={styles.uploadSubText}>
-            Required for entrance identification
+            {t("onboarding_upload_exterior_hint")}
           </Text>
         </TouchableOpacity>
       )}
@@ -163,7 +165,7 @@ export default function Step3PhotoUpload({
       <View style={styles.spacer} />
 
       <TouchableOpacity style={styles.continueButton} onPress={onNext}>
-        <Text style={styles.continueButtonText}>Continue</Text>
+        <Text style={styles.continueButtonText}>{t("continue")}</Text>
       </TouchableOpacity>
 
       <ImagePickerModal

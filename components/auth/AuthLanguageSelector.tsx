@@ -5,11 +5,13 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import LanguageModal from "../home/LanguageModal";
 import { useAppStore } from "../../store/useAppStore";
+import { useTranslation } from "../../utils/i18n";
 
 export default function AuthLanguageSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const appLanguage = useAppStore((state) => state.appLanguage);
   const setAppLanguage = useAppStore((state) => state.setAppLanguage);
+  const { t } = useTranslation();
 
   return (
     <>
@@ -17,7 +19,7 @@ export default function AuthLanguageSelector() {
         style={styles.langSelector}
         onPress={() => setIsOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel="Change language"
+        accessibilityLabel={t("change_language")}
       >
         <Text style={styles.langText}>{appLanguage === "it" ? "Ita" : "Eng"}</Text>
         <Feather name="chevron-down" size={moderateScale(15)} color="#4B5563" style={styles.chevron} />

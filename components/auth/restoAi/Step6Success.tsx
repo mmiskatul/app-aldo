@@ -3,9 +3,11 @@ import { useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { useTranslation } from "../../../utils/i18n";
 
 export default function Step6Success() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleEnterDashboard = () => {
     router.replace("/(tabs)/home");
@@ -22,10 +24,10 @@ export default function Step6Success() {
       </View>
 
       <Text style={styles.title}>
-        Your AI restaurant{"\n"}profile is ready.
+        {t("onboarding_success_title")}
       </Text>
       <Text style={styles.subtitle}>
-        Risto AI will now generate personalized insights for your restaurant.
+        {t("onboarding_success_subtitle")}
       </Text>
 
       <View style={styles.spacer} />
@@ -34,7 +36,7 @@ export default function Step6Success() {
         style={styles.continueButton}
         onPress={handleEnterDashboard}
       >
-        <Text style={styles.continueButtonText}>Enter Dashboard</Text>
+        <Text style={styles.continueButtonText}>{t("onboarding_enter_dashboard")}</Text>
         <Feather
           name="arrow-right"
           size={moderateScale(18)}

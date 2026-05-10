@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
+import { useTranslation } from "../../../utils/i18n";
 
 interface Step5Props {
   biggestProblem: string;
@@ -17,18 +18,20 @@ export default function Step5BiggestChallenge({
   setImprovementGoal,
   onNext,
 }: Step5Props) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.title}>Tell us about your biggest challenge.</Text>
+      <Text style={styles.title}>{t("onboarding_challenge_title")}</Text>
       <Text style={styles.subtitle}>
-        Risto AI will use this information to personalize insights and suggestions.
+        {t("onboarding_challenge_subtitle")}
       </Text>
 
-      <Text style={styles.inputLabel}>Biggest problem you currently face</Text>
+      <Text style={styles.inputLabel}>{t("onboarding_biggest_problem_label")}</Text>
       <View style={styles.textAreaContainer}>
         <TextInput
           style={styles.textArea}
-          placeholder="Describe your current restaurant challenges..."
+          placeholder={t("onboarding_biggest_problem_placeholder")}
           placeholderTextColor="#9CA3AF"
           multiline
           numberOfLines={4}
@@ -38,11 +41,11 @@ export default function Step5BiggestChallenge({
         />
       </View>
 
-      <Text style={styles.inputLabel}>What would you like to improve the most</Text>
+      <Text style={styles.inputLabel}>{t("onboarding_improvement_goal_label")}</Text>
       <View style={styles.textAreaContainer}>
         <TextInput
           style={styles.textArea}
-          placeholder="E.g. Table turnover, food waste, staff scheduling..."
+          placeholder={t("onboarding_improvement_goal_placeholder")}
           placeholderTextColor="#9CA3AF"
           multiline
           numberOfLines={4}
@@ -55,7 +58,7 @@ export default function Step5BiggestChallenge({
       <View style={styles.spacer} />
 
       <TouchableOpacity style={styles.continueButton} onPress={onNext}>
-        <Text style={styles.continueButtonText}>Continue</Text>
+        <Text style={styles.continueButtonText}>{t("continue")}</Text>
       </TouchableOpacity>
     </View>
   );

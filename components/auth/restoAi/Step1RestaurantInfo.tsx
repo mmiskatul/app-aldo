@@ -54,7 +54,7 @@ export default function Step1RestaurantInfo({
       if (mode === "camera") {
         const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
         if (!permissionResult.granted) {
-          showErrorMessage("You've refused to allow this app to access your camera!");
+          showErrorMessage(t("camera_permission_required"));
           return;
         }
         result = await ImagePicker.launchCameraAsync({
@@ -66,7 +66,7 @@ export default function Step1RestaurantInfo({
       } else {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permissionResult.granted) {
-          showErrorMessage("You've refused to allow this app to access your photos!");
+          showErrorMessage(t("gallery_permission_required"));
           return;
         }
         result = await ImagePicker.launchImageLibraryAsync({
@@ -104,7 +104,7 @@ export default function Step1RestaurantInfo({
           <TouchableOpacity
             style={styles.cameraButton}
             onPress={() => setShowImagePicker(true)}
-            accessibilityLabel="Change profile photo"
+            accessibilityLabel={t("change_photo")}
           >
             <Feather name="camera" size={moderateScale(14)} color="#FFFFFF" />
           </TouchableOpacity>
@@ -113,7 +113,7 @@ export default function Step1RestaurantInfo({
           <TouchableOpacity
             onPress={() => setProfilePhoto(null)}
             style={styles.removeImageButton}
-            accessibilityLabel="Remove profile photo"
+            accessibilityLabel={t("remove_photo")}
           >
             <Feather name="trash-2" size={moderateScale(16)} color="#EF4444" />
           </TouchableOpacity>

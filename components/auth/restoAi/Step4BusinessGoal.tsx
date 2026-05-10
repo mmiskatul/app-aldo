@@ -2,13 +2,14 @@ import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
+import { useTranslation } from "../../../utils/i18n";
 
 const BUSINESS_GOALS = [
-  "Increase revenue",
-  "Reduce costs",
-  "Optimize staff efficiency",
-  "Improve customer experience",
-  "Improve profit margins",
+  { value: "Increase revenue", labelKey: "onboarding_goal_increase_revenue" },
+  { value: "Reduce costs", labelKey: "onboarding_goal_reduce_costs" },
+  { value: "Optimize staff efficiency", labelKey: "onboarding_goal_optimize_staff_efficiency" },
+  { value: "Improve customer experience", labelKey: "onboarding_goal_improve_customer_experience" },
+  { value: "Improve profit margins", labelKey: "onboarding_goal_improve_profit_margins" },
 ];
 
 interface Step4Props {
@@ -22,6 +23,8 @@ export default function Step4BusinessGoal({
   setBusinessGoals,
   onNext,
 }: Step4Props) {
+  const { t } = useTranslation();
+
   const toggleGoal = (goal: string) => {
     if (businessGoals.includes(goal)) {
       setBusinessGoals(businessGoals.filter((selectedGoal) => selectedGoal !== goal));
@@ -33,15 +36,14 @@ export default function Step4BusinessGoal({
 
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.title}>What is your main business goal?</Text>
+      <Text style={styles.title}>{t("onboarding_goal_title")}</Text>
       <Text style={styles.subtitle}>
-        This helps Risto AI provide better recommendations tailored to your
-        success.
+        {t("onboarding_goal_subtitle")}
       </Text>
 
       <View style={styles.radioListContainer}>
         {BUSINESS_GOALS.map((goal, index) => {
-          const isSelected = businessGoals.includes(goal);
+          const isSelected = businessGoals.includes(goal.value);
           return (
             <TouchableOpacity
               key={index}
@@ -49,10 +51,10 @@ export default function Step4BusinessGoal({
                 styles.radioRow,
                 isSelected ? styles.radioRowSelected : null,
               ]}
-              onPress={() => toggleGoal(goal)}
+              onPress={() => toggleGoal(goal.value)}
               activeOpacity={0.8}
             >
-              <Text style={styles.radioText}>{goal}</Text>
+              <Text style={styles.radioText}>{t(goal.labelKey as any)}</Text>
               <View
                 style={[
                   styles.radioOuter,
@@ -71,7 +73,7 @@ export default function Step4BusinessGoal({
       <View style={styles.spacer} />
 
       <TouchableOpacity style={styles.continueButton} onPress={onNext}>
-        <Text style={styles.continueButtonText}>Continue</Text>
+        <Text style={styles.continueButtonText}>{t("continue")}</Text>
       </TouchableOpacity>
     </View>
   );

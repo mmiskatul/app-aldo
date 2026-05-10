@@ -27,6 +27,7 @@ import { buildFileName, inferMimeType } from "../../utils/fileMetadata";
 import { getApiBaseUrl, getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 import LanguageModal from "../../components/home/LanguageModal";
+import { useTranslation } from "../../utils/i18n";
 
 type OnboardingProfileResponse = {
   restaurant_name?: string | null;
@@ -151,8 +152,13 @@ const getRequestDebugUrl = (error: any): string => {
   return `${baseUrl}${requestUrl.startsWith("/") ? "" : "/"}${requestUrl}`;
 };
 
+const isRemoteOrInlineImage = (value: string) => {
+  return /^https?:\/\//i.test(value) || value.startsWith("data:image/");
+};
+
 export default function SetupScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const setUser = useAppStore((state) => state.setUser);
   const tokens = useAppStore((state) => state.tokens);
   const appLanguage = useAppStore((state) => state.appLanguage);
@@ -286,6 +292,9 @@ export default function SetupScreen() {
 
     const response = await apiClient.post("/api/v1/upload/image", imageFormData, {
       timeout: 60_000,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
     return [imageUrlFieldByUploadField[fieldName], String(response.data?.url || "")];
   };
@@ -297,9 +306,8 @@ export default function SetupScreen() {
     if (!uri) {
       return null;
     }
-    const urlFieldName = imageUrlFieldByUploadField[fieldName];
-    if (/^https?:\/\//i.test(uri)) {
-      return [urlFieldName, uri];
+    if (isRemoteOrInlineImage(uri)) {
+      return [imageUrlFieldByUploadField[fieldName], uri];
     }
     return uploadOnboardingImage(fieldName, uri);
   };
@@ -310,27 +318,27 @@ export default function SetupScreen() {
     }
 
     if (!restaurantName.trim()) {
-      showErrorMessage("Restaurant name is required.");
+      showErrorMessage(t("onboarding_required_restaurant_name"));
       setStep(1);
       return;
     }
     if (!restaurantType.trim()) {
-      showErrorMessage("Restaurant type is required.");
+      showErrorMessage(t("onboarding_required_restaurant_type"));
       setStep(1);
       return;
     }
     if (!city.trim() || !seats.trim() || !averageSpend.trim()) {
-      showErrorMessage("Complete the restaurant details before continuing.");
+      showErrorMessage(t("onboarding_required_restaurant_details"));
       setStep(2);
       return;
     }
     if (businessGoals.length === 0) {
-      showErrorMessage("Select at least one business goal before continuing.");
+      showErrorMessage(t("onboarding_required_business_goal"));
       setStep(4);
       return;
     }
     if (!biggestProblem.trim() || !improvementGoal.trim()) {
-      showErrorMessage("Complete the challenge section before finishing setup.");
+      showErrorMessage(t("onboarding_required_challenge"));
       setStep(5);
       return;
     }
@@ -338,7 +346,7 @@ export default function SetupScreen() {
     const parsedSeats = Number.parseInt(seats, 10);
     const parsedAverageSpend = Number.parseFloat(averageSpend);
     if (!Number.isFinite(parsedSeats) || parsedSeats <= 0 || !Number.isFinite(parsedAverageSpend) || parsedAverageSpend < 0) {
-      showErrorMessage("Enter a valid number of seats and average spend.");
+      showErrorMessage(t("onboarding_invalid_restaurant_details"));
       setStep(2);
       return;
     }
@@ -367,12 +375,15 @@ export default function SetupScreen() {
       });
 
       await apiClient.post("/api/v1/onboarding/profile", formData, {
-        timeout: 30_000,
+        timeout: 60_000,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       const user = await getCurrentUser();
       setUser(user, tokens);
-      showSuccessMessage("Onboarding saved successfully.");
+      showSuccessMessage(t("onboarding_saved_successfully"));
       if (user.subscription_plan_name && !["canceled", "expired", "suspended"].includes(String(user.subscription_status || ""))) {
         router.replace("/(tabs)/home" as any);
       } else {
@@ -385,7 +396,7 @@ export default function SetupScreen() {
         message: error?.message,
         response: error?.response?.data,
       });
-      showErrorMessage(getApiErrorMessage(error, "Could not save onboarding details."));
+      showErrorMessage(getApiErrorMessage(error, t("onboarding_save_failed")));
     } finally {
       setSubmitting(false);
     }
@@ -469,6 +480,8 @@ export default function SetupScreen() {
             style={styles.langSelector}
             onPress={() => setIsLangMenuOpen(true)}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={t("change_language")}
           >
             <Text style={styles.langText}>{appLanguage === "it" ? "Ita" : "Eng"}</Text>
             <Feather name="chevron-down" size={moderateScale(15)} color="#4B5563" />
@@ -573,7 +586,7 @@ export default function SetupScreen() {
             <View style={styles.loadingContent}>
               <ActivityIndicator size="large" color="#FA8C4C" />
               <Text style={styles.loadingText}>
-                {loadingInitialData ? "Loading setup..." : "Saving setup..."}
+                {loadingInitialData ? t("onboarding_loading_setup") : t("onboarding_saving_setup")}
               </Text>
             </View>
           </View>

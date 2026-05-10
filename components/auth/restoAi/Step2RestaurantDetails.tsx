@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Input from "../../ui/Input";
+import { useTranslation } from "../../../utils/i18n";
 
 interface Step2Props {
   city: string;
@@ -23,16 +24,18 @@ export default function Step2RestaurantDetails({
   setAverageSpend,
   onNext,
 }: Step2Props) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.title}>Restaurant Details</Text>
+      <Text style={styles.title}>{t("onboarding_restaurant_details_title")}</Text>
       <Text style={styles.subtitle}>
-        Tell us more about your restaurant setup.
+        {t("onboarding_restaurant_details_subtitle")}
       </Text>
 
       <Input
-        label="City / Location"
-        placeholder="e.g. New York, NY"
+        label={t("city_location")}
+        placeholder={t("onboarding_city_placeholder")}
         value={city}
         onChangeText={setCity}
         trailingIcon={
@@ -45,8 +48,8 @@ export default function Step2RestaurantDetails({
       />
 
       <Input
-        label="Number of Seats"
-        placeholder="e.g. 45"
+        label={t("number_of_seats")}
+        placeholder={t("onboarding_seats_placeholder")}
         keyboardType="number-pad"
         value={seats}
         onChangeText={setSeats}
@@ -60,8 +63,8 @@ export default function Step2RestaurantDetails({
       />
 
       <Input
-        label="Average Spend per Customer"
-        placeholder="e.g. 25.00"
+        label={t("onboarding_average_spend_label")}
+        placeholder={t("onboarding_average_spend_placeholder")}
         keyboardType="decimal-pad"
         value={averageSpend}
         onChangeText={setAverageSpend}
@@ -77,7 +80,7 @@ export default function Step2RestaurantDetails({
       <View style={styles.spacer} />
 
       <TouchableOpacity style={styles.continueButton} onPress={onNext}>
-        <Text style={styles.continueButtonText}>Continue</Text>
+        <Text style={styles.continueButtonText}>{t("continue")}</Text>
       </TouchableOpacity>
     </View>
   );

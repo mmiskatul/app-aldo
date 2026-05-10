@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { scale, moderateScale, verticalScale } from "react-native-size-matters";
+import { useTranslation } from "../../utils/i18n";
 
 interface ImagePickerModalProps {
   visible: boolean;
@@ -22,6 +23,8 @@ export default function ImagePickerModal({
   onCameraSelect,
   onGallerySelect,
 }: ImagePickerModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal
       visible={visible}
@@ -37,7 +40,7 @@ export default function ImagePickerModal({
         />
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Upload Photo</Text>
+            <Text style={styles.modalTitle}>{t("upload_photo")}</Text>
             <TouchableOpacity onPress={onClose}>
               <Feather name="x" size={moderateScale(24)} color="#111827" />
             </TouchableOpacity>
@@ -48,14 +51,14 @@ export default function ImagePickerModal({
               <View style={styles.iconCircle}>
                 <Feather name="camera" size={moderateScale(22)} color="#FA8C4C" />
               </View>
-              <Text style={styles.optionText}>Take a Photo</Text>
+              <Text style={styles.optionText}>{t("take_photo")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionButton} onPress={onGallerySelect}>
               <View style={styles.iconCircle}>
                 <Feather name="image" size={moderateScale(22)} color="#FA8C4C" />
               </View>
-              <Text style={styles.optionText}>Choose from Gallery</Text>
+              <Text style={styles.optionText}>{t("choose_from_gallery")}</Text>
             </TouchableOpacity>
           </View>
         </View>
