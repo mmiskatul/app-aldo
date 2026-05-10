@@ -234,10 +234,6 @@ export default function NotificationsScreen() {
     return <Redirect href="/(auth)" />;
   }
 
-  if (!hasActiveSubscription(user)) {
-    return <Redirect href="/(auth)/subscription" />;
-  }
-
   if (!hasCompletedOnboarding(user)) {
     return <Redirect href="/(auth)/setup" />;
   }

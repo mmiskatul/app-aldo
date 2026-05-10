@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scale, verticalScale } from "react-native-size-matters";
 import { useRouter } from "expo-router";
 import apiClient from "../../../api/apiClient";
-import { useAppStore } from "../../../store/useAppStore";
+import { hasActiveSubscription, useAppStore } from "../../../store/useAppStore";
 
 import ActionFilterBar from "../../../components/home/ActionFilterBar";
 import AIInsightBox from "../../../components/home/AIInsightBox";
@@ -198,6 +198,8 @@ export default function TabsIndex() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const appLanguage = useAppStore((state) => state.appLanguage);
+  const user = useAppStore((state) => state.user);
+  const hasSubscription = hasActiveSubscription(user);
 
   const setAnalyticsData = useAppStore((state) => state.setAnalyticsData);
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
@@ -546,6 +548,9 @@ export default function TabsIndex() {
 
   useFocusEffect(
     useCallback(() => {
+      if (!hasSubscription) {
+        return () => {};
+      }
       hasFocusedRef.current = true;
       previousPeriodRef.current = activePeriod;
       const hasCachedShell = !!homeScreenCache.shellData;
@@ -565,19 +570,19 @@ export default function TabsIndex() {
       }
       return () => {
       };
-    }, [activePeriod, fetchHomeData, homeScreenCache.fetchedAt, homeScreenCache.shellData, hydrateSupportingData])
+    }, [activePeriod, fetchHomeData, hasSubscription, homeScreenCache.fetchedAt, homeScreenCache.shellData, hydrateSupportingData])
   );
 
   useEffect(() => {
-    if (!hasFocusedRef.current || loading || previousPeriodRef.current === activePeriod) {
+    if (!hasSubscription || !hasFocusedRef.current || loading || previousPeriodRef.current === activePeriod) {
       return;
     }
     previousPeriodRef.current = activePeriod;
     void fetchTopPrioritySections(activePeriod);
-  }, [activePeriod, fetchTopPrioritySections, loading]);
+  }, [activePeriod, fetchTopPrioritySections, hasSubscription, loading]);
 
   useEffect(() => {
-    if (!loading) {
+    if (hasSubscription && !loading) {
       void fetchTopPrioritySections(activePeriod);
       if (triggeredSectionsRef.current.revenue && !revenueByPeriod[activePeriod]) {
         void fetchRevenueSection(activePeriod);
@@ -586,23 +591,32 @@ export default function TabsIndex() {
         void fetchInsightSection(activePeriod);
       }
     }
-  }, [activePeriod, fetchInsightSection, fetchRevenueSection, fetchTopPrioritySections, insightByPeriod, loading, revenueByPeriod]);
+  }, [activePeriod, fetchInsightSection, fetchRevenueSection, fetchTopPrioritySections, hasSubscription, insightByPeriod, loading, revenueByPeriod]);
 
   useEffect(() => {
+    if (!hasSubscription) {
+      return;
+    }
     if (!hasInitializedLanguageRef.current) {
       hasInitializedLanguageRef.current = true;
       return;
     }
     void fetchHomeShell();
-  }, [appLanguage, fetchHomeShell]);
+  }, [appLanguage, fetchHomeShell, hasSubscription]);
 
   const onRefresh = () => {
+    if (!hasSubscription) {
+      return;
+    }
     setRefreshing(true);
     setLoading(true);
     void fetchHomeData(activePeriod, false, true);
   };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!hasSubscription) {
+      return;
+    }
     const offsetY = event.nativeEvent.contentOffset.y;
 
     if (offsetY >= REVENUE_TRIGGER_Y && !triggeredSectionsRef.current.revenue) {

@@ -1,5 +1,4 @@
 import axios from "axios";
-import { router } from "expo-router";
 import { useAppStore } from "../store/useAppStore";
 import { API_REQUEST_TIMEOUT_MS, getApiBaseUrl, getApiErrorMessage, isNetworkLikeApiError } from "../utils/api";
 import { showModalErrorMessage } from "../utils/feedback";
@@ -72,12 +71,11 @@ const clearStaleSession = () => {
   router.replace("/(auth)" as any);
 };
 
-const redirectToSubscriptionSelection = () => {
+const redirectToSubscriptionStatus = () => {
   if (isRedirectingToSubscription) {
     return;
   }
   isRedirectingToSubscription = true;
-  router.replace("/(auth)/subscription" as any);
   setTimeout(() => {
     isRedirectingToSubscription = false;
   }, 1500);
@@ -146,7 +144,7 @@ apiClient.interceptors.response.use(
       subscriptionErrorCode === "subscription_required"
     ) {
       markLocalSubscriptionRequired(error);
-      redirectToSubscriptionSelection();
+      redirectToSubscriptionStatus();
     }
     if (error.response?.status === 403 && subscriptionErrorCode === "onboarding_required") {
       redirectToOnboarding();

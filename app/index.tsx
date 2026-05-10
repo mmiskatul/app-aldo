@@ -161,7 +161,7 @@ export default function OnboardingScreen() {
       return <Redirect href="/(tabs)/settings/restricted-access" />;
     }
     if (!hasActiveSubscription(user)) {
-      return <Redirect href="/(auth)/subscription" />;
+      return <Redirect href="/(tabs)/home" />;
     }
     if (!hasCompletedOnboarding(user)) {
       return <Redirect href="/(auth)/setup" />;

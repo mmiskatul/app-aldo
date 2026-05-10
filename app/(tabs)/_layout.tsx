@@ -12,7 +12,7 @@ import React, { useEffect, useState } from "react";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
 import StartupSplash from "../../components/app/StartupSplash";
-import { getRestrictedAccessStatus, hasActiveSubscription, useAppStore } from "../../store/useAppStore";
+import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../utils/i18n";
 
 const hugeiconsAny = HugeiconsModule as any;
@@ -27,7 +27,7 @@ export default function TabLayout() {
   const tokens = useAppStore((state) => state.tokens);
   const setUser = useAppStore((state) => state.setUser);
   const logout = useAppStore((state) => state.logout);
-  const [isSessionChecking, setIsSessionChecking] = useState(true);
+  const [isSessionChecking, setIsSessionChecking] = useState(false);
   const isRestrictedAccess = getRestrictedAccessStatus(user) !== null;
   const currentLeaf = (segments as string[])[2];
 
@@ -44,6 +44,9 @@ export default function TabLayout() {
     let isMounted = true;
 
     const validateSession = async () => {
+      if (isMounted && !user) {
+        setIsSessionChecking(true);
+      }
       try {
         const currentUser = await getCurrentUser();
         if (!isMounted) {
@@ -71,7 +74,7 @@ export default function TabLayout() {
     return () => {
       isMounted = false;
     };
-  }, [hasHydrated, logout, setUser, tokens]);
+  }, [hasHydrated, logout, setUser, tokens, user]);
 
   if (!hasHydrated || isSessionChecking) {
     return <StartupSplash />;
@@ -83,10 +86,6 @@ export default function TabLayout() {
 
   if (isRestrictedAccess && currentLeaf !== "help-center" && currentLeaf !== "restricted-access") {
     return <Redirect href="/(tabs)/settings/restricted-access" />;
-  }
-
-  if (!hasActiveSubscription(user)) {
-    return <Redirect href="/(auth)/subscription" />;
   }
 
   if (!hasCompletedOnboarding(user)) {

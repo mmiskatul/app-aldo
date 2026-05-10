@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useAppStore } from '../../store/useAppStore';
-import { useTranslation } from '../../utils/i18n';
 import ProfilePlaceholderAvatar from '../ui/ProfilePlaceholderAvatar';
 
 interface ProfileCardProps {
@@ -11,12 +11,11 @@ interface ProfileCardProps {
 
 export default function ProfileCard({ onEditProfile }: ProfileCardProps) {
   const profile = useAppStore((state) => state.profile);
-  const { t } = useTranslation();
   const hasProfileImage = !!profile?.profile_image_url;
   const locationParts = [profile?.restaurant_name, profile?.city_location].filter(Boolean);
 
   return (
-    <View style={styles.container}>
+    <TouchableOpacity style={styles.container} onPress={onEditProfile} activeOpacity={0.85}>
       <View style={styles.infoRow}>
         {hasProfileImage ? (
           <Image
@@ -31,16 +30,11 @@ export default function ProfileCard({ onEditProfile }: ProfileCardProps) {
           {profile?.email ? <Text style={styles.email}>{profile.email}</Text> : null}
           {locationParts.length > 0 ? <Text style={styles.location}>{locationParts.join(' • ')}</Text> : null}
         </View>
+        <View style={styles.editIconBadge}>
+          <Feather name="edit-2" size={moderateScale(14)} color="#FA8C4C" />
+        </View>
       </View>
-      
-      <TouchableOpacity 
-        style={styles.editButton} 
-        onPress={onEditProfile}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.editButtonText}>{t('edit_profile_button')}</Text>
-      </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -55,7 +49,6 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: verticalScale(16),
   },
   avatar: {
     width: scale(70),
@@ -84,15 +77,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: verticalScale(4),
   },
-  editButton: {
-    backgroundColor: '#FA8C4C',
-    borderRadius: scale(12),
-    paddingVertical: verticalScale(12),
+  editIconBadge: {
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(17),
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
     alignItems: 'center',
-  },
-  editButtonText: {
-    color: '#FFFFFF',
-    fontSize: moderateScale(15, 0.3),
-    fontWeight: '700',
+    justifyContent: 'center',
+    marginLeft: scale(12),
   },
 });

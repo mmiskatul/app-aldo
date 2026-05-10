@@ -40,7 +40,14 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
 
   return (
     <View style={styles.container}>
-      <View style={styles.leftSection}>
+      <TouchableOpacity
+        style={styles.leftSection}
+        onPress={() => router.push({
+          pathname: "/(tabs)/settings/edit-profile",
+          params: { origin: "/(tabs)/home" },
+        } as any)}
+        activeOpacity={0.7}
+      >
         {hasProfileImage ? (
           <Image
             style={styles.avatar}
@@ -62,7 +69,7 @@ export default function HomeHeader({ greetingName, restaurantName, preferredLang
             {displayName}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.rightSection}>
         <TouchableOpacity

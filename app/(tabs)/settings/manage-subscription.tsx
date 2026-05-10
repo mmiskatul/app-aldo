@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import Header from '../../../components/ui/Header';
@@ -22,7 +21,6 @@ import { formatBillingCycleLabel, formatReadableDate, formatSubscriptionStatus }
 import { showDialog, showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 
 export default function ManageSubscriptionScreen() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [activatingPlanId, setActivatingPlanId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -125,7 +123,6 @@ export default function ManageSubscriptionScreen() {
       }
       clearHomeScreenCache();
       clearAnalyticsScreenCache();
-      router.replace('/(auth)/subscription' as any);
     } catch (error: any) {
       showErrorMessage(error?.message || 'Unable to cancel subscription.');
     } finally {

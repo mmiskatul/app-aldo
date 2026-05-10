@@ -387,7 +387,7 @@ export default function SetupScreen() {
       if (user.subscription_plan_name && !["canceled", "expired", "suspended"].includes(String(user.subscription_status || ""))) {
         router.replace("/(tabs)/home" as any);
       } else {
-        router.replace("/(auth)/subscription" as any);
+        router.replace("/(tabs)/home" as any);
       }
     } catch (error: any) {
       console.error("Error saving onboarding:", {

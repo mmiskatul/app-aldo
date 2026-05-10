@@ -19,9 +19,6 @@ export default function AuthLayout() {
     if (getRestrictedAccessStatus(user) !== null) {
       return <Redirect href="/(tabs)/settings/restricted-access" />;
     }
-    if (!hasActiveSubscription(user) && currentLeaf !== "subscription") {
-      return <Redirect href="/(auth)/subscription" />;
-    }
     if (hasActiveSubscription(user) && !hasCompletedOnboarding(user) && currentLeaf !== "setup") {
       return <Redirect href="/(auth)/setup" />;
     }
@@ -35,6 +32,7 @@ export default function AuthLayout() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="signup" options={{ headerShown: false }} />
       <Stack.Screen name="verify" options={{ headerShown: false }} />
+      <Stack.Screen name="subscription-status" options={{ headerShown: false }} />
       <Stack.Screen name="subscription" options={{ headerShown: false }} />
       <Stack.Screen name="setup" options={{ headerShown: false }} />
       <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
