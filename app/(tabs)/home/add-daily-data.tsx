@@ -23,6 +23,7 @@ import MethodSelector from "../../../components/home/add-daily-data/MethodSelect
 import RevenueInputMethodsModal from "../../../components/home/add-daily-data/RevenueInputMethodsModal";
 import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
 import { useAppStore } from "../../../store/useAppStore";
+import type { DailyDataListCacheItem } from "../../../store/useAppStore";
 import { getApiErrorMessage } from "../../../utils/api";
 import { useTranslation } from "../../../utils/i18n";
 
@@ -116,6 +117,7 @@ export default function AddDailyDataScreen() {
   const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
   const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
+  const cachedDateItems = useAppStore((state) => state.dailyDataScreenCache.itemsBySegment.date);
   const [selectedMethod, setSelectedMethod] = useState<"method1" | "method2">("method1");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingRecord, setIsLoadingRecord] = useState(false);
@@ -175,6 +177,69 @@ export default function AddDailyDataScreen() {
     return numericValue === 0 ? "" : String(numericValue);
   };
 
+  const applyRecordToForm = (record: DailyDataEditResponse | DailyDataListCacheItem) => {
+    setBusinessDate(record.business_date || getLocalBusinessDate());
+    setSelectedMethod(record.method === "method_2" ? "method2" : "method1");
+    setMethod1Data({
+      pos_payments: formatNumberForInput(Number(record.pos_payments || 0)),
+      cash_withdrawals: formatNumberForInput(Number(record.cash_withdrawals || 0)),
+      cash_in: formatNumberForInput(Number(record.cash_in || 0)),
+      cash_out: formatNumberForInput(Number(record.cash_out || 0)),
+      expenses_in_cash: formatNumberForInput(Number(record.expenses_in_cash || 0)),
+      lunch_covers: formatNumberForInput(Number(record.lunch_covers || 0)),
+      dinner_covers: formatNumberForInput(Number(record.dinner_covers || 0)),
+      opening_cash: formatNumberForInput(Number(record.opening_cash || 0)),
+      closing_cash: formatNumberForInput(Number(record.closing_cash || 0)),
+      notes: record.notes || "",
+    });
+    setMethod2Data({
+      pos_payments: formatNumberForInput(Number(record.pos_payments || 0)),
+      cash_payments: formatNumberForInput(Number(record.cash_payments || 0)),
+      bank_transfer_payments: formatNumberForInput(Number(record.bank_transfer_payments || 0)),
+      expenses_in_cash: formatNumberForInput(Number(record.expenses_in_cash || 0)),
+      lunch_covers: formatNumberForInput(Number(record.lunch_covers || 0)),
+      dinner_covers: formatNumberForInput(Number(record.dinner_covers || 0)),
+      opening_cash: formatNumberForInput(Number(record.opening_cash || 0)),
+      closing_cash: formatNumberForInput(Number(record.closing_cash || 0)),
+    });
+    setInventoryUsage(
+      record.inventory_usage?.length
+        ? record.inventory_usage.map((item, index) => ({
+            rowId: `${item.inventory_item_id}-${index}`,
+            inventoryItemId: item.inventory_item_id,
+            productName: item.product_name,
+            query: item.product_name,
+            quantityUsed: formatNumberForInput(item.quantity_used),
+            availableQuantity: 0,
+            unitType: item.unit_type,
+          }))
+        : [
+            {
+              rowId: String(Date.now()),
+              inventoryItemId: "",
+              productName: "",
+              query: "",
+              quantityUsed: "",
+              availableQuantity: 0,
+              unitType: "",
+            },
+          ],
+    );
+  };
+
+  const cachedEditableRecord = useMemo(
+    () =>
+      editingRecordId
+        ? cachedDateItems?.find(
+            (item) =>
+              (item.record_id === editingRecordId || item.id === editingRecordId) &&
+              typeof item.method === "string" &&
+              item.method.length > 0,
+          ) || null
+        : null,
+    [cachedDateItems, editingRecordId],
+  );
+
   useEffect(() => {
     const fetchInventoryItems = async () => {
       try {
@@ -198,60 +263,18 @@ export default function AddDailyDataScreen() {
       return;
     }
 
+    if (cachedEditableRecord) {
+      applyRecordToForm(cachedEditableRecord);
+      return;
+    }
+
     const fetchRecord = async () => {
       setIsLoadingRecord(true);
       try {
         const response = await apiClient.get<DailyDataEditResponse>(
           `/api/v1/restaurant/daily-data/${encodeURIComponent(editingRecordId)}`,
         );
-        const record = response.data;
-        setBusinessDate(record.business_date || getLocalBusinessDate());
-        setSelectedMethod(record.method === "method_2" ? "method2" : "method1");
-        setMethod1Data({
-          pos_payments: formatNumberForInput(record.pos_payments),
-          cash_withdrawals: formatNumberForInput(record.cash_withdrawals),
-          cash_in: formatNumberForInput(record.cash_in),
-          cash_out: formatNumberForInput(record.cash_out),
-          expenses_in_cash: formatNumberForInput(record.expenses_in_cash),
-          lunch_covers: formatNumberForInput(record.lunch_covers),
-          dinner_covers: formatNumberForInput(record.dinner_covers),
-          opening_cash: formatNumberForInput(record.opening_cash),
-          closing_cash: formatNumberForInput(record.closing_cash),
-          notes: record.notes || "",
-        });
-        setMethod2Data({
-          pos_payments: formatNumberForInput(record.pos_payments),
-          cash_payments: formatNumberForInput(record.cash_payments),
-          bank_transfer_payments: formatNumberForInput(record.bank_transfer_payments),
-          expenses_in_cash: formatNumberForInput(record.expenses_in_cash),
-          lunch_covers: formatNumberForInput(record.lunch_covers),
-          dinner_covers: formatNumberForInput(record.dinner_covers),
-          opening_cash: formatNumberForInput(record.opening_cash),
-          closing_cash: formatNumberForInput(record.closing_cash),
-        });
-        setInventoryUsage(
-          record.inventory_usage?.length
-            ? record.inventory_usage.map((item, index) => ({
-                rowId: `${item.inventory_item_id}-${index}`,
-                inventoryItemId: item.inventory_item_id,
-                productName: item.product_name,
-                query: item.product_name,
-                quantityUsed: formatNumberForInput(item.quantity_used),
-                availableQuantity: 0,
-                unitType: item.unit_type,
-              }))
-            : [
-                {
-                  rowId: String(Date.now()),
-                  inventoryItemId: "",
-                  productName: "",
-                  query: "",
-                  quantityUsed: "",
-                  availableQuantity: 0,
-                  unitType: "",
-                },
-              ],
-        );
+        applyRecordToForm(response.data);
       } catch (error: any) {
         console.error("Error loading daily record for edit:", error?.response?.data || error?.message);
         showErrorMessage(t("unable_to_load_daily_record"));
@@ -261,7 +284,7 @@ export default function AddDailyDataScreen() {
     };
 
     void fetchRecord();
-  }, [editingRecordId, t]);
+  }, [cachedEditableRecord, editingRecordId, t]);
 
   useEffect(() => {
     if (!inventoryItems.length) {

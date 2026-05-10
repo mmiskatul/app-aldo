@@ -352,6 +352,38 @@ export interface DailyDataListCacheItem {
   total_expenses: number;
   total_covers: number;
   avg_revenue_per_cover: number;
+  method?: string | null;
+  profit?: number | null;
+  lunch_covers?: number | null;
+  dinner_covers?: number | null;
+  pos_payments?: number | null;
+  cash_withdrawals?: number | null;
+  cash_in?: number | null;
+  cash_out?: number | null;
+  cash_payments?: number | null;
+  bank_transfer_payments?: number | null;
+  expenses_in_cash?: number | null;
+  opening_cash?: number | null;
+  closing_cash?: number | null;
+  notes?: string | null;
+  inventory_usage?: {
+    inventory_item_id: string;
+    product_name: string;
+    quantity_used: number;
+    unit_type: string;
+    unit_cost?: number;
+    total_cost?: number;
+  }[];
+  method_sections?: {
+    key: string;
+    title: string;
+    fields: {
+      key: string;
+      label: string;
+      value: number | string | null;
+      value_type: "currency" | "integer" | "text";
+    }[];
+  }[];
 }
 
 export interface DailyDataScreenCache {

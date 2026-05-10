@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +18,7 @@ import SectionDataCard, {
   SectionDataField,
 } from "../../../components/home/data-management/daily-record-details/SectionDataCard";
 import Header from "../../../components/ui/Header";
+import { useAppStore } from "../../../store/useAppStore";
 import { getLocale, useTranslation } from "../../../utils/i18n";
 import { generateDailyDataExcelExport, generateDailyDataPdfExport } from "../../../utils/exportData";
 import { showErrorMessage } from "../../../utils/feedback";
@@ -110,6 +112,7 @@ const endpointForSegment = (segment: DetailSegment, referenceDate: string) => {
 export default function DailyRecordDetailsScreen() {
   const { t } = useTranslation();
   const locale = getLocale();
+  const cachedDateItems = useAppStore((state) => state.dailyDataScreenCache.itemsBySegment.date);
   const { segment, referenceDate, recordId, dataId } = useLocalSearchParams<{
     segment?: DetailSegment;
     referenceDate?: string;
@@ -160,8 +163,33 @@ export default function DailyRecordDetailsScreen() {
   const selectedSegment: DetailSegment = resolvedRoute.segment;
   const resolvedReferenceDate = resolvedRoute.referenceDate;
   const resolvedRecordId = resolvedRoute.recordId;
-  const [record, setRecord] = useState<DailyRecordDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cachedRecord = useMemo<DailyRecordDetail | null>(() => {
+    if (!resolvedRecordId) {
+      return null;
+    }
+    const matchedItem = cachedDateItems?.find(
+      (item) =>
+        (item.record_id === resolvedRecordId || item.id === resolvedRecordId) &&
+        Array.isArray(item.method_sections) &&
+        item.method_sections.length > 0,
+    );
+    if (!matchedItem) {
+      return null;
+    }
+    return {
+      id: matchedItem.record_id || matchedItem.id,
+      business_date: matchedItem.business_date,
+      method: matchedItem.method || undefined,
+      total_revenue: Number(matchedItem.total_revenue || 0),
+      total_expenses: Number(matchedItem.total_expenses || 0),
+      invoice_document_total: 0,
+      total_covers: Number(matchedItem.total_covers || 0),
+      avg_revenue_per_cover: Number(matchedItem.avg_revenue_per_cover || 0),
+      method_sections: matchedItem.method_sections || [],
+    };
+  }, [cachedDateItems, resolvedRecordId]);
+  const [record, setRecord] = useState<DailyRecordDetail | null>(cachedRecord);
+  const [loading, setLoading] = useState(!cachedRecord);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [showGroupedHeader, setShowGroupedHeader] = useState(
     typeof dataId === "string" && /^(date|week|month):/.test(dataId),
@@ -175,6 +203,9 @@ export default function DailyRecordDetailsScreen() {
       }
 
       try {
+        if (!cachedRecord) {
+          setLoading(true);
+        }
         let response;
 
         if (resolvedRecordId) {
@@ -235,7 +266,7 @@ export default function DailyRecordDetailsScreen() {
     };
 
     void fetchRecord();
-  }, [fromDataId, resolvedRecordId, resolvedReferenceDate, selectedSegment]);
+  }, [cachedRecord, fromDataId, resolvedRecordId, resolvedReferenceDate, selectedSegment]);
 
   const summary = useMemo(() => {
     const expenses = (record?.total_expenses ?? 0) + (record?.invoice_document_total ?? 0);
@@ -369,12 +400,11 @@ export default function DailyRecordDetailsScreen() {
         animationType="fade"
         onRequestClose={() => setIsExportMenuOpen(false)}
       >
-        <TouchableOpacity
+        <Pressable
           style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setIsExportMenuOpen(false)}
+          onPress={() => setIsExportMenuOpen(false)}
         >
-          <TouchableOpacity activeOpacity={1} style={styles.exportMenu}>
+          <Pressable style={styles.exportMenu} onPress={() => {}}>
             <TouchableOpacity
               style={styles.exportOption}
               onPress={() => {
@@ -393,8 +423,8 @@ export default function DailyRecordDetailsScreen() {
             >
               <Text style={styles.exportOptionText}>Excel</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );

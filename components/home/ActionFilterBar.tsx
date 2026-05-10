@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   ArrowDownTrayIcon,
@@ -70,14 +70,13 @@ export default function ActionFilterBar({
         animationType="fade"
         onRequestClose={() => setIsExportMenuOpen(false)}
       >
-        <TouchableOpacity
+        <Pressable
           style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setIsExportMenuOpen(false)}
+          onPress={() => setIsExportMenuOpen(false)}
         >
-          <TouchableOpacity
-            activeOpacity={1}
+          <Pressable
             style={[styles.dropdownMenu, { right: scale(100), top: dropdownTop }]}
+            onPress={() => {}}
           >
             <TouchableOpacity
               style={styles.exportOptionBtn}
@@ -98,8 +97,8 @@ export default function ActionFilterBar({
             >
               <Text style={styles.exportOptionText}>Excel</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Period Selection Modal */}
@@ -109,14 +108,13 @@ export default function ActionFilterBar({
         animationType="fade"
         onRequestClose={() => setIsPeriodMenuOpen(false)}
       >
-        <TouchableOpacity
+        <Pressable
           style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setIsPeriodMenuOpen(false)}
+          onPress={() => setIsPeriodMenuOpen(false)}
         >
-          <TouchableOpacity
-            activeOpacity={1}
+          <Pressable
             style={[styles.dropdownMenu, { right: scale(20), top: dropdownTop }]}
+            onPress={() => {}}
           >
             {availablePeriods.map((period) => (
               <TouchableOpacity
@@ -143,8 +141,8 @@ export default function ActionFilterBar({
                 </Text>
               </TouchableOpacity>
             ))}
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
