@@ -59,7 +59,7 @@ export default function DetailsActions({
       {!isEditing && (
         <TouchableOpacity style={styles.deleteButton} onPress={onDelete} disabled={isBusy}>
           <Feather name="trash-2" size={moderateScale(16)} color="#EF4444" style={{ marginRight: scale(8) }}/>
-          <Text style={styles.deleteText}>{t('delete_document_title')}</Text>
+          <Text style={styles.deleteText}>{t('delete')}</Text>
         </TouchableOpacity>
       )}
     </View>

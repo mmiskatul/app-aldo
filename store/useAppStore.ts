@@ -2,18 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import type { AuthenticatedUser } from "../api/auth";
+
 const DEFAULT_APP_LANGUAGE = "it" as const;
 
-export interface User {
-  id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  restaurant_name?: string | null;
-  account_status?: string | null;
-  onboarding_completed?: boolean;
-  [key: string]: any; // Allow other fields from the API
-}
+export type User = AuthenticatedUser;
 
 export const getRestrictedAccessStatus = (user: User | null): "restricted" | "suspended" | null => {
   if (!user || user.is_active !== false) {
@@ -49,7 +42,7 @@ export interface Profile {
   full_name: string;
   email: string;
   phone: string | null;
-  restaurant_name: string;
+  restaurant_name: string | null;
   restaurant_type: string | null;
   location: string | null;
   city_location: string | null;
@@ -87,21 +80,22 @@ export interface AnalyticsData {
   weekly_revenue: { label: string; value: number }[];
   metric_tiles: {
     label: string;
-    value: any;
+    value: number | string;
     change_percent?: number;
     subtitle?: string;
   }[];
-  summary_stats: { label: string; value: any }[];
+  summary_stats: { label: string; value: number | string }[];
   revenue_comparison: { label: string; value: number }[];
   covers_total: number;
   covers_activity: { label: string; value: number }[];
   avg_revenue_per_cover: number;
   cost_breakdown: { label: string; value: number }[];
-  supplier_price_alerts: any[];
+  supplier_price_alerts: Array<Record<string, unknown>>;
 }
 
 export interface CashOverviewData {
   active_period: string;
+  fetched_at?: number | null;
   periods: {
     [key: string]: {
       summary: {
@@ -109,6 +103,7 @@ export interface CashOverviewData {
         cash_available: number;
         pos_payments: number;
         withdrawals_total: number;
+        bank_deposits?: number;
         bank_deposits_total: number;
       };
       status: {
@@ -127,8 +122,9 @@ export interface VatOverviewData {
   estimated_vat_balance: number;
   vat_payable: number;
   vat_receivable: number;
-  filing_deadline: string;
+  filing_deadline: string | null;
   report_ready: boolean;
+  fetched_at?: number | null;
 }
 
 export interface InventoryDetailCacheItem {
@@ -325,22 +321,42 @@ export interface AnalyticsScreenCache {
   fetchedAt: number | null;
 }
 
+export interface DocumentListCacheItem {
+  id: string;
+  document_type?: string | null;
+  document_label?: string | null;
+  counterparty_name?: string | null;
+  supplier_name?: string | null;
+  document_number?: string | null;
+  invoice_number?: string | null;
+  document_date?: string | null;
+  invoice_date?: string | null;
+  invoice_date_formatted?: string | null;
+  upload_date?: string | null;
+  created_at?: string | null;
+  total_amount?: number | null;
+  line_item_count?: number | null;
+  status?: string | null;
+}
+
+export interface DocumentsBannerData {
+  title: string;
+  subtitle: string;
+}
+
 export interface DocumentsScreenCache {
-  documents: any[];
-  bannerData: {
-    title: string;
-    subtitle: string;
-  };
+  documents: DocumentListCacheItem[];
+  bannerData: DocumentsBannerData;
   fetchedAt: number | null;
 }
 
 export interface ExpensesScreenCache {
-  data: any | null;
+  data: Record<string, unknown> | null;
   fetchedAt: number | null;
 }
 
 export interface NotificationsScreenCache {
-  items: any[];
+  items: Array<Record<string, unknown>>;
   fetchedAt: number | null;
 }
 

@@ -5,6 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import Skeleton, { SkeletonCard } from "../ui/Skeleton";
+import { DocumentListCacheItem } from "../../store/useAppStore";
 import { useTranslation } from "../../utils/i18n";
 import { formatEuropeanDate } from "../../utils/date";
 
@@ -20,7 +21,7 @@ interface DocumentProp {
 }
 
 interface RecentDocumentsListProps {
-  documents?: any[];
+  documents?: DocumentListCacheItem[];
   loading?: boolean;
   headerContent?: React.ReactNode;
   emptyContent?: React.ReactNode;

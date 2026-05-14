@@ -1,8 +1,8 @@
 import { Feather } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -14,7 +14,11 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../../api/apiClient";
 import Header from "../../../components/ui/Header";
 import { ListRouteSkeleton } from "../../../components/ui/RouteSkeletons";
+import StateCard from "../../../components/ui/StateCard";
+import { useCachedFocusRefresh } from "../../../hooks/useCachedFocusRefresh";
 import { useAppStore } from "../../../store/useAppStore";
+import { getApiDisplayMessage, logApiError } from "../../../utils/apiErrors";
+import { normalizeCashOverviewData } from "../../../utils/restaurantData";
 
 import CashMetrics from "../../../components/home/cash/CashMetrics";
 import RecentDeposits from "../../../components/home/cash/RecentDeposits";
@@ -28,6 +32,29 @@ type CashSummary = {
   bank_deposits_total?: number;
 };
 
+const CASH_OVERVIEW_CACHE_TTL_MS = 60 * 1000;
+
+const normalizeCashSummary = (summary?: Partial<CashSummary> | null): CashSummary | null => {
+  if (!summary) {
+    return null;
+  }
+
+  const posPayments = Number(summary.pos_payments ?? 0);
+  const cashAvailable = Number(summary.cash_available ?? 0);
+  const bankDeposits = Number(summary.bank_deposits ?? summary.bank_deposits_total ?? 0);
+  const withdrawalsTotal = Number(summary.withdrawals_total ?? 0);
+  const totalCollected = Number(summary.total_collected ?? cashAvailable + posPayments + bankDeposits);
+
+  return {
+    total_collected: totalCollected,
+    cash_available: cashAvailable,
+    pos_payments: posPayments,
+    withdrawals_total: withdrawalsTotal,
+    bank_deposits: bankDeposits,
+    bank_deposits_total: Number(summary.bank_deposits_total ?? bankDeposits),
+  };
+};
+
 export default function CashManagementScreen() {
   const router = useRouter();
 
@@ -37,6 +64,8 @@ export default function CashManagementScreen() {
   const [activeFilter, setActiveFilter] = useState("Today");
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(!cashOverviewData?.periods?.today);
+  const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const filters = ["Today", "This Week", "This Month"];
 
@@ -53,12 +82,21 @@ export default function CashManagementScreen() {
     }
   };
 
-  const fetchCashOverview = useCallback(async () => {
+  const fetchCashOverview = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setLoading(true);
+    }
     try {
       const cashOverviewRes = await apiClient.get("/api/v1/restaurant/cash/overview");
-      setCashOverviewData(cashOverviewRes.data);
+      setCashOverviewData({
+        ...normalizeCashOverviewData(cashOverviewRes.data),
+        fetched_at: Date.now(),
+      });
+      setError(null);
     } catch (error) {
-      console.error("Error fetching cash overview:", error);
+      logApiError("cash.overview", error);
+      setError(getApiDisplayMessage(error, "Unable to load cash overview."));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -67,59 +105,70 @@ export default function CashManagementScreen() {
 
   useEffect(() => {
     if (!cashOverviewData?.periods?.today) {
-      fetchCashOverview();
+      void fetchCashOverview();
       return;
     }
     setLoading(false);
   }, [cashOverviewData?.periods?.today, fetchCashOverview]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!cashOverviewData?.periods?.today) {
-        setLoading(true);
-      }
+  useCachedFocusRefresh({
+    hasCache: Boolean(cashOverviewData?.periods?.today),
+    fetchedAt: cashOverviewData?.fetched_at ?? null,
+    ttlMs: CASH_OVERVIEW_CACHE_TTL_MS,
+    loadOnEmpty: () => {
       void fetchCashOverview();
-    }, [cashOverviewData?.periods?.today, fetchCashOverview])
-  );
+    },
+    refreshStale: () => {
+      void fetchCashOverview({ silent: true });
+    },
+  });
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setLoading(true);
-    fetchCashOverview();
+    void fetchCashOverview({ silent: true });
   }, [fetchCashOverview]);
 
   const periodKey = filterToPeriodKey(activeFilter);
   const currentData = cashOverviewData?.periods?.[periodKey];
   const hasScreenData = Boolean(currentData);
 
-  const currentSummary: CashSummary | null = currentData?.summary
-    ? (() => {
-        const posPayments = Number((currentData.summary as any).pos_payments ?? 0);
-        const cashAvailable = Number((currentData.summary as any).cash_available ?? 0);
-        const bankDeposits =
-          Number(
-            (currentData.summary as any).bank_deposits ??
-            (currentData.summary as any).bank_deposits_total ??
-            0,
-          );
-        return {
-          ...currentData.summary,
-          total_collected: cashAvailable + posPayments + bankDeposits,
-          cash_available: cashAvailable,
-          bank_deposits: bankDeposits,
-          pos_payments: posPayments,
-        };
-      })()
-    : null;
+  const currentSummary = normalizeCashSummary(currentData?.summary);
 
   const recentTransactions = currentData?.recent_deposits;
+
+  const handleRetry = useCallback(async () => {
+    setRetrying(true);
+    try {
+      await fetchCashOverview();
+    } finally {
+      setRetrying(false);
+    }
+  }, [fetchCashOverview]);
 
   return (
     <View style={styles.safeArea}>
       <Header title="Cash Management" showBack={true} fallbackHref="/(tabs)/home" />
 
-      {loading ? (
+      {loading && !hasScreenData ? (
         <ListRouteSkeleton itemCount={3} />
+      ) : error && !hasScreenData ? (
+        <View style={styles.stateCardWrap}>
+          <StateCard
+            title="Unable to load cash overview"
+            description={error}
+            tone="error"
+            actionLabel="Try Again"
+            actionLoading={retrying}
+            onAction={() => void handleRetry()}
+          />
+        </View>
+      ) : !hasScreenData ? (
+        <View style={styles.stateCardWrap}>
+          <StateCard
+            title="No cash data yet"
+            description="Add a bank deposit or upload more daily data to start tracking cash activity here."
+          />
+        </View>
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -181,19 +230,7 @@ export default function CashManagementScreen() {
 
           {currentData && (
             <>
-              <CashMetrics
-                summary={
-                  currentSummary ?? {
-                    ...currentData.summary,
-                    bank_deposits:
-                      (currentData.summary as any).bank_deposits ??
-                      (currentData.summary as any).bank_deposits_total ??
-                      0,
-                    pos_payments: (currentData.summary as any).pos_payments ?? 0,
-                  }
-                }
-                status={currentData.status}
-              />
+              {currentSummary ? <CashMetrics summary={currentSummary} status={currentData.status} /> : null}
               <RecentDeposits deposits={recentTransactions} />
             </>
           )}
@@ -278,5 +315,9 @@ const styles = StyleSheet.create({
   filterTextActive: {
     color: "#FFFFFF",
     fontWeight: "600",
+  },
+  stateCardWrap: {
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(16),
   },
 });

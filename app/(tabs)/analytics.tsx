@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity } from 'react-native';
+import React, { startTransition } from 'react';
+import { ActivityIndicator, View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-import { useFocusEffect } from '@react-navigation/native';
 
 import { useCachedFocusRefresh } from '../../hooks/useCachedFocusRefresh';
 import Header from '../../components/ui/Header';
@@ -14,6 +13,7 @@ import ActivityCostSection from '../../components/analytics/ActivityCostSection'
 import SupplierPriceAlerts from '../../components/analytics/SupplierPriceAlerts';
 import ActionFilterBar from '../../components/home/ActionFilterBar';
 import Skeleton, { SkeletonCard } from '../../components/ui/Skeleton';
+import StateCard from '../../components/ui/StateCard';
 import apiClient from '../../api/apiClient';
 import { useAppStore } from '../../store/useAppStore';
 import { getApiDisplayMessage, logApiError } from '../../utils/apiErrors';
@@ -21,6 +21,14 @@ import { showErrorMessage } from '../../utils/feedback';
 import { useTranslation } from '../../utils/i18n';
 import { resolveLocalizedText } from '../../utils/localizedContent';
 import { generateAnalyticsPdfExport, generateAnalyticsExcelExport } from '../../utils/exportData';
+import {
+  asArray,
+  asNumber,
+  asString,
+  normalizeAnalyticsComparisonItems,
+  normalizeAnalyticsInsight,
+  normalizeAnalyticsSummaryItems,
+} from '../../utils/restaurantData';
 
 type PeriodKey = 'weekly' | 'monthly';
 
@@ -53,6 +61,11 @@ type RevenuePoint = {
 type SummaryStat = {
   label: string;
   value: number | string;
+};
+
+type ActivityCostStat = {
+  label: string;
+  value: number;
 };
 
 type RevenueComparison = {
@@ -95,6 +108,55 @@ interface AnalyticsOverviewResponse {
   supplier_price_alerts: SupplierAlert[];
 }
 
+const normalizeMetricTiles = (value: unknown): MetricTile[] =>
+  asArray(value, (item) => {
+    const record = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+    return {
+      label: asString(record.label),
+      value: typeof record.value === 'string' ? record.value : asNumber(record.value, 0),
+      change_percent: asNumber(record.change_percent, 0),
+      subtitle: asString(record.subtitle),
+    };
+  });
+
+const normalizeRevenuePoints = (value: unknown): RevenuePoint[] =>
+  asArray(value, (item) => {
+    const record = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+    return {
+      label: asString(record.label),
+      value: asNumber(record.value, 0),
+    };
+  });
+
+const normalizeSupplierAlerts = (value: unknown): SupplierAlert[] =>
+  asArray(value, (item) => {
+    const record = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+    return {
+      title: asString(record.title),
+      subtitle: asString(record.subtitle),
+      impact: asString(record.impact),
+      ai_provider: typeof record.ai_provider === 'string' ? record.ai_provider : null,
+      title_translations: record.title_translations as SupplierAlert['title_translations'],
+      subtitle_translations: record.subtitle_translations as SupplierAlert['subtitle_translations'],
+    };
+  });
+
+const normalizeAnalyticsOverview = (value: unknown): AnalyticsOverviewResponse => {
+  const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  return {
+    insight_banner: normalizeAnalyticsInsight(record.insight_banner),
+    revenue_total: asNumber(record.revenue_total, 0),
+    revenue_change_percent: asNumber(record.revenue_change_percent, 0),
+    weekly_revenue: normalizeRevenuePoints(record.weekly_revenue),
+    metric_tiles: normalizeMetricTiles(record.metric_tiles),
+    summary_stats: normalizeAnalyticsSummaryItems(record.summary_stats) ?? [],
+    revenue_comparison: normalizeAnalyticsComparisonItems(record.revenue_comparison) ?? [],
+    covers_activity: normalizeAnalyticsSummaryItems(record.covers_activity) ?? [],
+    cost_breakdown: normalizeAnalyticsSummaryItems(record.cost_breakdown) ?? [],
+    supplier_price_alerts: normalizeSupplierAlerts(record.supplier_price_alerts),
+  };
+};
+
 const ANALYTICS_CACHE_TTL_MS = 60 * 1000;
 
 const hasPeriodAnalyticsData = (
@@ -127,6 +189,7 @@ export default function AnalyticsScreen() {
 
   const [activePeriod, setActivePeriod] = React.useState<PeriodKey>('weekly');
   const [refreshing, setRefreshing] = React.useState(false);
+  const [retrying, setRetrying] = React.useState(false);
   const [loading, setLoading] = React.useState(
     !hasPeriodAnalyticsData('weekly', analyticsScreenCache as any),
   );
@@ -171,41 +234,44 @@ export default function AnalyticsScreen() {
 
   const applyAnalyticsOverview = React.useCallback(
     (period: PeriodKey, data: AnalyticsOverviewResponse) => {
+      const normalizedData = normalizeAnalyticsOverview(data);
       const nextRevenueTrend = {
         period,
-        revenue_total: data.revenue_total,
-        change_percent: data.revenue_change_percent,
-        points: data.weekly_revenue,
+        revenue_total: normalizedData.revenue_total,
+        change_percent: normalizedData.revenue_change_percent,
+        points: normalizedData.weekly_revenue,
       };
 
-      const nextMetricTilesByPeriod = { ...currentSnapshot.metricTilesByPeriod, [period]: data.metric_tiles };
+      const nextMetricTilesByPeriod = { ...currentSnapshot.metricTilesByPeriod, [period]: normalizedData.metric_tiles };
       const nextRevenueTrendByPeriod = { ...currentSnapshot.revenueTrendByPeriod, [period]: nextRevenueTrend };
-      const nextSummaryStatsByPeriod = { ...currentSnapshot.summaryStatsByPeriod, [period]: data.summary_stats };
+      const nextSummaryStatsByPeriod = { ...currentSnapshot.summaryStatsByPeriod, [period]: normalizedData.summary_stats };
       const nextRevenueComparisonByPeriod = {
         ...currentSnapshot.revenueComparisonByPeriod,
-        [period]: data.revenue_comparison,
+        [period]: normalizedData.revenue_comparison,
       };
-      const nextCoversActivityByPeriod = { ...currentSnapshot.coversActivityByPeriod, [period]: data.covers_activity };
-      const nextCostBreakdownByPeriod = { ...currentSnapshot.costBreakdownByPeriod, [period]: data.cost_breakdown };
+      const nextCoversActivityByPeriod = { ...currentSnapshot.coversActivityByPeriod, [period]: normalizedData.covers_activity };
+      const nextCostBreakdownByPeriod = { ...currentSnapshot.costBreakdownByPeriod, [period]: normalizedData.cost_breakdown };
       const nextSupplierAlertsByPeriod = {
         ...currentSnapshot.supplierAlertsByPeriod,
-        [period]: data.supplier_price_alerts,
+        [period]: normalizedData.supplier_price_alerts,
       };
       const fetchedAt = Date.now();
 
-      if (data.insight_banner) {
-        setBusinessInsight(data.insight_banner);
-      }
-      setMetricTilesByPeriod(nextMetricTilesByPeriod);
-      setRevenueTrendByPeriod(nextRevenueTrendByPeriod);
-      setSummaryStatsByPeriod(nextSummaryStatsByPeriod);
-      setRevenueComparisonByPeriod(nextRevenueComparisonByPeriod);
-      setCoversActivityByPeriod(nextCoversActivityByPeriod);
-      setCostBreakdownByPeriod(nextCostBreakdownByPeriod);
-      setSupplierAlertsByPeriod(nextSupplierAlertsByPeriod);
+      startTransition(() => {
+        if (normalizedData.insight_banner) {
+          setBusinessInsight(normalizedData.insight_banner);
+        }
+        setMetricTilesByPeriod(nextMetricTilesByPeriod);
+        setRevenueTrendByPeriod(nextRevenueTrendByPeriod);
+        setSummaryStatsByPeriod(nextSummaryStatsByPeriod);
+        setRevenueComparisonByPeriod(nextRevenueComparisonByPeriod);
+        setCoversActivityByPeriod(nextCoversActivityByPeriod);
+        setCostBreakdownByPeriod(nextCostBreakdownByPeriod);
+        setSupplierAlertsByPeriod(nextSupplierAlertsByPeriod);
+      });
 
       setAnalyticsScreenCache({
-        businessInsight: data.insight_banner ?? currentSnapshot.businessInsight,
+        businessInsight: normalizedData.insight_banner ?? currentSnapshot.businessInsight,
         metricTilesByPeriod: nextMetricTilesByPeriod,
         revenueTrendByPeriod: nextRevenueTrendByPeriod,
         summaryStatsByPeriod: nextSummaryStatsByPeriod,
@@ -225,9 +291,9 @@ export default function AnalyticsScreen() {
         const response = await apiClient.get<InsightBanner>('/api/v1/restaurant/analytics/business-insight', {
           params: { period },
         });
-        setBusinessInsight(response.data);
+        setBusinessInsight(normalizeAnalyticsInsight(response.data));
         setAnalyticsScreenCache({
-          businessInsight: response.data,
+          businessInsight: normalizeAnalyticsInsight(response.data),
         });
       } catch (error) {
         logApiError('analytics.business-insight', error);
@@ -269,9 +335,10 @@ export default function AnalyticsScreen() {
       }
 
       if (insightResult.status === 'fulfilled') {
-        setBusinessInsight(insightResult.response.data);
+        const normalizedInsight = normalizeAnalyticsInsight(insightResult.response.data);
+        setBusinessInsight(normalizedInsight);
         setAnalyticsScreenCache({
-          businessInsight: insightResult.response.data,
+          businessInsight: normalizedInsight,
         });
       } else {
         logApiError('analytics.business-insight', insightResult.error);
@@ -294,15 +361,6 @@ export default function AnalyticsScreen() {
       void fetchAnalyticsScreenData(activePeriod, true);
     },
   });
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (hasCachedPeriodData) {
-        void fetchAnalyticsScreenData(activePeriod, true);
-      }
-      return undefined;
-    }, [activePeriod, fetchAnalyticsScreenData, hasCachedPeriodData]),
-  );
 
   React.useEffect(() => {
     if (hasCachedPeriodData && !businessInsight) {
@@ -452,21 +510,33 @@ export default function AnalyticsScreen() {
 
   const localizedCoversActivity = React.useMemo(
     () =>
-      (coversActivityByPeriod[activePeriod] ?? []).map((item) => ({
+      (coversActivityByPeriod[activePeriod] ?? []).map((item): ActivityCostStat => ({
         ...item,
         label: localizeAnalyticsLabel(item.label),
+        value: typeof item.value === 'number' ? item.value : asNumber(item.value, 0),
       })),
     [activePeriod, localizeAnalyticsLabel, coversActivityByPeriod],
   );
 
   const localizedCostBreakdown = React.useMemo(
     () =>
-      (costBreakdownByPeriod[activePeriod] ?? []).map((item) => ({
+      (costBreakdownByPeriod[activePeriod] ?? []).map((item): ActivityCostStat => ({
         ...item,
         label: localizeAnalyticsLabel(item.label),
+        value: typeof item.value === 'number' ? item.value : asNumber(item.value, 0),
       })),
     [activePeriod, localizeAnalyticsLabel, costBreakdownByPeriod],
   );
+
+  const hasVisibleAnalyticsData =
+    Boolean(localizedBusinessInsight) ||
+    localizedMetricTiles.length > 0 ||
+    localizedRevenueTrendPoints.length > 0 ||
+    localizedSummaryStats.length > 0 ||
+    localizedRevenueComparison.length > 0 ||
+    localizedCoversActivity.length > 0 ||
+    localizedCostBreakdown.length > 0 ||
+    localizedSupplierAlerts.length > 0;
 
   const handlePeriodChange = React.useCallback((period: string) => {
     setActivePeriod(period as PeriodKey);
@@ -475,6 +545,15 @@ export default function AnalyticsScreen() {
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     void fetchAnalyticsScreenData(activePeriod, false);
+  }, [activePeriod, fetchAnalyticsScreenData]);
+
+  const handleRetry = React.useCallback(async () => {
+    setRetrying(true);
+    try {
+      await fetchAnalyticsScreenData(activePeriod, false);
+    } finally {
+      setRetrying(false);
+    }
   }, [activePeriod, fetchAnalyticsScreenData]);
 
   const handleExport = React.useCallback(async (format: 'pdf' | 'excel') => {
@@ -569,13 +648,19 @@ export default function AnalyticsScreen() {
             </SkeletonCard>
           </>
         ) : error && !hasCachedPeriodData ? (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorTitle}>Something went wrong</Text>
-            <Text style={styles.errorSubtitle}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => void fetchAnalyticsScreenData(activePeriod, false)}>
-              <Text style={styles.retryText}>Try Again</Text>
-            </TouchableOpacity>
-          </View>
+          <StateCard
+            title="Something went wrong"
+            description={error}
+            tone="error"
+            actionLabel="Try Again"
+            actionLoading={retrying}
+            onAction={() => void handleRetry()}
+          />
+        ) : !hasVisibleAnalyticsData ? (
+          <StateCard
+            title="No analytics yet"
+            description="Analytics will appear here after enough restaurant activity has been recorded."
+          />
         ) : (
           <>
             {localizedBusinessInsight ? <AnalyticsAIInsightCard insight={localizedBusinessInsight} /> : null}
@@ -630,38 +715,6 @@ const styles = StyleSheet.create({
   metricCardSkeleton: {
     flex: 1,
     marginHorizontal: scale(4),
-  },
-  errorCard: {
-    marginBottom: verticalScale(24),
-    borderRadius: scale(16),
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    backgroundColor: '#FEF2F2',
-    padding: scale(18),
-    alignItems: 'center',
-  },
-  errorTitle: {
-    fontSize: moderateScale(16, 0.3),
-    fontWeight: '700',
-    color: '#991B1B',
-  },
-  errorSubtitle: {
-    marginTop: verticalScale(8),
-    fontSize: moderateScale(13, 0.3),
-    color: '#7F1D1D',
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: verticalScale(16),
-    borderRadius: scale(12),
-    backgroundColor: '#FA8C4C',
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(10),
-  },
-  retryText: {
-    color: '#FFFFFF',
-    fontSize: moderateScale(13, 0.3),
-    fontWeight: '700',
   },
   gap8: {
     marginTop: verticalScale(8),

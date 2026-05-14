@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 
@@ -9,11 +9,16 @@ import AIExtractionBanner from "../../../components/documents/AIExtractionBanner
 import DocumentsHeader from "../../../components/documents/DocumentsHeader";
 import RecentDocumentsList from "../../../components/documents/RecentDocumentsList";
 import Header from "../../../components/ui/Header";
+import StateCard from "../../../components/ui/StateCard";
+import { useCachedFocusRefresh } from "../../../hooks/useCachedFocusRefresh";
 import { useAppStore } from "../../../store/useAppStore";
 import { getApiDisplayMessage, logApiError } from "../../../utils/apiErrors";
 import { isNetworkLikeApiError } from "../../../utils/api";
 import { useTranslation } from "../../../utils/i18n";
 import { formatEuropeanDate } from "../../../utils/date";
+import { normalizeDocumentsResponse } from "../../../utils/restaurantData";
+
+const DOCUMENTS_CACHE_TTL_MS = 60 * 1000;
 
 export default function DocumentsScreen() {
   const { t } = useTranslation();
@@ -32,6 +37,7 @@ export default function DocumentsScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [supplierFilterIndex, setSupplierFilterIndex] = useState(0);
   const [statusFilter, setStatusFilter] = useState<"all" | "processed" | "pending">("all");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const fetchDocuments = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -49,13 +55,11 @@ export default function DocumentsScreen() {
           page_size: 50,
         },
       });
+      const normalizedResponse = normalizeDocumentsResponse(response.data);
 
       setDocumentsScreenCache({
-        documents: response.data.items || [],
-        bannerData: {
-          title: response.data.ai_banner_title,
-          subtitle: response.data.ai_banner_subtitle,
-        },
+        documents: normalizedResponse.items,
+        bannerData: normalizedResponse.bannerData,
         fetchedAt: Date.now(),
       });
     } catch (nextError) {
@@ -76,6 +80,18 @@ export default function DocumentsScreen() {
 
     void fetchDocuments();
   }, [fetchDocuments, hasFetchedDocuments]);
+
+  useCachedFocusRefresh({
+    hasCache: hasFetchedDocuments,
+    fetchedAt: documentsScreenCache.fetchedAt,
+    ttlMs: DOCUMENTS_CACHE_TTL_MS,
+    loadOnEmpty: () => {
+      void fetchDocuments();
+    },
+    refreshStale: () => {
+      void fetchDocuments({ silent: true });
+    },
+  });
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -114,11 +130,11 @@ export default function DocumentsScreen() {
   }, []);
 
   const filteredDocuments = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+    const query = deferredSearchQuery.trim().toLowerCase();
     const selectedSupplier = supplierFilterIndex === 0 ? null : supplierLabel.toLowerCase();
     const selectedDateKey = selectedDate ? selectedDate.toISOString().slice(0, 10) : null;
 
-    const getSearchText = (item: any) =>
+    const getSearchText = (item: typeof documentsScreenCache.documents[number]) =>
       [
         item.counterparty_name,
         item.supplier_name,
@@ -132,7 +148,7 @@ export default function DocumentsScreen() {
         .join(" ")
         .toLowerCase();
 
-    const getSortDate = (item: any) => {
+    const getSortDate = (item: typeof documentsScreenCache.documents[number]) => {
       const rawDate = item.document_date || item.invoice_date || item.upload_date || item.created_at;
       const parsed = rawDate ? Date.parse(String(rawDate)) : 0;
       return Number.isFinite(parsed) ? parsed : 0;
@@ -174,7 +190,7 @@ export default function DocumentsScreen() {
         const direction = dateSort === "newest" ? -1 : 1;
         return (getSortDate(a) - getSortDate(b)) * direction;
       });
-  }, [dateSort, documentsScreenCache.documents, getDocumentDateKey, searchQuery, selectedDate, statusFilter, supplierFilterIndex, supplierLabel]);
+  }, [dateSort, deferredSearchQuery, documentsScreenCache.documents, getDocumentDateKey, selectedDate, statusFilter, supplierFilterIndex, supplierLabel]);
 
   const handleDateChange = useCallback((event: DateTimePickerEvent, nextDate?: Date) => {
     if (event.type === "dismissed") {
@@ -259,19 +275,29 @@ export default function DocumentsScreen() {
 
   const emptyContent = useMemo(() => {
     if (!error) {
-      return null;
+      if (documentsScreenCache.documents.length === 0) {
+        return null;
+      }
+
+      return (
+        <StateCard
+          title={t("no_documents")}
+          description="No documents match the current filters. Try clearing search, supplier, or date filters."
+        />
+      );
     }
 
     return (
-      <View style={styles.errorCard}>
-        <Text style={styles.errorTitle}>{t("something_went_wrong")}</Text>
-        <Text style={styles.errorSubtitle}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => void fetchDocuments()}>
-          <Text style={styles.retryText}>{t("try_again")}</Text>
-        </TouchableOpacity>
-      </View>
+      <StateCard
+        title={t("something_went_wrong")}
+        description={error}
+        tone="error"
+        actionLabel={t("try_again")}
+        actionLoading={loading}
+        onAction={() => void fetchDocuments()}
+      />
     );
-  }, [error, fetchDocuments]);
+  }, [documentsScreenCache.documents.length, error, fetchDocuments, loading, t]);
 
   const refreshControl = useMemo(
     () => (
@@ -302,37 +328,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-  },
-  errorCard: {
-    marginHorizontal: scale(20),
-    borderRadius: scale(16),
-    borderWidth: 1,
-    borderColor: "#FEE2E2",
-    backgroundColor: "#FFF7F7",
-    padding: scale(18),
-    alignItems: "center",
-  },
-  errorTitle: {
-    fontSize: moderateScale(16, 0.3),
-    fontWeight: "700",
-    color: "#991B1B",
-  },
-  errorSubtitle: {
-    marginTop: verticalScale(8),
-    fontSize: moderateScale(13, 0.3),
-    color: "#7F1D1D",
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: verticalScale(16),
-    backgroundColor: "#FA8C4C",
-    borderRadius: scale(12),
-    paddingHorizontal: scale(20),
-    paddingVertical: verticalScale(10),
-  },
-  retryText: {
-    color: "#FFFFFF",
-    fontSize: moderateScale(13, 0.3),
-    fontWeight: "700",
   },
 });

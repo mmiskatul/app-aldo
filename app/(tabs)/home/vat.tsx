@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useNavigation } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,12 +11,17 @@ import * as Sharing from 'expo-sharing';
 import Header from '../../../components/ui/Header';
 import VatBalance from '../../../components/home/VatBalance'; 
 import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
+import StateCard from '../../../components/ui/StateCard';
+import { useCachedFocusRefresh } from '../../../hooks/useCachedFocusRefresh';
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore"; 
 import { showErrorMessage } from "../../../utils/feedback";
+import { getApiDisplayMessage, logApiError } from "../../../utils/apiErrors";
+import { normalizeVatOverviewData } from "../../../utils/restaurantData";
 
 // @ts-ignore
 const HugeiconsIcon = HugeiconsModule.HugeiconsIcon || HugeiconsModule.default?.HugeiconsIcon || (HugeiconsModule as any);
+const VAT_OVERVIEW_CACHE_TTL_MS = 60 * 1000;
 
 export default function VatScreen() {
   const navigation = useNavigation();
@@ -24,13 +29,25 @@ export default function VatScreen() {
   const setVatOverviewData = useAppStore((state) => state.setVatOverviewData);
   const [loading, setLoading] = useState(!vatOverviewData);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
-  const fetchVatOverview = useCallback(async () => {
+  const fetchVatOverview = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setLoading(true);
+    }
     try {
       const res = await apiClient.get("/api/v1/restaurant/vat/overview");
-      setVatOverviewData(res.data);
+      setVatOverviewData({
+        ...normalizeVatOverviewData(res.data),
+        fetched_at: Date.now(),
+      });
+      setError(null);
     } catch (error) {
-      console.error("Error fetching VAT overview:", error);
+      logApiError("vat.overview", error);
+      setError(getApiDisplayMessage(error, "Unable to load VAT overview."));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -39,11 +56,32 @@ export default function VatScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setLoading(true);
-    fetchVatOverview();
+    void fetchVatOverview({ silent: true });
   }, [fetchVatOverview]);
 
+  const handleRetry = useCallback(async () => {
+    setRetrying(true);
+    try {
+      await fetchVatOverview();
+    } finally {
+      setRetrying(false);
+    }
+  }, [fetchVatOverview]);
+
+  useCachedFocusRefresh({
+    hasCache: Boolean(vatOverviewData),
+    fetchedAt: vatOverviewData?.fetched_at ?? null,
+    ttlMs: VAT_OVERVIEW_CACHE_TTL_MS,
+    loadOnEmpty: () => {
+      void fetchVatOverview();
+    },
+    refreshStale: () => {
+      void fetchVatOverview({ silent: true });
+    },
+  });
+
   const generatePdf = async () => {
+    setDownloading(true);
     try {
       const htmlContent = `
         <!DOCTYPE html>
@@ -118,13 +156,13 @@ export default function VatScreen() {
     } catch (error) {
       console.error("Error generating PDF:", error);
       showErrorMessage("Failed to generate VAT report PDF.");
+    } finally {
+      setDownloading(false);
     }
   };
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchVatOverview();
-
       const parent = navigation.getParent();
       parent?.setOptions({
         tabBarStyle: { display: "none" },
@@ -159,8 +197,22 @@ export default function VatScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FA8C4C"]} />}
       >
-      {loading ? (
+      {loading && !vatOverviewData ? (
         <ListRouteSkeleton itemCount={3} />
+      ) : error && !vatOverviewData ? (
+        <StateCard
+          title="Unable to load VAT"
+          description={error}
+          tone="error"
+          actionLabel="Try Again"
+          actionLoading={retrying}
+          onAction={() => void handleRetry()}
+        />
+      ) : !vatOverviewData ? (
+        <StateCard
+          title="No VAT data yet"
+          description="VAT totals will appear here after invoices and restaurant records have been processed."
+        />
       ) : (
         <>
           {/* VAT Card */}
@@ -211,9 +263,15 @@ export default function VatScreen() {
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.downloadButton} activeOpacity={0.8} onPress={generatePdf}>
-        <Feather name="download" size={moderateScale(18)} color="#FFFFFF" />
-        <Text style={styles.downloadButtonText}>Download VAT Report</Text>
+      <TouchableOpacity style={styles.downloadButton} activeOpacity={0.8} onPress={generatePdf} disabled={downloading}>
+        {downloading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <>
+            <Feather name="download" size={moderateScale(18)} color="#FFFFFF" />
+            <Text style={styles.downloadButtonText}>Download VAT Report</Text>
+          </>
+        )}
       </TouchableOpacity>
       </>
       )}
@@ -290,6 +348,40 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: verticalScale(16),
+  },
+  errorCard: {
+    marginHorizontal: scale(20),
+    marginTop: verticalScale(24),
+    backgroundColor: "#FFF7F7",
+    borderColor: "#FECACA",
+    borderWidth: 1,
+    borderRadius: scale(16),
+    padding: scale(20),
+    alignItems: "center",
+  },
+  errorTitle: {
+    fontSize: moderateScale(16, 0.3),
+    fontWeight: "700",
+    color: "#991B1B",
+  },
+  errorSubtitle: {
+    marginTop: verticalScale(8),
+    textAlign: "center",
+    fontSize: moderateScale(13, 0.3),
+    lineHeight: moderateScale(20, 0.3),
+    color: "#7F1D1D",
+  },
+  retryButton: {
+    marginTop: verticalScale(16),
+    backgroundColor: "#FA8C4C",
+    borderRadius: scale(12),
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(10),
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: "700",
   },
   fileReturnButton: {
     backgroundColor: '#FA8C4C',

@@ -1,7 +1,30 @@
 import axios from "axios";
+import { router } from "expo-router";
 import { useAppStore } from "../store/useAppStore";
 import { API_REQUEST_TIMEOUT_MS, getApiBaseUrl, getApiErrorMessage, isNetworkLikeApiError } from "../utils/api";
 import { showModalErrorMessage } from "../utils/feedback";
+
+type ApiErrorRecord = {
+  response?: {
+    status?: number;
+    data?: {
+      error?: {
+        code?: string;
+        message?: string;
+        details?: Record<string, unknown>;
+      };
+      code?: string;
+      message?: string;
+      detail?: string;
+    };
+  };
+  message?: string;
+  config?: {
+    url?: string;
+    headers?: Record<string, string>;
+    _retry?: boolean;
+  };
+};
 
 const apiUrl = getApiBaseUrl();
 
@@ -13,7 +36,10 @@ const apiClient = axios.create({
 });
 
 let isRefreshing = false;
-let failedQueue: any[] = [];
+let failedQueue: Array<{
+  resolve: (token: string | null) => void;
+  reject: (error: unknown) => void;
+}> = [];
 let lastConnectionErrorShownAt = 0;
 let isRedirectingToSubscription = false;
 let isRedirectingToOnboarding = false;
@@ -32,7 +58,7 @@ const showConnectionError = () => {
   );
 };
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -44,23 +70,33 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-const getApiErrorCode = (error: any): string => {
-  return String(error?.response?.data?.error?.code || error?.response?.data?.code || "").toLowerCase();
+const asOptionalString = (value: unknown): string | null => {
+  if (typeof value === "string") {
+    return value;
+  }
+  return value == null ? null : String(value);
 };
 
-const getApiErrorResponseMessage = (error: any): string => {
+const getApiErrorCode = (error: unknown): string => {
+  const normalizedError = error as ApiErrorRecord;
+  return String(normalizedError?.response?.data?.error?.code || normalizedError?.response?.data?.code || "").toLowerCase();
+};
+
+const getApiErrorResponseMessage = (error: unknown): string => {
+  const normalizedError = error as ApiErrorRecord;
   return String(
-    error?.response?.data?.error?.message ||
-      error?.response?.data?.message ||
-      error?.response?.data?.detail ||
-      error?.message ||
+    normalizedError?.response?.data?.error?.message ||
+      normalizedError?.response?.data?.message ||
+      normalizedError?.response?.data?.detail ||
+      normalizedError?.message ||
       ""
   );
 };
 
-const isStalePersistedSessionError = (error: any): boolean => {
+const isStalePersistedSessionError = (error: unknown): boolean => {
+  const normalizedError = error as ApiErrorRecord;
   return (
-    error?.response?.status === 401 &&
+    normalizedError?.response?.status === 401 &&
     getApiErrorCode(error) === "unauthorized" &&
     getApiErrorResponseMessage(error).toLowerCase().includes("user not found")
   );
@@ -76,24 +112,26 @@ const redirectToSubscriptionStatus = () => {
     return;
   }
   isRedirectingToSubscription = true;
+  router.replace("/(auth)/subscription-status" as any);
   setTimeout(() => {
     isRedirectingToSubscription = false;
   }, 1500);
 };
 
-const markLocalSubscriptionRequired = (error: any) => {
+const markLocalSubscriptionRequired = (error: unknown) => {
+  const normalizedError = error as ApiErrorRecord;
   const { user, tokens, setUser, clearHomeScreenCache, clearAnalyticsScreenCache } = useAppStore.getState();
   if (!user) {
     return;
   }
-  const details = error?.response?.data?.error?.details || {};
+  const details = normalizedError?.response?.data?.error?.details || {};
 
   setUser(
     {
       ...user,
-      subscription_plan_name: details.subscription_plan_name ?? user.subscription_plan_name ?? null,
-      subscription_plan: details.subscription_plan ?? user.subscription_plan ?? null,
-      subscription_status: details.subscription_status ?? user.subscription_status ?? "canceled",
+      subscription_plan_name: asOptionalString(details.subscription_plan_name) ?? user.subscription_plan_name ?? null,
+      subscription_plan: asOptionalString(details.subscription_plan) ?? user.subscription_plan ?? null,
+      subscription_status: asOptionalString(details.subscription_status) ?? user.subscription_status ?? "canceled",
       subscription_selection_required: true,
     },
     tokens
@@ -133,24 +171,25 @@ apiClient.interceptors.request.use(
 // Response interceptor: Handle 401
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error) => {
+  async (error: unknown) => {
+    const normalizedError = error as ApiErrorRecord;
     if (isNetworkLikeApiError(error)) {
       showConnectionError();
     }
 
-    const subscriptionErrorCode = error.response?.data?.error?.code;
+    const subscriptionErrorCode = normalizedError.response?.data?.error?.code;
     if (
-      error.response?.status === 403 &&
+      normalizedError.response?.status === 403 &&
       subscriptionErrorCode === "subscription_required"
     ) {
       markLocalSubscriptionRequired(error);
       redirectToSubscriptionStatus();
     }
-    if (error.response?.status === 403 && subscriptionErrorCode === "onboarding_required") {
+    if (normalizedError.response?.status === 403 && subscriptionErrorCode === "onboarding_required") {
       redirectToOnboarding();
     }
 
-    const originalRequest = error.config;
+    const originalRequest = normalizedError.config;
     const accessToken = useAppStore.getState().tokens?.access_token;
     const refreshToken = useAppStore.getState().tokens?.refresh_token;
     const requestUrl = String(originalRequest?.url || "");
@@ -163,18 +202,25 @@ apiClient.interceptors.response.use(
     }
 
     const shouldAttemptRefresh =
-      error.response?.status === 401 &&
+      normalizedError.response?.status === 401 &&
       !originalRequest?._retry &&
       !isRefreshRequest &&
       !!accessToken;
 
     if (shouldAttemptRefresh) {
+      if (!originalRequest) {
+        return Promise.reject(error);
+      }
+
+      const retryHeaders = originalRequest.headers ?? {};
+      originalRequest.headers = retryHeaders;
+
       if (isRefreshing) {
         return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+            retryHeaders.Authorization = `Bearer ${token}`;
             return apiClient(originalRequest);
           })
           .catch((err) => {
@@ -203,10 +249,11 @@ apiClient.interceptors.response.use(
         useAppStore.getState().setTokens(newTokens);
 
         processQueue(null, newTokens.access_token);
-        originalRequest.headers["Authorization"] = `Bearer ${newTokens.access_token}`;
+        retryHeaders.Authorization = `Bearer ${newTokens.access_token}`;
         return apiClient(originalRequest);
-      } catch (refreshError: any) {
-        console.log("[apiClient] Refresh failed:", refreshError.response?.data || refreshError.message);
+      } catch (refreshError: unknown) {
+        const normalizedRefreshError = refreshError as ApiErrorRecord;
+        console.log("[apiClient] Refresh failed:", normalizedRefreshError.response?.data || normalizedRefreshError.message);
         processQueue(refreshError, null);
         clearStaleSession();
         return Promise.reject(refreshError);
@@ -215,7 +262,7 @@ apiClient.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401 && !accessToken) {
+    if (normalizedError.response?.status === 401 && !accessToken) {
       useAppStore.getState().logout();
     }
 

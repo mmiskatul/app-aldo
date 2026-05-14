@@ -36,7 +36,7 @@ export default function RestrictedAccessScreen() {
       const refreshedUser = await getCurrentUser();
       setUser(refreshedUser, tokens);
 
-      if (getRestrictedAccessStatus(refreshedUser as any) === null) {
+      if (getRestrictedAccessStatus(refreshedUser) === null) {
         if (showRestoredMessage) {
           showSuccessMessage("Your account access has been restored.", "Access Restored");
         }
