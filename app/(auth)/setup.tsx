@@ -28,6 +28,7 @@ import { getApiBaseUrl, getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 import LanguageModal from "../../components/home/LanguageModal";
 import { useTranslation } from "../../utils/i18n";
+import { resolveLocalizedList, resolveLocalizedText } from "../../utils/localizedContent";
 
 type OnboardingProfileResponse = {
   restaurant_name?: string | null;
@@ -49,6 +50,18 @@ type OnboardingFeatureScreen = {
   title: string;
   description: string;
   points: string[];
+  title_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  description_translations?: {
+    en?: string | null;
+    it?: string | null;
+  } | null;
+  points_translations?: {
+    en?: string[] | null;
+    it?: string[] | null;
+  } | null;
 };
 
 const FALLBACK_FEATURE_SCREENS: OnboardingFeatureScreen[] = [
@@ -427,12 +440,25 @@ export default function SetupScreen() {
   const renderFeatureStep = (screenIndex: number) => {
     const screen = featureScreens[screenIndex] || FALLBACK_FEATURE_SCREENS[screenIndex];
     const fallbackCopy = FALLBACK_FEATURE_COPY[screen.key];
+    const fallbackTitle = fallbackCopy ? t(fallbackCopy.titleKey as any) : screen.title;
+    const fallbackDescription = fallbackCopy ? t(fallbackCopy.descriptionKey as any) : screen.description;
+    const fallbackPoints = fallbackCopy
+      ? fallbackCopy.pointKeys.map((pointKey) => t(pointKey as any))
+      : screen.points;
+    const localizedTitle = resolveLocalizedText(appLanguage, screen.title_translations, fallbackTitle);
+    const localizedDescription = resolveLocalizedText(
+      appLanguage,
+      screen.description_translations,
+      fallbackDescription,
+    );
+    const localizedPoints = resolveLocalizedList(appLanguage, screen.points_translations, fallbackPoints);
+
     return (
       <StepFeatureExplanation
         icon={(screen.icon || FALLBACK_FEATURE_SCREENS[screenIndex].icon) as any}
-        title={screen.title || undefined}
-        description={screen.description || undefined}
-        points={screen.points && screen.points.length > 0 ? screen.points : undefined}
+        title={localizedTitle || undefined}
+        description={localizedDescription || undefined}
+        points={localizedPoints.length > 0 ? localizedPoints : undefined}
         titleKey={fallbackCopy?.titleKey}
         descriptionKey={fallbackCopy?.descriptionKey}
         pointKeys={fallbackCopy?.pointKeys}
