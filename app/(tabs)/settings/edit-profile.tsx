@@ -22,6 +22,22 @@ import PhotoPickerModal from '../../../components/ui/PhotoPickerModal';
 
 type RestaurantPhotoTarget = 'interior' | 'exterior';
 
+const buildFormStateFromProfile = (profile: ReturnType<typeof useAppStore.getState>['profile']) => ({
+  full_name: profile?.full_name || '',
+  email: profile?.email || '',
+  phone: profile?.phone || '',
+  restaurant_name: profile?.restaurant_name || '',
+  restaurant_type: profile?.restaurant_type || '',
+  city_location: profile?.city_location || '',
+  number_of_seats: profile?.number_of_seats?.toString() || '',
+  profile_image: null as ProfileImageFile | null,
+  interior_photo: null as ProfileImageFile | null,
+  exterior_photo: null as ProfileImageFile | null,
+  remove_profile_image: false,
+  remove_interior_photo: false,
+  remove_exterior_photo: false,
+});
+
 export default function EditProfileScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -37,47 +53,31 @@ export default function EditProfileScreen() {
   const [savePhase, setSavePhase] = useState<'idle' | 'saving'>('idle');
   const [loadingDots, setLoadingDots] = useState(1);
   const [activePhotoTarget, setActivePhotoTarget] = useState<RestaurantPhotoTarget | null>(null);
+  const [hasFormChanges, setHasFormChanges] = useState(false);
+  const [hasHydratedForm, setHasHydratedForm] = useState(false);
 
-  const [formData, setFormData] = useState({
-    full_name: profile?.full_name || '',
-    email: profile?.email || '',
-    phone: profile?.phone || '',
-    restaurant_name: profile?.restaurant_name || '',
-    restaurant_type: profile?.restaurant_type || '',
-    city_location: profile?.city_location || '',
-    number_of_seats: profile?.number_of_seats?.toString() || '',
-    profile_image: null as ProfileImageFile | null,
-    interior_photo: null as ProfileImageFile | null,
-    exterior_photo: null as ProfileImageFile | null,
-    remove_profile_image: false,
-    remove_interior_photo: false,
-    remove_exterior_photo: false,
-  });
+  const [formData, setFormData] = useState(() => buildFormStateFromProfile(profile));
 
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      full_name: profile?.full_name || '',
-      email: profile?.email || '',
-      phone: profile?.phone || '',
-      restaurant_name: profile?.restaurant_name || '',
-      restaurant_type: profile?.restaurant_type || '',
-      city_location: profile?.city_location || '',
-      number_of_seats: profile?.number_of_seats?.toString() || '',
-      profile_image: null,
-      interior_photo: null,
-      exterior_photo: null,
-      remove_profile_image: false,
-      remove_interior_photo: false,
-      remove_exterior_photo: false,
-    }));
-  }, [profile]);
+    if (!profile) {
+      return;
+    }
+
+    if (hasHydratedForm && hasFormChanges) {
+      return;
+    }
+
+    setFormData(buildFormStateFromProfile(profile));
+    setHasHydratedForm(true);
+  }, [hasFormChanges, hasHydratedForm, profile]);
 
   const updateField = (field: string, value: string | boolean | ProfileImageFile | null) => {
+    setHasFormChanges(true);
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleImageChange = (file: ProfileImageFile | null) => {
+    setHasFormChanges(true);
     setFormData((prev) => ({
       ...prev,
       profile_image: file,
@@ -86,6 +86,7 @@ export default function EditProfileScreen() {
   };
 
   const handleRestaurantPhotoChange = (target: RestaurantPhotoTarget, file: ProfileImageFile | null) => {
+    setHasFormChanges(true);
     if (target === 'interior') {
       setFormData((prev) => ({
         ...prev,
@@ -157,6 +158,7 @@ export default function EditProfileScreen() {
           text: t('remove_photo'),
           style: 'destructive',
           onPress: () => {
+            setHasFormChanges(true);
             setFormData((prev) => ({
               ...prev,
               profile_image: null,
@@ -182,6 +184,7 @@ export default function EditProfileScreen() {
           text: t('remove_photo'),
           style: 'destructive',
           onPress: () => {
+            setHasFormChanges(true);
             if (target === 'interior') {
               setFormData((prev) => ({
                 ...prev,
@@ -311,6 +314,9 @@ export default function EditProfileScreen() {
       }
       const refreshedProfile = await apiClient.get('/api/v1/restaurant/settings/profile');
       setProfile(refreshedProfile.data);
+      setFormData(buildFormStateFromProfile(refreshedProfile.data));
+      setHasFormChanges(false);
+      setHasHydratedForm(true);
       const refreshedUser = await getCurrentUser();
       setUser(refreshedUser, tokens);
 
