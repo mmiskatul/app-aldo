@@ -26,7 +26,6 @@ import { useAppStore } from "../../store/useAppStore";
 import { buildFileName, inferMimeType } from "../../utils/fileMetadata";
 import { getApiBaseUrl, getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
-import LanguageModal from "../../components/home/LanguageModal";
 import { useTranslation } from "../../utils/i18n";
 import { resolveLocalizedList, resolveLocalizedText } from "../../utils/localizedContent";
 
@@ -169,17 +168,18 @@ const isRemoteOrInlineImage = (value: string) => {
   return /^https?:\/\//i.test(value) || value.startsWith("data:image/");
 };
 
+const isSubscriptionSelectionRequiredError = (error: any) => {
+  return error?.response?.status === 403 && error?.response?.data?.error?.code === "subscription_required";
+};
+
 export default function SetupScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const setUser = useAppStore((state) => state.setUser);
   const tokens = useAppStore((state) => state.tokens);
-  const appLanguage = useAppStore((state) => state.appLanguage);
-  const setAppLanguage = useAppStore((state) => state.setAppLanguage);
   const [step, setStep] = useState(1);
   const [loadingInitialData, setLoadingInitialData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const [featureScreens, setFeatureScreens] = useState<OnboardingFeatureScreen[]>(FALLBACK_FEATURE_SCREENS);
 
   // Step 1 State
@@ -259,18 +259,25 @@ export default function SetupScreen() {
         setBiggestProblem(onboarding?.biggest_problem || "");
         setImprovementGoal(onboarding?.improvement_focus || "");
 
-        try {
-          const featureResponse = await apiClient.get<{ screens: OnboardingFeatureScreen[] }>(
-            "/api/v1/onboarding/feature-screens"
-          );
-          if (Array.isArray(featureResponse.data?.screens) && featureResponse.data.screens.length > 0) {
-            setFeatureScreens(featureResponse.data.screens);
-          }
-        } catch (featureError: any) {
-          if (featureError?.response?.status !== 404) {
-            console.log("Error loading onboarding feature screens:", featureError?.response?.data || featureError?.message);
-          }
+        if (user.subscription_selection_required === true) {
           setFeatureScreens(FALLBACK_FEATURE_SCREENS);
+        } else {
+          try {
+            const featureResponse = await apiClient.get<{ screens: OnboardingFeatureScreen[] }>(
+              "/api/v1/onboarding/feature-screens"
+            );
+            if (Array.isArray(featureResponse.data?.screens) && featureResponse.data.screens.length > 0) {
+              setFeatureScreens(featureResponse.data.screens);
+            }
+          } catch (featureError: any) {
+            if (
+              featureError?.response?.status !== 404 &&
+              !isSubscriptionSelectionRequiredError(featureError)
+            ) {
+              console.log("Error loading onboarding feature screens:", featureError?.response?.data || featureError?.message);
+            }
+            setFeatureScreens(FALLBACK_FEATURE_SCREENS);
+          }
         }
       } catch (error: any) {
         if (error?.response?.status !== 401) {
@@ -502,16 +509,7 @@ export default function SetupScreen() {
             <Text style={styles.logoTextOrange}>AI</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.langSelector}
-            onPress={() => setIsLangMenuOpen(true)}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel={t("change_language")}
-          >
-            <Text style={styles.langText}>{appLanguage === "it" ? "Ita" : "Eng"}</Text>
-            <Feather name="chevron-down" size={moderateScale(15)} color="#4B5563" />
-          </TouchableOpacity>
+          <View style={styles.headerSpacer} />
         </View>
         {step < 10 && renderProgressBar()}
       </View>
@@ -598,15 +596,6 @@ export default function SetupScreen() {
             )}
           </ScrollView>
         </View>
-        <LanguageModal
-          visible={isLangMenuOpen}
-          onClose={() => setIsLangMenuOpen(false)}
-          selectedLang={appLanguage}
-          onSelectLang={(lang) => {
-            setAppLanguage(lang);
-            setIsLangMenuOpen(false);
-          }}
-        />
         {loadingInitialData || submitting ? (
           <View style={styles.loadingOverlay} pointerEvents="auto">
             <View style={styles.loadingContent}>
@@ -689,21 +678,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#D97706",
   },
-  langSelector: {
+  headerSpacer: {
     minWidth: scale(64),
     height: moderateScale(36),
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFF0E5",
-    paddingHorizontal: scale(10),
-    borderRadius: scale(18),
-  },
-  langText: {
-    fontSize: moderateScale(12, 0.3),
-    fontWeight: "700",
-    color: "#111827",
-    marginRight: scale(2),
   },
   progressContainer: {
     flexDirection: "row",
