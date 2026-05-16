@@ -21,6 +21,7 @@ interface ProfileImageEditProps {
   onRemoveImage?: () => void;
   removeDisabled?: boolean;
   editable?: boolean;
+  allowRemove?: boolean;
 }
 
 export default function ProfileImageEdit({
@@ -29,6 +30,7 @@ export default function ProfileImageEdit({
   onRemoveImage,
   removeDisabled = false,
   editable = true,
+  allowRemove = true,
 }: ProfileImageEditProps) {
   const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
@@ -124,7 +126,7 @@ export default function ProfileImageEdit({
       </View>
       {editable ? (
         <View style={styles.actionsRow}>
-          {hasProfileImage ? (
+          {hasProfileImage && allowRemove ? (
             <TouchableOpacity
               onPress={onRemoveImage}
               style={styles.iconActionButton}

@@ -94,6 +94,9 @@ export default function EditProfileScreen() {
     let isMounted = true;
 
     const loadProfile = async () => {
+      if (profile) {
+        return;
+      }
       setLoadingProfile(true);
       try {
         const response = await apiClient.get('/api/v1/restaurant/settings/profile');
@@ -104,7 +107,7 @@ export default function EditProfileScreen() {
       } catch (error) {
         if (isMounted) {
           logApiError('settings.edit_profile.load', error);
-          showErrorMessage(getApiDisplayMessage(error, t('unable_to_load_profile')));
+          showErrorMessage(getApiDisplayMessage(error, i18n.t('unable_to_load_profile')));
         }
       } finally {
         if (isMounted) {
@@ -118,7 +121,7 @@ export default function EditProfileScreen() {
     return () => {
       isMounted = false;
     };
-  }, [i18n.language, setProfile, t]);
+  }, [i18n, profile, setProfile]);
 
   const handleRemovePhoto = () => {
     Alert.alert(
