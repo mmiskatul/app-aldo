@@ -1,15 +1,17 @@
 import LegalDocumentScreen from '../../../components/settings/LegalDocumentScreen';
 import { getTermsOfService } from '../../../api/settings';
+import { useTranslation } from '../../../utils/i18n';
 
 export default function TermsConditionsScreen() {
+  const { t } = useTranslation();
   return (
     <LegalDocumentScreen
       cacheKey="terms-of-service"
-      datePrefix="Last updated"
-      defaultTitle="Terms of Service"
-      errorFallback="Failed to load terms and conditions."
-      errorTitle="Unable to load terms"
-      headerTitle="Terms of Service"
+      datePrefix={t('legal_last_updated')}
+      defaultTitle={t('terms_of_service')}
+      errorFallback={t('terms_load_failed')}
+      errorTitle={t('terms_unable_to_load')}
+      headerTitle={t('terms_of_service')}
       loadDocument={getTermsOfService}
     />
   );

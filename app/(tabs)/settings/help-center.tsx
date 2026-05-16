@@ -20,8 +20,10 @@ import { createSupportTicket } from "../../../api/support";
 import { getRestrictedAccessStatus, useAppStore } from "../../../store/useAppStore";
 import { showErrorMessage, showSuccessMessage } from "../../../utils/feedback";
 import { buildSettingsHref, normalizeOrigin } from "../../../utils/settingsNavigation";
+import { useTranslation } from "../../../utils/i18n";
 
 export default function HelpCenterScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { origin } = useLocalSearchParams<{ origin?: string | string[] }>();
   const settingsOrigin = normalizeOrigin(origin);
@@ -29,7 +31,6 @@ export default function HelpCenterScreen() {
   const user = useAppStore((state) => state.user);
   const accessStatus = getRestrictedAccessStatus(user);
   const isRestrictedAccess = accessStatus !== null;
-  const accessStatusLabel = accessStatus === "suspended" ? "suspended" : "restricted";
   const [issue, setIssue] = useState("");
   const [description, setDescription] = useState("");
   const [attachedFile, setAttachedFile] = useState<any>(null);
@@ -40,7 +41,7 @@ export default function HelpCenterScreen() {
 
   const handleSubmit = async () => {
     if (!issue.trim() || !description.trim()) {
-      showErrorMessage("Please fill in all fields");
+      showErrorMessage(t("required_fields_no_period"));
       return;
     }
 
@@ -59,8 +60,8 @@ export default function HelpCenterScreen() {
       const res = await createSupportTicket(payload);
       console.log('[HelpCenter] Create ticket response:', JSON.stringify(res, null, 2));
       showSuccessMessage(
-        `${res.message}\nTicket #${res.ticket.ticket_number}`,
-        "Ticket Created"
+        `${res.message}\n${t("help_center_ticket_number")} #${res.ticket.ticket_number}`,
+        t("help_center_ticket_created")
       );
       setIssue("");
       setDescription("");
@@ -69,7 +70,7 @@ export default function HelpCenterScreen() {
       const msg =
         err?.response?.data?.message ||
         err?.message ||
-        "Something went wrong. Please try again.";
+        t("something_went_wrong");
       showErrorMessage(msg);
     } finally {
       setIsLoading(false);
@@ -88,13 +89,13 @@ export default function HelpCenterScreen() {
       }
     } catch (err) {
       console.log("Error picking document:", err);
-      showErrorMessage("Failed to pick document.");
+      showErrorMessage(t("help_center_document_pick_failed"));
     }
   };
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Help Center" showBack={true} />
+      <Header title={t("help_center")} showBack={true} />
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
@@ -115,11 +116,11 @@ export default function HelpCenterScreen() {
             <View style={styles.titleRow}>
               {/* Titles */}
               <View>
-                <Text style={styles.mainTitle}>Help Center</Text>
+                <Text style={styles.mainTitle}>{t("help_center")}</Text>
                 <Text style={styles.subTitle}>
                   {isRestrictedAccess
-                    ? `Your account is ${accessStatusLabel}. Tell us the reason and our support team will review it.`
-                    : "How can we help you?"}
+                    ? t(accessStatus === "suspended" ? "help_center_restricted_suspended_subtitle" : "help_center_restricted_subtitle")
+                    : t("help_center_subtitle")}
                 </Text>
               </View>
               {!isRestrictedAccess && (
@@ -128,7 +129,7 @@ export default function HelpCenterScreen() {
                   activeOpacity={0.7}
                   onPress={() => router.push(buildSettingsHref('/(tabs)/settings/tickets', settingsOrigin))}
                 >
-                  <Text style={styles.viewTicketsText}>View All Tickets</Text>
+                  <Text style={styles.viewTicketsText}>{t("help_center_view_all_tickets")}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -136,10 +137,10 @@ export default function HelpCenterScreen() {
             {isRestrictedAccess && (
               <View style={styles.suspendedBanner}>
                 <Text style={styles.suspendedBannerTitle}>
-                  Account {accessStatus === "suspended" ? "Suspended" : "Restricted"}
+                  {accessStatus === "suspended" ? t("help_center_account_suspended") : t("help_center_account_restricted")}
                 </Text>
                 <Text style={styles.suspendedBannerText}>
-                  Only Help Center is available right now. Send your message and reason here, and the admin support team will receive it in the dashboard support panel.
+                  {t("help_center_restricted_banner")}
                 </Text>
               </View>
             )}
@@ -147,11 +148,11 @@ export default function HelpCenterScreen() {
             <View style={styles.formContainer}>
               {/* Issue Selection Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Issue</Text>
+                <Text style={styles.label}>{t("help_center_issue_label")}</Text>
                 <View style={styles.inputWrapper}>
                   <TextInput
                     style={styles.input}
-                    placeholder={isRestrictedAccess ? "Reason for review" : "Issue name"}
+                    placeholder={isRestrictedAccess ? t("help_center_issue_placeholder_restricted") : t("help_center_issue_placeholder")}
                     placeholderTextColor="#4B5563"
                     value={issue}
                     onChangeText={setIssue}
@@ -161,11 +162,11 @@ export default function HelpCenterScreen() {
 
               {/* Description Input */}
               <View style={[styles.inputGroup, { marginBottom: 0 }]}>
-                <Text style={styles.label}>Describe Your Problem</Text>
+                <Text style={styles.label}>{t("help_center_description_label")}</Text>
                 <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
                   <TextInput
                     style={styles.textArea}
-                    placeholder={isRestrictedAccess ? "Explain why your account should be reviewed or restored..." : "Explain your issue in detail..."}
+                    placeholder={isRestrictedAccess ? t("help_center_description_placeholder_restricted") : t("help_center_description_placeholder")}
                     placeholderTextColor="#9CA3AF"
                     value={description}
                     onChangeText={setDescription}
@@ -198,7 +199,7 @@ export default function HelpCenterScreen() {
                     >
                       {attachedFile
                         ? attachedFile.name
-                        : "Attach File (optional)"}
+                        : t("help_center_attach_file")}
                     </Text>
                   </TouchableOpacity>
                   {attachedFile && (
@@ -232,7 +233,7 @@ export default function HelpCenterScreen() {
               disabled={isLoading}
             >
               <Text style={styles.submitButtonText}>
-                {isLoading ? "Sending..." : "Send Message"}
+                {isLoading ? t("help_center_sending") : t("help_center_send_message")}
               </Text>
               {!isLoading && (
                 <Feather

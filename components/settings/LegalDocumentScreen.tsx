@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PublicLegalDocument } from '../../api/settings';
 import { useAppStore } from '../../store/useAppStore';
 import { formatReadableDate } from '../../utils/date';
+import { useTranslation } from '../../utils/i18n';
 import Header from '../ui/Header';
 import { TextRouteSkeleton } from '../ui/RouteSkeletons';
 
@@ -36,6 +37,7 @@ export default function LegalDocumentScreen({
   headerTitle,
   loadDocument,
 }: LegalDocumentScreenProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const cachedDocument = useAppStore((state) => state.legalDocumentCache[cacheKey]);
   const setLegalDocumentCacheItem = useAppStore((state) => state.setLegalDocumentCacheItem);
@@ -80,7 +82,7 @@ export default function LegalDocumentScreen({
           <Text style={styles.stateTitle}>{errorTitle}</Text>
           <Text style={styles.stateDescription}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => void fetchDocument()}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('try_again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -112,12 +114,12 @@ export default function LegalDocumentScreen({
                 month: 'long',
                 year: 'numeric',
               },
-              'Not available',
+              t('not_available'),
               'input',
             )}
           </Text>
           {document?.updated_by ? (
-            <Text style={styles.updatedBy}>Updated by: {document.updated_by}</Text>
+            <Text style={styles.updatedBy}>{t('legal_updated_by')}: {document.updated_by}</Text>
           ) : null}
 
           {(document?.content ?? '')

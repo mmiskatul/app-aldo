@@ -4,9 +4,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import Header from '../../../components/ui/Header';
-import {
-  getCurrentUser,
-} from '../../../api/auth';
+import { getCurrentUser } from '../../../api/auth';
 import {
   BillingCycle,
   RestaurantSubscriptionSettings,
@@ -17,10 +15,25 @@ import {
   selectUserSubscriptionPlan,
 } from '../../../api/settings';
 import { useAppStore } from '../../../store/useAppStore';
-import { formatBillingCycleLabel, formatReadableDate, formatSubscriptionStatus } from '../../../utils/date';
+import { formatReadableDate, formatSubscriptionStatus } from '../../../utils/date';
 import { showDialog, showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
+import { useTranslation } from '../../../utils/i18n';
+
+const LOCALIZED_PLAN_NAME_KEYS: Record<string, string> = {
+  'Core Plan': 'subscription_plan_core_name',
+};
+
+const LOCALIZED_PLAN_FEATURE_KEYS: Record<string, string> = {
+  'AI menu suggestions': 'subscription_feature_ai_menu_suggestions',
+  'Basic sales analytics': 'subscription_feature_basic_sales_analytics',
+  'Email support': 'subscription_feature_email_support',
+  'Advanced AI insights': 'subscription_feature_advanced_ai_insights',
+  'Revenue analytics': 'subscription_feature_revenue_analytics',
+  'Enterprise reports': 'subscription_feature_enterprise_reports',
+};
 
 export default function ManageSubscriptionScreen() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [activatingPlanId, setActivatingPlanId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -46,11 +59,11 @@ export default function ManageSubscriptionScreen() {
         setBillingCycle(subscriptionSettings.billing_cycle);
       }
     } catch (error: any) {
-      showErrorMessage(error?.message || 'Unable to load subscription details.');
+      showErrorMessage(error?.message || t('subscription_manage_load_failed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadSubscriptionData();
@@ -72,6 +85,36 @@ export default function ManageSubscriptionScreen() {
     : currentPlan?.monthly_price ?? 0;
   const switchablePlans = plans.filter((plan) => !isCurrentPlanForCycle(plan));
 
+  const getLocalizedPlanName = (name?: string | null) => {
+    if (!name) {
+      return t('subscription_no_plan_selected');
+    }
+    const key = LOCALIZED_PLAN_NAME_KEYS[name.trim()];
+    return key ? t(key as any) : name;
+  };
+
+  const getLocalizedFeature = (feature: string) => {
+    const key = LOCALIZED_PLAN_FEATURE_KEYS[feature.trim()];
+    return key ? t(key as any) : feature;
+  };
+
+  const getLocalizedBillingCycleLabel = (value: string | null | undefined) => {
+    if (value === '1_year') return t('subscription_yearly');
+    if (value === '1_month') return t('subscription_monthly');
+    return t('subscription_not_selected');
+  };
+
+  const getLocalizedStatusLabel = (value: string | null | undefined) => {
+    const normalized = String(value || '').toLowerCase();
+    if (!normalized) return t('subscription_status_not_active');
+    if (normalized === 'active') return t('subscription_status_active');
+    if (normalized === 'trial') return t('subscription_status_trial');
+    if (normalized === 'canceled') return t('subscription_status_canceled');
+    if (normalized === 'expired') return t('subscription_status_expired');
+    if (normalized === 'suspended') return t('subscription_status_suspended');
+    return formatSubscriptionStatus(value);
+  };
+
   const handleActivatePlan = async (plan: UserSubscriptionPlan) => {
     if (isCurrentPlanForCycle(plan)) {
       return;
@@ -80,12 +123,12 @@ export default function ManageSubscriptionScreen() {
     setActivatingPlanId(plan.id);
     try {
       const response = await selectUserSubscriptionPlan(billingCycle, false, plan.id);
-      showSuccessMessage(response.message || 'Plan activated successfully.');
+      showSuccessMessage(response.message || t('subscription_plan_activated_successfully'));
       const refreshedUser = await getCurrentUser();
       setUser(refreshedUser, tokens);
       await loadSubscriptionData();
     } catch (error: any) {
-      showErrorMessage(error?.message || 'Unable to activate plan.');
+      showErrorMessage(error?.message || t('subscription_activate_failed'));
     } finally {
       setActivatingPlanId(null);
     }
@@ -95,7 +138,7 @@ export default function ManageSubscriptionScreen() {
     setCancelLoading(true);
     try {
       const response = await cancelUserSubscription();
-      showSuccessMessage(response.message || 'Subscription canceled successfully.');
+      showSuccessMessage(response.message || t('subscription_canceled_successfully'));
       setSubscription((current) => ({
         selection_required: response.subscription.selection_required,
         plan_name: response.subscription.plan_name,
@@ -124,7 +167,7 @@ export default function ManageSubscriptionScreen() {
       clearHomeScreenCache();
       clearAnalyticsScreenCache();
     } catch (error: any) {
-      showErrorMessage(error?.message || 'Unable to cancel subscription.');
+      showErrorMessage(error?.message || t('subscription_cancel_failed'));
     } finally {
       setCancelLoading(false);
     }
@@ -132,11 +175,11 @@ export default function ManageSubscriptionScreen() {
 
   const handleCancelSubscription = () => {
     showDialog(
-      'Cancel Subscription',
-      'Are you sure you want to cancel this subscription?',
+      t('subscription_cancel_title'),
+      t('subscription_cancel_message'),
       [
-        { text: 'Keep Plan', style: 'cancel' },
-        { text: 'Cancel Subscription', style: 'destructive', onPress: () => { void submitCancelSubscription(); } },
+        { text: t('subscription_keep_plan'), style: 'cancel' },
+        { text: t('subscription_cancel_action'), style: 'destructive', onPress: () => { void submitCancelSubscription(); } },
       ],
     );
   };
@@ -150,18 +193,18 @@ export default function ManageSubscriptionScreen() {
       <View key={plan.id} style={[styles.planCard, currentForCycle && styles.currentPlanCard]}>
         <View style={styles.planHeaderRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.planName}>{plan.name || 'Subscription Plan'}</Text>
+            <Text style={styles.planName}>{getLocalizedPlanName(plan.name || null)}</Text>
           </View>
           {plan.is_best_plan && !currentForCycle ? (
             <View style={styles.bestBadge}>
-              <Text style={styles.bestBadgeText}>BEST VALUE</Text>
+              <Text style={styles.bestBadgeText}>{t('subscription_best_value')}</Text>
             </View>
           ) : null}
         </View>
 
         <View style={styles.priceRow}>
-          <Text style={styles.priceAmount}>€{currentPrice}</Text>
-          <Text style={styles.pricePeriod}>{billingCycle === '1_year' ? ' / year' : ' / month'}</Text>
+          <Text style={styles.priceAmount}>{`\u20AC${currentPrice}`}</Text>
+          <Text style={styles.pricePeriod}>{billingCycle === '1_year' ? t('subscription_per_year') : t('subscription_per_month')}</Text>
         </View>
 
         <View style={styles.featuresWrap}>
@@ -172,7 +215,7 @@ export default function ManageSubscriptionScreen() {
                 size={moderateScale(18)}
                 color="#D97706"
               />
-              <Text style={styles.featureText}>{feature}</Text>
+              <Text style={styles.featureText}>{getLocalizedFeature(feature)}</Text>
             </View>
           ))}
         </View>
@@ -186,7 +229,7 @@ export default function ManageSubscriptionScreen() {
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={[styles.primaryButtonText, currentForCycle && styles.disabledPrimaryButtonText]}>
-              {currentForCycle ? 'Current Plan' : hasActiveSubscription ? 'Switch Plan' : 'Activate Plan'}
+              {currentForCycle ? t('subscription_current_plan_button') : hasActiveSubscription ? t('subscription_switch_plan') : t('subscription_activate_plan')}
             </Text>
           )}
         </TouchableOpacity>
@@ -196,7 +239,7 @@ export default function ManageSubscriptionScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Manage Subscription" showBack={true} />
+      <Header title={t('manage_subscription')} showBack={true} />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {loading ? (
@@ -211,8 +254,8 @@ export default function ManageSubscriptionScreen() {
                   <Feather name="credit-card" size={moderateScale(22)} color="#FA8C4C" />
                 </View>
                 <View style={styles.cardHeaderCopy}>
-                  <Text style={styles.sectionEyebrow}>Current Subscription</Text>
-                  <Text style={styles.title}>{subscription?.plan_name || 'No plan selected'}</Text>
+                  <Text style={styles.sectionEyebrow}>{t('subscription_current_section')}</Text>
+                  <Text style={styles.title}>{getLocalizedPlanName(subscription?.plan_name || null)}</Text>
                 </View>
               </View>
 
@@ -220,39 +263,39 @@ export default function ManageSubscriptionScreen() {
                 {currentPlan ? (
                   <View style={styles.currentPlanSummary}>
                     <View style={styles.currentBadge}>
-                      <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
+                      <Text style={styles.currentBadgeText}>{t('subscription_current_plan_badge')}</Text>
                     </View>
                     <View style={styles.priceRowCompact}>
-                      <Text style={styles.priceAmountCompact}>€{currentPlanPrice}</Text>
+                      <Text style={styles.priceAmountCompact}>{`\u20AC${currentPlanPrice}`}</Text>
                       <Text style={styles.pricePeriod}>
-                        {subscription?.billing_cycle === '1_year' ? ' / year' : ' / month'}
+                        {subscription?.billing_cycle === '1_year' ? t('subscription_per_year') : t('subscription_per_month')}
                       </Text>
                     </View>
                   </View>
                 ) : null}
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Status</Text>
-                  <Text style={styles.infoValue}>{formatSubscriptionStatus(subscription?.status ?? null)}</Text>
+                  <Text style={styles.infoLabel}>{t('subscription_status_label')}</Text>
+                  <Text style={styles.infoValue}>{getLocalizedStatusLabel(subscription?.status ?? null)}</Text>
                 </View>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Billing</Text>
-                  <Text style={styles.infoValue}>{formatBillingCycleLabel(subscription?.billing_cycle ?? null)}</Text>
+                  <Text style={styles.infoLabel}>{t('subscription_billing_label')}</Text>
+                  <Text style={styles.infoValue}>{getLocalizedBillingCycleLabel(subscription?.billing_cycle ?? null)}</Text>
                 </View>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Started</Text>
-                  <Text style={styles.infoValue}>{formatReadableDate(subscription?.started_at ?? null)}</Text>
+                  <Text style={styles.infoLabel}>{t('subscription_started_label')}</Text>
+                  <Text style={styles.infoValue}>{formatReadableDate(subscription?.started_at ?? null, undefined, t('not_available'))}</Text>
                 </View>
                 <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Next renewal</Text>
-                  <Text style={styles.infoValue}>{formatReadableDate(subscription?.expires_at ?? null)}</Text>
+                  <Text style={styles.infoLabel}>{t('subscription_next_renewal_label')}</Text>
+                  <Text style={styles.infoValue}>{formatReadableDate(subscription?.expires_at ?? null, undefined, t('not_available'))}</Text>
                 </View>
               </View>
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.sectionEyebrow}>Switch Plan</Text>
+              <Text style={styles.sectionEyebrow}>{t('subscription_switch_section')}</Text>
               <Text style={styles.helperText}>
-                Choose a different plan or billing cycle. No payment module is connected yet.
+                {t('subscription_switch_helper')}
               </Text>
 
               <View style={styles.toggleContainer}>
@@ -261,7 +304,7 @@ export default function ManageSubscriptionScreen() {
                   onPress={() => setBillingCycle('1_month')}
                 >
                   <Text style={[styles.toggleText, billingCycle === '1_month' ? styles.toggleTextActive : null]}>
-                    Monthly
+                    {t('subscription_monthly')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -269,21 +312,21 @@ export default function ManageSubscriptionScreen() {
                   onPress={() => setBillingCycle('1_year')}
                 >
                   <Text style={[styles.toggleText, billingCycle === '1_year' ? styles.toggleTextActive : null]}>
-                    Yearly
+                    {t('subscription_yearly')}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               {switchablePlans.length > 0 ? switchablePlans.map(renderPlanCard) : (
-                <Text style={styles.helperText}>No other plan is available for this billing cycle.</Text>
+                <Text style={styles.helperText}>{t('subscription_no_other_plan_for_cycle')}</Text>
               )}
             </View>
 
             {hasActiveSubscription ? (
               <View style={styles.card}>
-                <Text style={styles.sectionEyebrow}>Subscription Actions</Text>
+                <Text style={styles.sectionEyebrow}>{t('subscription_actions_section')}</Text>
                 <Text style={styles.helperText}>
-                  Canceling your plan will remove access until another plan is activated.
+                  {t('subscription_actions_helper')}
                 </Text>
 
                 <TouchableOpacity
@@ -294,7 +337,7 @@ export default function ManageSubscriptionScreen() {
                   {cancelLoading ? (
                     <ActivityIndicator color="#B91C1C" />
                   ) : (
-                    <Text style={styles.dangerButtonText}>Cancel Subscription</Text>
+                    <Text style={styles.dangerButtonText}>{t('subscription_cancel_action')}</Text>
                   )}
                 </TouchableOpacity>
               </View>

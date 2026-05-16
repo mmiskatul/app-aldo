@@ -28,40 +28,41 @@ import {
   getPushDeviceId,
   registerForPushNotificationsAsync,
 } from '../../../utils/pushNotifications';
+import { useTranslation } from '../../../utils/i18n';
 
 type NotificationKey = keyof RestaurantNotificationSettings;
 
 interface NotificationOption {
   id: NotificationKey;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
 }
 
 const NOTIFICATION_OPTIONS: NotificationOption[] = [
   {
     id: 'push_notifications',
-    title: 'Push Notifications',
-    description: 'Receive instant alerts on your device.',
+    titleKey: 'notification_push_title',
+    descriptionKey: 'notification_push_description',
   },
   {
     id: 'email_notifications',
-    title: 'Email Notifications',
-    description: 'Get updates and reports in your inbox.',
+    titleKey: 'notification_email_title',
+    descriptionKey: 'notification_email_description',
   },
   {
     id: 'daily_summary_notifications',
-    title: 'Daily Summary Alerts',
-    description: 'A quick overview of performance every morning.',
+    titleKey: 'notification_daily_summary_title',
+    descriptionKey: 'notification_daily_summary_description',
   },
   {
     id: 'low_stock_alerts',
-    title: 'Low Stock Alerts',
-    description: 'Get notified when inventory drops below threshold.',
+    titleKey: 'notification_low_stock_title',
+    descriptionKey: 'notification_low_stock_description',
   },
   {
     id: 'marketing_notifications',
-    title: 'Marketing Notifications',
-    description: 'Receive product news, offers, and feature updates.',
+    titleKey: 'notification_marketing_title',
+    descriptionKey: 'notification_marketing_description',
   },
 ];
 
@@ -74,6 +75,7 @@ const DEFAULT_SETTINGS: RestaurantNotificationSettings = {
 };
 
 export default function NotificationSettingsScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const profile = useAppStore((state) => state.profile);
   const [settings, setSettings] =
@@ -93,12 +95,12 @@ export default function NotificationSettingsScreen() {
       setError(
         err?.response?.data?.message ??
           err?.message ??
-          'Failed to load notification settings.'
+          t('notification_load_failed')
       );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchSettings();
@@ -115,7 +117,7 @@ export default function NotificationSettingsScreen() {
       if (id === 'push_notifications' && nextValue) {
         const expoPushToken = await registerForPushNotificationsAsync();
         if (!expoPushToken) {
-          throw new Error('Push notification permission was not granted.');
+          throw new Error(t('notification_push_permission_denied'));
         }
         const deviceId = await getPushDeviceId();
         await registerPushDevice({
@@ -131,14 +133,14 @@ export default function NotificationSettingsScreen() {
       });
       setSettings(updated);
       setLastUpdatedKey(id);
-      showSuccessMessage('Notification preference updated.');
+      showSuccessMessage(t('notification_updated_successfully'));
     } catch (err: any) {
       setSettings(previous);
       showErrorMessage(
         err?.response?.data?.message ??
           err?.message ??
-          'Could not update notification settings.',
-        'Update failed'
+          t('notification_update_failed'),
+        t('save_failed')
       );
     } finally {
       setSavingKey(null);
@@ -159,7 +161,7 @@ export default function NotificationSettingsScreen() {
   return (
     <View style={styles.safeArea}>
       <Header
-        title="Notification Settings"
+        title={t('notification_settings')}
         showBack={true}
         rightComponent={<AvatarRight />}
       />
@@ -169,10 +171,10 @@ export default function NotificationSettingsScreen() {
       ) : error ? (
         <View style={styles.centerState}>
           <Feather name="alert-circle" size={moderateScale(42)} color="#EF4444" />
-          <Text style={styles.stateTitle}>Unable to load settings</Text>
+          <Text style={styles.stateTitle}>{t('notification_unable_to_load_title')}</Text>
           <Text style={styles.stateDescription}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchSettings}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={styles.retryButtonText}>{t('try_again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -195,15 +197,15 @@ export default function NotificationSettingsScreen() {
                 >
                   <View style={styles.textContainer}>
                     <View style={styles.optionTitleRow}>
-                      <Text style={styles.optionTitle}>{option.title}</Text>
+                      <Text style={styles.optionTitle}>{t(option.titleKey as any)}</Text>
                       {isSaving ? (
-                        <Text style={styles.optionStatus}>Saving...</Text>
+                        <Text style={styles.optionStatus}>{t('saving')}</Text>
                       ) : wasUpdated ? (
-                        <Text style={styles.optionStatusSuccess}>Saved</Text>
+                        <Text style={styles.optionStatusSuccess}>{t('saved')}</Text>
                       ) : null}
                     </View>
                     <Text style={styles.optionDescription}>
-                      {option.description}
+                      {t(option.descriptionKey as any)}
                     </Text>
                   </View>
                   <Switch
