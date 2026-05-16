@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,6 +20,7 @@ interface ProfileImageEditProps {
   onImageChange?: (file: ProfileImageFile | null) => void;
   onRemoveImage?: () => void;
   removeDisabled?: boolean;
+  editable?: boolean;
 }
 
 export default function ProfileImageEdit({
@@ -27,6 +28,7 @@ export default function ProfileImageEdit({
   onImageChange,
   onRemoveImage,
   removeDisabled = false,
+  editable = true,
 }: ProfileImageEditProps) {
   const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
@@ -110,37 +112,43 @@ export default function ProfileImageEdit({
         ) : (
           <ProfilePlaceholderAvatar size={scale(100)} style={styles.avatar} />
         )}
-        <TouchableOpacity
-          style={styles.cameraButton}
-          onPress={() => setModalVisible(true)}
-          accessibilityLabel={t('change_photo')}
-        >
-          <Feather name="camera" size={moderateScale(14)} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.actionsRow}>
-        {hasProfileImage ? (
+        {editable ? (
           <TouchableOpacity
-            onPress={onRemoveImage}
-            style={styles.iconActionButton}
-            disabled={removeDisabled}
-            accessibilityLabel={t('remove_photo')}
+            style={styles.cameraButton}
+            onPress={() => setModalVisible(true)}
+            accessibilityLabel={t('change_photo')}
           >
-            <Feather
-              name="trash-2"
-              size={moderateScale(16)}
-              color={removeDisabled ? "#FCA5A5" : "#EF4444"}
-            />
+            <Feather name="camera" size={moderateScale(14)} color="#FFFFFF" />
           </TouchableOpacity>
         ) : null}
       </View>
+      {editable ? (
+        <View style={styles.actionsRow}>
+          {hasProfileImage ? (
+            <TouchableOpacity
+              onPress={onRemoveImage}
+              style={styles.iconActionButton}
+              disabled={removeDisabled}
+              accessibilityLabel={t('remove_photo')}
+            >
+              <Feather
+                name="trash-2"
+                size={moderateScale(16)}
+                color={removeDisabled ? "#FCA5A5" : "#EF4444"}
+              />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
 
-      <PhotoPickerModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSelectCamera={handleCamera}
-        onSelectGallery={handleGallery}
-      />
+      {editable ? (
+        <PhotoPickerModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          onSelectCamera={handleCamera}
+          onSelectGallery={handleGallery}
+        />
+      ) : null}
     </View>
   );
 }

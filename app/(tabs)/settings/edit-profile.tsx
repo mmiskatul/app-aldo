@@ -1,9 +1,8 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Feather } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useAppStore } from '../../../store/useAppStore';
 import apiClient from '../../../api/apiClient';
 import { getCurrentUser } from '../../../api/auth';
@@ -11,16 +10,12 @@ import { getApiDisplayMessage, logApiError } from '../../../utils/apiErrors';
 import { useTranslation } from '../../../utils/i18n';
 import { showErrorMessage } from '../../../utils/feedback';
 import { normalizeOrigin } from '../../../utils/settingsNavigation';
-import { buildFileName, inferMimeType } from '../../../utils/fileMetadata';
 
 // Components
 import Header from '../../../components/ui/Header';
 import ProfileImageEdit, { ProfileImageFile } from '../../../components/settings/edit-profile/ProfileImageEdit';
 import FormInput from '../../../components/settings/edit-profile/FormInput';
 import RestaurantDetailsForm from '../../../components/settings/edit-profile/RestaurantDetailsForm';
-import PhotoPickerModal from '../../../components/ui/PhotoPickerModal';
-
-type RestaurantPhotoTarget = 'interior' | 'exterior';
 
 export default function EditProfileScreen() {
   const { t } = useTranslation();
@@ -36,8 +31,6 @@ export default function EditProfileScreen() {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [savePhase, setSavePhase] = useState<'idle' | 'saving'>('idle');
   const [loadingDots, setLoadingDots] = useState(1);
-  const [activePhotoTarget, setActivePhotoTarget] = useState<RestaurantPhotoTarget | null>(null);
-
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     email: profile?.email || '',
@@ -75,30 +68,6 @@ export default function EditProfileScreen() {
 
   const updateField = (field: string, value: string | boolean | ProfileImageFile | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleImageChange = (file: ProfileImageFile | null) => {
-    setFormData((prev) => ({
-      ...prev,
-      profile_image: file,
-      remove_profile_image: false,
-    }));
-  };
-
-  const handleRestaurantPhotoChange = (target: RestaurantPhotoTarget, file: ProfileImageFile | null) => {
-    if (target === 'interior') {
-      setFormData((prev) => ({
-        ...prev,
-        interior_photo: file,
-        remove_interior_photo: false,
-      }));
-      return;
-    }
-    setFormData((prev) => ({
-      ...prev,
-      exterior_photo: file,
-      remove_exterior_photo: false,
-    }));
   };
 
   useEffect(() => {
@@ -144,119 +113,6 @@ export default function EditProfileScreen() {
     };
   }, [setProfile, t]);
 
-  const handleRemovePhoto = () => {
-    Alert.alert(
-      t('remove_photo_title'),
-      t('remove_photo_message'),
-      [
-        {
-          text: t('cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('remove_photo'),
-          style: 'destructive',
-          onPress: () => {
-            setFormData((prev) => ({
-              ...prev,
-              profile_image: null,
-              remove_profile_image: true,
-            }));
-          },
-        },
-      ]
-    );
-  };
-
-  const handleRemoveRestaurantPhoto = (target: RestaurantPhotoTarget) => {
-    const title = target === 'interior' ? t('onboarding_interior_photo_title') : t('onboarding_exterior_photo_title');
-    Alert.alert(
-      title,
-      t('remove_photo_message'),
-      [
-        {
-          text: t('cancel'),
-          style: 'cancel',
-        },
-        {
-          text: t('remove_photo'),
-          style: 'destructive',
-          onPress: () => {
-            if (target === 'interior') {
-              setFormData((prev) => ({
-                ...prev,
-                interior_photo: null,
-                remove_interior_photo: true,
-              }));
-              return;
-            }
-            setFormData((prev) => ({
-              ...prev,
-              exterior_photo: null,
-              remove_exterior_photo: true,
-            }));
-          },
-        },
-      ]
-    );
-  };
-
-  const selectRestaurantPhoto = async (source: 'camera' | 'gallery') => {
-    try {
-      const requiresCamera = source === 'camera';
-      const permissionResult = requiresCamera
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (!permissionResult.granted) {
-        showErrorMessage(t(requiresCamera ? 'camera_permission_required' : 'gallery_permission_required'));
-        return;
-      }
-
-      const result = requiresCamera
-        ? await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 0.8,
-          })
-        : await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 0.8,
-          });
-
-      if (!result.canceled && activePhotoTarget) {
-        const asset = result.assets[0];
-        const mimeType = inferMimeType(asset.fileName || asset.uri, (asset as any).mimeType);
-        handleRestaurantPhotoChange(activePhotoTarget, {
-          uri: asset.uri,
-          name: buildFileName(asset.fileName, asset.uri, `${activePhotoTarget}-photo`, mimeType),
-          mimeType,
-        });
-      }
-    } catch (error) {
-      console.log('Error selecting restaurant photo:', error);
-      showErrorMessage(t(source === 'camera' ? 'image_capture_failed' : 'image_pick_failed'));
-    } finally {
-      setActivePhotoTarget(null);
-    }
-  };
-
-  const getRestaurantPhotoUri = (target: RestaurantPhotoTarget) => {
-    if (target === 'interior') {
-      if (formData.remove_interior_photo) {
-        return null;
-      }
-      return formData.interior_photo?.uri || profile?.interior_photo_url || null;
-    }
-    if (formData.remove_exterior_photo) {
-      return null;
-    }
-    return formData.exterior_photo?.uri || profile?.exterior_photo_url || null;
-  };
-
   const handleSave = async () => {
     setLoading(true);
     setSavePhase('saving');
@@ -286,6 +142,7 @@ export default function EditProfileScreen() {
           type: formData.interior_photo.mimeType,
         } as any);
       } else if (formData.remove_interior_photo) {
+        data.append('remove_interior_photo', 'true');
         data.append('interior_photo_url', '');
       }
       if (formData.exterior_photo) {
@@ -295,6 +152,7 @@ export default function EditProfileScreen() {
           type: formData.exterior_photo.mimeType,
         } as any);
       } else if (formData.remove_exterior_photo) {
+        data.append('remove_exterior_photo', 'true');
         data.append('exterior_photo_url', '');
       }
 
@@ -351,9 +209,7 @@ export default function EditProfileScreen() {
                 ? null
                 : formData.profile_image?.uri || profile?.profile_image_url || null
             }
-            onImageChange={handleImageChange}
-            onRemoveImage={handleRemovePhoto}
-            removeDisabled={loading}
+            editable={false}
           />
 
           <View style={styles.formSection}>
@@ -392,16 +248,13 @@ export default function EditProfileScreen() {
           <View style={styles.restaurantPhotosSection}>
             <Text style={styles.sectionTitle}>{t('restaurant_photos')}</Text>
             <View style={styles.restaurantPhotosRow}>
-              {(['interior', 'exterior'] as RestaurantPhotoTarget[]).map((target) => {
-                const uri = getRestaurantPhotoUri(target);
-                const label = target === 'interior' ? t('interior_photo') : t('exterior_photo');
+              {([
+                { key: 'interior', uri: profile?.interior_photo_url || null, label: t('interior_photo') },
+                { key: 'exterior', uri: profile?.exterior_photo_url || null, label: t('exterior_photo') },
+              ]).map(({ key, uri, label }) => {
                 return (
-                  <View key={target} style={styles.restaurantPhotoItem}>
-                    <TouchableOpacity
-                      style={styles.restaurantPhotoButton}
-                      activeOpacity={0.85}
-                      onPress={() => setActivePhotoTarget(target)}
-                    >
+                  <View key={key} style={styles.restaurantPhotoItem}>
+                    <View style={styles.restaurantPhotoButton}>
                       {uri ? (
                         <Image source={{ uri }} style={styles.restaurantPhoto} />
                       ) : (
@@ -410,28 +263,8 @@ export default function EditProfileScreen() {
                           <Text style={styles.restaurantPhotoPlaceholderText}>{t('upload_photo')}</Text>
                         </View>
                       )}
-                    </TouchableOpacity>
-                    <Text style={styles.restaurantPhotoLabel}>{label}</Text>
-                    <View style={styles.restaurantPhotoActions}>
-                      <TouchableOpacity
-                        style={styles.restaurantPhotoActionButton}
-                        onPress={() => setActivePhotoTarget(target)}
-                        disabled={loading}
-                        accessibilityLabel={t('upload_photo')}
-                      >
-                        <Feather name={uri ? 'upload' : 'camera'} size={moderateScale(16)} color="#374151" />
-                      </TouchableOpacity>
-                      {uri ? (
-                        <TouchableOpacity
-                          style={styles.restaurantPhotoActionButton}
-                          onPress={() => handleRemoveRestaurantPhoto(target)}
-                          disabled={loading}
-                          accessibilityLabel={t('remove_photo')}
-                        >
-                          <Feather name="trash-2" size={moderateScale(16)} color="#EF4444" />
-                        </TouchableOpacity>
-                      ) : null}
                     </View>
+                    <Text style={styles.restaurantPhotoLabel}>{label}</Text>
                   </View>
                 );
               })}
@@ -452,17 +285,6 @@ export default function EditProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <PhotoPickerModal
-        visible={activePhotoTarget !== null}
-        onClose={() => setActivePhotoTarget(null)}
-        onSelectCamera={() => {
-          void selectRestaurantPhoto('camera');
-        }}
-        onSelectGallery={() => {
-          void selectRestaurantPhoto('gallery');
-        }}
-      />
 
       {loading ? (
         <View style={styles.loadingOverlay} pointerEvents="auto">
@@ -568,21 +390,6 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(12, 0.3),
     fontWeight: '700',
     color: '#6B7280',
-  },
-  restaurantPhotoActions: {
-    flexDirection: 'row',
-    gap: scale(8),
-    marginTop: verticalScale(10),
-  },
-  restaurantPhotoActionButton: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: scale(10),
-    width: scale(36),
-    height: scale(36),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
   },
   buttonContainer: {
     flexDirection: 'row',
