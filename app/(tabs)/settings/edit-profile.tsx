@@ -39,10 +39,8 @@ export default function EditProfileScreen() {
     restaurant_type: profile?.restaurant_type || '',
     city_location: profile?.city_location || '',
     number_of_seats: profile?.number_of_seats?.toString() || '',
-    profile_image: null as ProfileImageFile | null,
     interior_photo: null as ProfileImageFile | null,
     exterior_photo: null as ProfileImageFile | null,
-    remove_profile_image: false,
     remove_interior_photo: false,
     remove_exterior_photo: false,
   });
@@ -57,10 +55,8 @@ export default function EditProfileScreen() {
       restaurant_type: profile?.restaurant_type || '',
       city_location: profile?.city_location || '',
       number_of_seats: profile?.number_of_seats?.toString() || '',
-      profile_image: null,
       interior_photo: null,
       exterior_photo: null,
-      remove_profile_image: false,
       remove_interior_photo: false,
       remove_exterior_photo: false,
     }));
@@ -126,15 +122,6 @@ export default function EditProfileScreen() {
       if (formData.number_of_seats) data.append('number_of_seats', formData.number_of_seats);
       if (appLanguage) data.append('preferred_language', appLanguage);
 
-      if (formData.profile_image) {
-        data.append('profile_image', {
-          uri: formData.profile_image.uri,
-          name: formData.profile_image.name,
-          type: formData.profile_image.mimeType,
-        } as any);
-      } else if (formData.remove_profile_image) {
-        data.append('profile_image_url', '');
-      }
       if (formData.interior_photo) {
         data.append('interior_photo', {
           uri: formData.interior_photo.uri,
@@ -204,11 +191,7 @@ export default function EditProfileScreen() {
             </View>
           ) : null}
           <ProfileImageEdit 
-            profileImageUrl={
-              formData.remove_profile_image
-                ? null
-                : formData.profile_image?.uri || profile?.profile_image_url || null
-            }
+            profileImageUrl={profile?.profile_image_url || null}
             editable={false}
           />
 
