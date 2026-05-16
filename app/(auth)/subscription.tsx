@@ -8,9 +8,9 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
 import { BillingCycle, UserSubscriptionPlan, getUserSubscriptionPlans, selectUserSubscriptionPlan } from "../../api/settings";
-import { ListRouteSkeleton } from "../../components/ui/RouteSkeletons";
 import { useAppStore } from "../../store/useAppStore";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
+import { useTranslation } from "../../utils/i18n";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -22,8 +22,22 @@ type CurrentSubscriptionState = {
   status: string | null;
 };
 
+const LOCALIZED_PLAN_NAME_KEYS: Record<string, "subscription_plan_core_name"> = {
+  "Core Plan": "subscription_plan_core_name",
+};
+
+const LOCALIZED_PLAN_FEATURE_KEYS: Record<string, keyof ReturnType<typeof useTranslation>["t"] extends never ? never : any> = {
+  "AI menu suggestions": "subscription_feature_ai_menu_suggestions",
+  "Basic sales analytics": "subscription_feature_basic_sales_analytics",
+  "Email support": "subscription_feature_email_support",
+  "Advanced AI insights": "subscription_feature_advanced_ai_insights",
+  "Revenue analytics": "subscription_feature_revenue_analytics",
+  "Enterprise reports": "subscription_feature_enterprise_reports",
+};
+
 export default function SubscriptionScreen() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("1_month");
   const [plans, setPlans] = useState<UserSubscriptionPlan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscriptionState | null>(null);
@@ -41,8 +55,8 @@ export default function SubscriptionScreen() {
         setCurrentSubscription(response.current_subscription);
       } catch (error: any) {
         showErrorMessage(
-          error?.response?.data?.message || error?.message || "Please try again.",
-          "Unable to load plans"
+          error?.response?.data?.message || error?.message || i18n.t("something_went_wrong"),
+          i18n.t("subscription_load_failed")
         );
       } finally {
         setLoading(false);
@@ -50,11 +64,25 @@ export default function SubscriptionScreen() {
     };
 
     void loadPlans();
-  }, []);
+  }, [i18n, i18n.language]);
 
   const hasActiveSubscription =
     currentSubscription?.selection_required === false &&
     ["active", "trial"].includes(String(currentSubscription?.status || ""));
+
+  const resolvePlanName = (name?: string | null) => {
+    if (!name) {
+      return t("subscription_plan_fallback_name");
+    }
+
+    const localizedKey = LOCALIZED_PLAN_NAME_KEYS[name];
+    return localizedKey ? t(localizedKey) : name;
+  };
+
+  const resolvePlanFeature = (feature: string) => {
+    const localizedKey = LOCALIZED_PLAN_FEATURE_KEYS[feature];
+    return localizedKey ? t(localizedKey as any) : feature;
+  };
 
   const isCurrentPlanForCycle = (plan: UserSubscriptionPlan) => (
     Boolean(plan.is_current) &&
@@ -73,11 +101,11 @@ export default function SubscriptionScreen() {
       setCurrentSubscription(response.subscription);
       const refreshedUser = await getCurrentUser();
       setUser(refreshedUser, tokens);
-      showSuccessMessage("Subscription activated successfully.");
+      showSuccessMessage(t("subscription_activated_successfully"));
       router.replace((hasCompletedOnboarding(refreshedUser) ? "/(tabs)/home" : "/(auth)/setup") as any);
     } catch (error: any) {
       showErrorMessage(
-        error?.response?.data?.message || error?.message || "Unable to activate subscription.",
+        error?.response?.data?.message || error?.message || t("subscription_activate_failed"),
       );
     } finally {
       setSubmittingPlanId(null);
@@ -99,27 +127,33 @@ export default function SubscriptionScreen() {
             end={{ x: 1, y: 0.5 }}
             style={styles.ribbonContainer}
           >
-            <Text style={styles.ribbonText}>BEST VALUE</Text>
+            <Text style={styles.ribbonText} numberOfLines={1}>
+              {t("subscription_best_value")}
+            </Text>
           </LinearGradient>
         ) : null}
 
         {currentForCycle ? (
           <View style={styles.currentBadge}>
-            <Text style={styles.currentBadgeText}>CURRENT PLAN</Text>
+            <Text style={styles.currentBadgeText} numberOfLines={1}>
+              {t("subscription_current_plan_badge")}
+            </Text>
           </View>
         ) : null}
 
-        <Text style={styles.planTitle}>{plan.name || "Subscription Plan"}</Text>
+        <Text style={styles.planTitle}>{resolvePlanName(plan.name)}</Text>
 
         <View style={styles.priceContainer}>
-          <Text style={styles.priceAmount}>€{price}</Text>
+          <Text style={styles.priceAmount}>{"\u20AC"}{price}</Text>
           <Text style={styles.pricePeriod}>
-            {billingCycle === "1_month" ? " / month" : " / year"}
+            {billingCycle === "1_month" ? t("subscription_per_month") : t("subscription_per_year")}
           </Text>
         </View>
 
         <Text style={styles.trialText}>
-          {plan.trial_days > 0 ? `${plan.trial_days}-day free trial included` : "Paid plan"}
+          {plan.trial_days > 0
+            ? t("subscription_trial_included", { days: plan.trial_days })
+            : t("subscription_paid_plan")}
         </Text>
 
         <View style={styles.featuresContainer}>
@@ -130,7 +164,7 @@ export default function SubscriptionScreen() {
                 size={moderateScale(20)}
                 color="#D97706"
               />
-              <Text style={styles.featureText}>{feature}</Text>
+              <Text style={styles.featureText}>{resolvePlanFeature(feature)}</Text>
             </View>
           ))}
         </View>
@@ -143,8 +177,15 @@ export default function SubscriptionScreen() {
           {submitting ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={[styles.startButtonText, currentForCycle && styles.currentButtonText]}>
-              {currentForCycle ? "Current Plan" : hasActiveSubscription ? "Switch Plan" : "Continue Setup"}
+            <Text
+              style={[styles.startButtonText, currentForCycle && styles.currentButtonText]}
+              numberOfLines={1}
+            >
+              {currentForCycle
+                ? t("subscription_current_plan_button")
+                : hasActiveSubscription
+                  ? t("subscription_switch_plan")
+                  : t("continue")}
             </Text>
           )}
         </TouchableOpacity>
@@ -160,14 +201,17 @@ export default function SubscriptionScreen() {
         </View>
 
         <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>Choose Your Plan</Text>
+          <Text style={styles.headerTitle}>{t("subscription_choose_plan_title")}</Text>
           <Text style={styles.headerSubtitle}>
-            Unlock powerful AI tools to manage your restaurant business.
+            {t("subscription_choose_plan_subtitle")}
           </Text>
         </View>
 
         {loading ? (
-          <ListRouteSkeleton itemCount={2} />
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color="#FA8C4C" />
+            <Text style={styles.loadingLabel}>{t("loading")}</Text>
+          </View>
         ) : (
           <>
             <View style={styles.toggleContainer}>
@@ -176,7 +220,7 @@ export default function SubscriptionScreen() {
                 onPress={() => setBillingCycle("1_month")}
               >
                 <Text style={[styles.toggleText, billingCycle === "1_month" ? styles.toggleTextActive : null]}>
-                  Monthly
+                  {t("monthly")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -184,14 +228,14 @@ export default function SubscriptionScreen() {
                 onPress={() => setBillingCycle("1_year")}
               >
                 <Text style={[styles.toggleText, billingCycle === "1_year" ? styles.toggleTextActive : null]}>
-                  Yearly
+                  {t("subscription_yearly")}
                 </Text>
               </TouchableOpacity>
             </View>
 
             {plans.length > 0 ? plans.map(renderPlanCard) : (
               <View style={styles.emptyPlansContainer}>
-                <Text style={styles.footerCancelText}>No subscription plan is available right now.</Text>
+                <Text style={styles.footerCancelText}>{t("subscription_no_plan_available")}</Text>
               </View>
             )}
 
@@ -200,14 +244,14 @@ export default function SubscriptionScreen() {
                 style={styles.secondaryContinueButton}
                 onPress={() => router.push("/(auth)/setup" as any)}
               >
-                <Text style={styles.secondaryContinueText}>Continue Setup</Text>
+                <Text style={styles.secondaryContinueText}>{t("continue")}</Text>
               </TouchableOpacity>
             ) : null}
           </>
         )}
 
         <View style={styles.footerContainer}>
-          <Text style={styles.footerCancelText}>Plan information updates from the live subscription API.</Text>
+          <Text style={styles.footerCancelText}>{t("subscription_live_api_notice")}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -238,6 +282,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111827",
     marginBottom: verticalScale(8),
+    textAlign: "center",
   },
   headerSubtitle: {
     fontSize: moderateScale(15, 0.3),
@@ -245,6 +290,17 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: scale(10),
     lineHeight: moderateScale(22, 0.3),
+  },
+  loadingState: {
+    minHeight: verticalScale(240),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingLabel: {
+    marginTop: verticalScale(12),
+    fontSize: moderateScale(15, 0.3),
+    fontWeight: "600",
+    color: "#6B7280",
   },
   toggleContainer: {
     flexDirection: "row",
@@ -271,6 +327,7 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 0.3),
     fontWeight: "600",
     color: "#6B7280",
+    textAlign: "center",
   },
   toggleTextActive: {
     color: "#FA8C4C",
@@ -301,12 +358,13 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: scale(24),
     paddingHorizontal: scale(16),
     paddingVertical: verticalScale(6),
+    maxWidth: "70%",
   },
   ribbonText: {
     color: "#FFFFFF",
     fontSize: moderateScale(11, 0.3),
     fontWeight: "800",
-    letterSpacing: 1.5,
+    letterSpacing: 0.6,
   },
   currentBadge: {
     alignSelf: "flex-start",
@@ -315,12 +373,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(12),
     paddingVertical: verticalScale(5),
     marginBottom: verticalScale(12),
+    maxWidth: "75%",
   },
   currentBadgeText: {
     color: "#166534",
     fontSize: moderateScale(11, 0.3),
     fontWeight: "800",
-    letterSpacing: 0.8,
+    letterSpacing: 0.4,
   },
   planTitle: {
     fontSize: moderateScale(22, 0.3),
@@ -372,6 +431,7 @@ const styles = StyleSheet.create({
     height: verticalScale(54),
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: scale(12),
   },
   currentButton: {
     backgroundColor: "#E5E7EB",
@@ -380,6 +440,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "700",
     fontSize: moderateScale(16, 0.3),
+    textAlign: "center",
   },
   currentButtonText: {
     color: "#374151",
