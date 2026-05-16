@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -94,9 +94,6 @@ export default function EditProfileScreen() {
     let isMounted = true;
 
     const loadProfile = async () => {
-      if (profile) {
-        return;
-      }
       setLoadingProfile(true);
       try {
         const response = await apiClient.get('/api/v1/restaurant/settings/profile');
@@ -121,7 +118,7 @@ export default function EditProfileScreen() {
     return () => {
       isMounted = false;
     };
-  }, [i18n, profile, setProfile]);
+  }, [i18n.language, setProfile]);
 
   const handleRemovePhoto = () => {
     Alert.alert(
@@ -266,30 +263,6 @@ export default function EditProfileScreen() {
             onChangeNumberOfSeats={(text) => updateField('number_of_seats', text)}
           />
 
-          <View style={styles.restaurantPhotosSection}>
-            <Text style={styles.sectionTitle}>{t('restaurant_photos')}</Text>
-            <View style={styles.restaurantPhotosRow}>
-              {([
-                { key: 'interior', uri: profile?.interior_photo_url || null, label: t('interior_photo') },
-                { key: 'exterior', uri: profile?.exterior_photo_url || null, label: t('exterior_photo') },
-              ]).map(({ key, uri, label }) => (
-                <View key={key} style={styles.restaurantPhotoItem}>
-                  <View style={styles.restaurantPhotoButton}>
-                    {uri ? (
-                      <Image source={{ uri }} style={styles.restaurantPhoto} />
-                    ) : (
-                      <View style={styles.restaurantPhotoPlaceholder}>
-                        <Feather name="camera" size={moderateScale(20)} color="#FA8C4C" />
-                        <Text style={styles.restaurantPhotoPlaceholderText}>{t('upload_photo')}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.restaurantPhotoLabel}>{label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()} disabled={loading}>
               <Text style={styles.cancelButtonText}>{t('cancel')}</Text>
@@ -359,56 +332,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#F3F4F6',
     marginVertical: verticalScale(24),
-  },
-  sectionTitle: {
-    fontSize: moderateScale(12, 0.3),
-    fontWeight: '800',
-    color: '#FA8C4C',
-    letterSpacing: 1,
-    marginBottom: verticalScale(14),
-  },
-  restaurantPhotosSection: {
-    marginTop: verticalScale(20),
-  },
-  restaurantPhotosRow: {
-    flexDirection: 'row',
-    gap: scale(12),
-  },
-  restaurantPhotoItem: {
-    flex: 1,
-  },
-  restaurantPhotoButton: {
-    borderRadius: scale(12),
-    overflow: 'hidden',
-  },
-  restaurantPhoto: {
-    width: '100%',
-    height: verticalScale(110),
-    borderRadius: scale(12),
-    backgroundColor: '#F3F4F6',
-  },
-  restaurantPhotoPlaceholder: {
-    width: '100%',
-    height: verticalScale(110),
-    borderRadius: scale(12),
-    backgroundColor: '#FFF9F5',
-    borderWidth: 1,
-    borderColor: '#FFEDD5',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: verticalScale(8),
-  },
-  restaurantPhotoPlaceholderText: {
-    fontSize: moderateScale(12, 0.3),
-    fontWeight: '700',
-    color: '#FA8C4C',
-  },
-  restaurantPhotoLabel: {
-    marginTop: verticalScale(8),
-    fontSize: moderateScale(12, 0.3),
-    fontWeight: '700',
-    color: '#6B7280',
   },
   buttonContainer: {
     flexDirection: 'row',

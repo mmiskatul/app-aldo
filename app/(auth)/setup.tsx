@@ -221,11 +221,23 @@ export default function SetupScreen() {
           return;
         }
         let onboarding: OnboardingProfileResponse | null = null;
+        let restaurantProfile: OnboardingProfileResponse | null = null;
         try {
           const onboardingResponse = await apiClient.get<OnboardingProfileResponse | null>("/api/v1/onboarding/profile");
           onboarding = onboardingResponse.data;
         } catch (onboardingError: any) {
           console.log("Optional onboarding profile load failed:", onboardingError?.response?.data || onboardingError?.message);
+        }
+        try {
+          const restaurantProfileResponse = await apiClient.get<OnboardingProfileResponse | null>(
+            "/api/v1/restaurant/settings/profile"
+          );
+          restaurantProfile = restaurantProfileResponse.data;
+        } catch (restaurantProfileError: any) {
+          console.log(
+            "Optional restaurant profile load failed:",
+            restaurantProfileError?.response?.data || restaurantProfileError?.message
+          );
         }
 
         if (hasCompletedOnboarding(user)) {
@@ -249,12 +261,13 @@ export default function SetupScreen() {
         );
         setProfilePhoto(
           onboarding?.profile_image_url ||
+            restaurantProfile?.profile_image_url ||
             user.profile_image_url ||
             user.avatar_url ||
             null
         );
-        setInteriorPhoto(onboarding?.interior_photo_url || null);
-        setExteriorPhoto(onboarding?.exterior_photo_url || null);
+        setInteriorPhoto(onboarding?.interior_photo_url || restaurantProfile?.interior_photo_url || null);
+        setExteriorPhoto(onboarding?.exterior_photo_url || restaurantProfile?.exterior_photo_url || null);
         setBusinessGoals(parseBusinessGoals(onboarding?.main_business_goal));
         setBiggestProblem(onboarding?.biggest_problem || "");
         setImprovementGoal(onboarding?.improvement_focus || "");
