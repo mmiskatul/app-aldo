@@ -42,10 +42,15 @@ export default function LegalDocumentScreen({
   const cachedDocument = useAppStore((state) => state.legalDocumentCache[cacheKey]);
   const setLegalDocumentCacheItem = useAppStore((state) => state.setLegalDocumentCacheItem);
   const hasInitialCache = useRef(Boolean(cachedDocument)).current;
+  const errorFallbackRef = useRef(errorFallback);
   const [document, setDocument] = useState<PublicLegalDocument | null>(cachedDocument ?? null);
   const [loading, setLoading] = useState(!cachedDocument);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    errorFallbackRef.current = errorFallback;
+  }, [errorFallback]);
 
   const fetchDocument = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -58,13 +63,13 @@ export default function LegalDocumentScreen({
       setError(
         err?.response?.data?.message ??
           err?.message ??
-          errorFallback
+          errorFallbackRef.current
       );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [cacheKey, errorFallback, loadDocument, setLegalDocumentCacheItem]);
+  }, [cacheKey, loadDocument, setLegalDocumentCacheItem]);
 
   useEffect(() => {
     void fetchDocument(hasInitialCache);

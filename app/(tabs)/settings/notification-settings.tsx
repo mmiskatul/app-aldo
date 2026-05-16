@@ -75,7 +75,7 @@ const DEFAULT_SETTINGS: RestaurantNotificationSettings = {
 };
 
 export default function NotificationSettingsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const profile = useAppStore((state) => state.profile);
   const [settings, setSettings] =
@@ -95,12 +95,12 @@ export default function NotificationSettingsScreen() {
       setError(
         err?.response?.data?.message ??
           err?.message ??
-          t('notification_load_failed')
+          i18n.t('notification_load_failed')
       );
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [i18n]);
 
   useEffect(() => {
     fetchSettings();

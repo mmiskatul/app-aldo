@@ -2,7 +2,6 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingV
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Feather } from '@expo/vector-icons';
 import { useAppStore } from '../../../store/useAppStore';
 import apiClient from '../../../api/apiClient';
 import { getCurrentUser } from '../../../api/auth';
@@ -49,6 +48,11 @@ export default function EditProfileScreen() {
   const [hasFormChanges, setHasFormChanges] = useState(false);
   const [hasHydratedForm, setHasHydratedForm] = useState(false);
   const [formData, setFormData] = useState(() => buildFormStateFromProfile(profile));
+  const i18nRef = React.useRef(i18n);
+
+  useEffect(() => {
+    i18nRef.current = i18n;
+  }, [i18n]);
 
   useEffect(() => {
     if (!profile) {
@@ -104,7 +108,7 @@ export default function EditProfileScreen() {
       } catch (error) {
         if (isMounted) {
           logApiError('settings.edit_profile.load', error);
-          showErrorMessage(getApiDisplayMessage(error, i18n.t('unable_to_load_profile')));
+          showErrorMessage(getApiDisplayMessage(error, i18nRef.current.t('unable_to_load_profile')));
         }
       } finally {
         if (isMounted) {
@@ -118,7 +122,7 @@ export default function EditProfileScreen() {
     return () => {
       isMounted = false;
     };
-  }, [i18n.language, setProfile]);
+  }, [setProfile]);
 
   const handleRemovePhoto = () => {
     Alert.alert(

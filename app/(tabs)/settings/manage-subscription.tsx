@@ -33,7 +33,7 @@ const LOCALIZED_PLAN_FEATURE_KEYS: Record<string, string> = {
 };
 
 export default function ManageSubscriptionScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [activatingPlanId, setActivatingPlanId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
@@ -59,11 +59,11 @@ export default function ManageSubscriptionScreen() {
         setBillingCycle(subscriptionSettings.billing_cycle);
       }
     } catch (error: any) {
-      showErrorMessage(error?.message || t('subscription_manage_load_failed'));
+      showErrorMessage(error?.message || i18n.t('subscription_manage_load_failed'));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [i18n]);
 
   useEffect(() => {
     void loadSubscriptionData();
