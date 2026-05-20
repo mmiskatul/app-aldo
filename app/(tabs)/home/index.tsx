@@ -162,13 +162,13 @@ const cashOverviewToHomeItems = (overview: CashOverviewResponse, period: PeriodK
   const cashDeposit = Number(summary.bank_deposits ?? summary.bank_deposits_total ?? 0);
   const posPayments = Number(summary.pos_payments ?? 0);
   const cashAvailable = Number(summary.cash_available ?? 0);
-  const totalCollection = cashAvailable + posPayments + cashDeposit;
+  const totalCollection = cashAvailable + posPayments;
 
   return [
     {
       label: "Total Collection",
       amount: totalCollection,
-      subtitle: "Cash collected plus POS payments and cash deposits",
+      subtitle: "Available cash plus POS payments",
     },
     {
       label: "POS Payments",

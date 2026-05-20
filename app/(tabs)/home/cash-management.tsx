@@ -43,7 +43,7 @@ const normalizeCashSummary = (summary?: Partial<CashSummary> | null): CashSummar
   const cashAvailable = Number(summary.cash_available ?? 0);
   const bankDeposits = Number(summary.bank_deposits ?? summary.bank_deposits_total ?? 0);
   const withdrawalsTotal = Number(summary.withdrawals_total ?? 0);
-  const totalCollected = Number(summary.total_collected ?? cashAvailable + posPayments + bankDeposits);
+  const totalCollected = cashAvailable + posPayments;
 
   return {
     total_collected: totalCollected,
