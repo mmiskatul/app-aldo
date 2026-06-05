@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { useTranslation } from '../../../utils/i18n';
 
 interface QuickSummaryProps {
   todayTotal: number;
@@ -15,30 +16,31 @@ export default function QuickSummary({
   monthlyTotal, 
   topCategory 
 }: QuickSummaryProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>QUICK SUMMARY</Text>
+      <Text style={styles.sectionTitle}>{t('quick_summary').toUpperCase()}</Text>
       
       <View style={styles.grid}>
         <View style={styles.row}>
           <View style={[styles.card, styles.highlightCard]}>
-            <Text style={styles.highlightTitle}>Today</Text>
+            <Text style={styles.highlightTitle}>{t('today')}</Text>
             <Text style={styles.highlightValue}>€{todayTotal.toFixed(2)}</Text>
           </View>
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>This Week</Text>
+            <Text style={styles.cardTitle}>{t('this_week')}</Text>
             <Text style={styles.cardValue}>€{weeklyTotal.toFixed(2)}</Text>
           </View>
         </View>
         
         <View style={styles.row}>
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>This Month</Text>
+            <Text style={styles.cardTitle}>{t('this_month')}</Text>
             <Text style={styles.cardValue}>€{monthlyTotal.toFixed(2)}</Text>
           </View>
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Top Category</Text>
-            <Text style={styles.cardValue}>{topCategory || "N/A"}</Text>
+            <Text style={styles.cardTitle}>{t('top_category')}</Text>
+            <Text style={styles.cardValue}>{topCategory || t('not_available')}</Text>
           </View>
         </View>
       </View>

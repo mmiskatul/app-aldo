@@ -8,6 +8,7 @@ import {
   CreditCardIcon,
 } from "react-native-heroicons/outline";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { useTranslation } from "../../../utils/i18n";
 
 type CashTransactionType =
   | "bank_deposit"
@@ -58,6 +59,7 @@ const getIconType = (item: Deposit): "bank" | "cash" | "pos" => {
 
 export default function RecentDeposits({ deposits }: RecentDepositsProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const displayDeposits = deposits ?? [];
 
   const openTransactionDetails = (item: Deposit) => {
@@ -85,12 +87,12 @@ export default function RecentDeposits({ deposits }: RecentDepositsProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.sectionTitle}>Recent Transactions</Text>
+        <Text style={styles.sectionTitle}>{t("recent_transactions")}</Text>
       </View>
 
       {!displayDeposits.length ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No recent transactions yet</Text>
+          <Text style={styles.emptyStateText}>{t("no_recent_transactions_yet")}</Text>
         </View>
       ) : (
         displayDeposits.map((item) => {

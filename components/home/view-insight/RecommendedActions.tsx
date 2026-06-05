@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { SparklesIcon, DocumentTextIcon, CheckCircleIcon } from 'react-native-heroicons/outline';
+import { useTranslation } from '../../../utils/i18n';
 
 interface Action {
   title: string;
@@ -15,6 +16,7 @@ interface RecommendedActionsProps {
 }
 
 export default function RecommendedActions({ actions = [], onApply }: RecommendedActionsProps) {
+  const { t } = useTranslation();
   const [appliedIndexes, setAppliedIndexes] = React.useState<Record<number, boolean>>({});
 
   if (!actions || actions.length === 0) return null;
@@ -22,7 +24,7 @@ export default function RecommendedActions({ actions = [], onApply }: Recommende
     <View style={styles.container}>
       <View style={styles.header}>
         <SparklesIcon size={moderateScale(20)} color="#FB923C" />
-        <Text style={styles.headerTitle}>Recommended Actions</Text>
+        <Text style={styles.headerTitle}>{t('recommended_actions')}</Text>
       </View>
       
       {actions.map((action, index) => {
@@ -46,7 +48,7 @@ export default function RecommendedActions({ actions = [], onApply }: Recommende
               }}
             >
               <Text style={[styles.applyText, isApplied && styles.appliedText]}>
-                {isApplied ? 'Applied' : action.action_label || 'Apply'}
+                {isApplied ? t('applied') : action.action_label || t('apply')}
               </Text>
             </TouchableOpacity>
           </View>

@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
@@ -30,6 +30,7 @@ const parseMetricLabel = (value?: string | string[]): SupportedMetricLabel => {
 export default function MetricDetailsScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
+  const router = useRouter();
   const { t } = useTranslation();
 
   const metricLabel = parseMetricLabel(params.label);
@@ -108,6 +109,28 @@ export default function MetricDetailsScreen() {
     }
   }, [metricLabel, t]);
 
+  const actionConfig = useMemo(() => {
+    switch (metricLabel) {
+      case "expenses":
+        return {
+          label: t("metric_action_add_expenses"),
+          route: "/(tabs)/home/add-expense" as const,
+        };
+      case "food cost":
+        return {
+          label: t("metric_action_manage_food_cost"),
+          route: "/(tabs)/documents/upload-invoice" as const,
+        };
+      case "revenue":
+        return {
+          label: t("metric_action_add_revenue"),
+          route: "/(tabs)/home/add-daily-data" as const,
+        };
+      default:
+        return null;
+    }
+  }, [metricLabel, t]);
+
   return (
     <View style={styles.container}>
       <View
@@ -170,6 +193,19 @@ export default function MetricDetailsScreen() {
             {period === "monthly" ? t("comparison_note_monthly") : t("comparison_note_weekly")}
           </Text>
         </View>
+
+        {actionConfig ? (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>{t("next_action_title")}</Text>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => router.push(actionConfig.route)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.actionButtonText}>{actionConfig.label}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -245,6 +281,20 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13, 0.3),
     lineHeight: moderateScale(20, 0.3),
     color: "#4B5563",
+  },
+  actionButton: {
+    marginTop: verticalScale(6),
+    borderRadius: scale(14),
+    backgroundColor: "#FA8C4C",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: verticalScale(14),
+    paddingHorizontal: scale(16),
+  },
+  actionButtonText: {
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   bulletRow: {
     flexDirection: "row",

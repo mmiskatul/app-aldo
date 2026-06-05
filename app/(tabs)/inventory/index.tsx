@@ -200,7 +200,7 @@ export default function InventoryScreen() {
       const nextItems = response.data.items.map((item) => ({
         id: item.id,
         name: item.product_name,
-        supplier: item.supplier_name || 'Unknown supplier',
+        supplier: item.supplier_name || t('unknown_supplier'),
         status: item.stock_status,
         statusColor: statusColorFor(item.stock_status),
         quantity: item.stock_quantity,
@@ -236,7 +236,7 @@ export default function InventoryScreen() {
     } catch (error: any) {
       logApiError('inventory.list', error);
       if (!silent || !hasCachedInventory || query.trim().length > 0) {
-        showErrorMessage(getApiDisplayMessage(error, 'Unable to load inventory items.'), 'Load failed');
+        showErrorMessage(getApiDisplayMessage(error, t('unable_to_load_inventory_items')), t('load_failed'));
       }
     } finally {
       setLoading(false);
@@ -289,9 +289,9 @@ export default function InventoryScreen() {
     }
 
     const messageByNotice: Record<string, string> = {
-      'item-added': 'Item added successfully.',
-      'item-updated': 'Item updated successfully.',
-      'item-deleted': 'Item deleted successfully.',
+      'item-added': t('item_added_successfully'),
+      'item-updated': t('item_updated_successfully'),
+      'item-deleted': t('item_deleted_successfully'),
     };
     const nextMessage = messageByNotice[notice];
     if (!nextMessage) {
@@ -300,7 +300,7 @@ export default function InventoryScreen() {
 
     showSuccessMessage(nextMessage);
     return undefined;
-  }, [notice, noticeKey]);
+  }, [notice, noticeKey, t]);
 
   const toggleFilters = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);

@@ -47,7 +47,7 @@ const getVoiceErrorMessage = (error: any) => {
   if (apiMessage) {
     return String(apiMessage);
   }
-  return error?.message || "Could not transcribe voice message.";
+  return error?.message;
 };
 
 export default function ChatInput({ onSend }: ChatInputProps) {
@@ -132,7 +132,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
 
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
-        showErrorMessage("Microphone permission is required for voice input.", "Voice Input");
+        showErrorMessage(t("microphone_permission_required_voice"), t("voice_input"));
         return;
       }
 
@@ -179,7 +179,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
       if (recording) {
         await recording.stopAndUnloadAsync().catch(() => undefined);
       }
-      showErrorMessage(error?.message || "Could not start voice recording.", "Voice Input");
+      showErrorMessage(error?.message || t("could_not_start_voice_recording"), t("voice_input"));
       setIsRecording(false);
       resetWaveform();
     } finally {
@@ -242,14 +242,14 @@ export default function ChatInput({ onSend }: ChatInputProps) {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       if (!uri) {
-        throw new Error("No voice recording was captured.");
+        throw new Error(t("no_voice_recording_captured"));
       }
 
       const transcript = await transcribeRecording(uri);
       // If user cancelled while transcription was in-flight, discard result
       if (isCancelledRef.current) return;
       if (!transcript) {
-        throw new Error("No speech was detected. Please try again.");
+        throw new Error(t("no_speech_detected_try_again"));
       }
 
       setInputText(transcript);
@@ -260,7 +260,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
       }
     } catch (error: any) {
       if (!isCancelledRef.current) {
-        showErrorMessage(getVoiceErrorMessage(error), "Voice Input");
+        showErrorMessage(getVoiceErrorMessage(error) || t("could_not_transcribe_voice_message"), t("voice_input"));
       }
     } finally {
       isStoppingRecordingRef.current = false;
@@ -288,7 +288,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
     }
 
     if ((inputText.trim() || selectedFile) && onSend) {
-      const messageText = inputText.trim() || "Please review the attached document.";
+      const messageText = inputText.trim() || t("attach_review_document");
       onSend(messageText, selectedFile);
       setInputText("");
       setSelectedFile(null);
@@ -377,14 +377,14 @@ export default function ChatInput({ onSend }: ChatInputProps) {
           onPress={() => setShowAttachmentMenu(true)}
           disabled={isRecording || isTranscribing}
           accessibilityRole="button"
-          accessibilityLabel="Attach file"
+          accessibilityLabel={t("attach_file")}
         >
           <Feather name="plus" size={moderateScale(18)} color="#6B7280" />
         </TouchableOpacity>
 
         <TextInput
           style={[styles.textInput, (isRecording || isTranscribing) && styles.textInputListening]}
-          placeholder={isRecording ? "Recording..." : isTranscribing ? "Transcribing voice..." : t("chat_placeholder")}
+          placeholder={isRecording ? t("recording") : isTranscribing ? t("transcribing_voice") : t("chat_placeholder")}
           placeholderTextColor="#9CA3AF"
           multiline
           value={inputText}
@@ -397,7 +397,7 @@ export default function ChatInput({ onSend }: ChatInputProps) {
           onPress={handleVoicePress}
           disabled={isTranscribing}
           accessibilityRole="button"
-          accessibilityLabel={isRecording ? "Stop voice input" : "Start voice input"}
+          accessibilityLabel={isRecording ? t("stop_voice_input") : t("start_voice_input")}
         >
           <Feather
             name={isRecording ? "mic-off" : "mic"}
@@ -423,19 +423,19 @@ export default function ChatInput({ onSend }: ChatInputProps) {
               <Feather name={isTranscribing ? "loader" : "mic"} size={moderateScale(14)} color="#EF4444" />
             </View>
             <Text style={styles.listeningText}>
-              {isTranscribing ? "Converting voice to text..." : "Recording voice..."}
+              {isTranscribing ? t("converting_voice_to_text") : t("recording_voice")}
             </Text>
             <TouchableOpacity
               style={styles.voiceCancelButton}
               onPress={cancelRecording}
               accessibilityRole="button"
-              accessibilityLabel="Cancel voice recording"
+              accessibilityLabel={t("cancel_voice_recording")}
             >
               <Feather name="x" size={moderateScale(14)} color="#EF4444" />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.waveform} accessibilityLabel="Voice frequency indicator">
+          <View style={styles.waveform} accessibilityLabel={t("voice_frequency_indicator")}>
             {waveformValuesRef.current.map((value, index) => {
               const height = value.interpolate({
                 inputRange: [0, 1],

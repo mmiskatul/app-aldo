@@ -2,11 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { useTranslation } from '../../utils/i18n';
 
 export default function ChatHeader() {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>AI Chat</Text>
+      <Text style={styles.title}>{t('ai_chat_title')}</Text>
       <TouchableOpacity style={styles.bellButton}>
         <Feather name="bell" size={moderateScale(20)} color="#111827" />
       </TouchableOpacity>

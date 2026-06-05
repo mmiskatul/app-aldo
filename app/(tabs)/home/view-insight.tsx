@@ -58,9 +58,9 @@ export default function ViewInsightScreen() {
   }, []);
 
   const handleApplyRecommendedAction = React.useCallback((action: any) => {
-    showSuccessMessage("Action marked as applied. Opening the related workflow.", "Recommended Action");
+    showSuccessMessage(t("action_marked_as_applied_opening_workflow"), t("recommended_action"));
     router.push(resolveActionRoute(action) as any);
-  }, [resolveActionRoute, router]);
+  }, [resolveActionRoute, router, t]);
 
   const handleBackPress = React.useCallback(() => {
     if ((router as any).canGoBack?.()) {
@@ -217,7 +217,7 @@ export default function ViewInsightScreen() {
             <OtherInsights insights={localizedInsightData.other_related_insights} />
           </>
         ) : (
-          <Text style={{ textAlign: "center", marginTop: verticalScale(40) }}>No insight available</Text>
+          <Text style={{ textAlign: "center", marginTop: verticalScale(40) }}>{t("no_insight_available")}</Text>
         )}
       </ScrollView>
 

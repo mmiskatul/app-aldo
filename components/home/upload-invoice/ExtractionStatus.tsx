@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from '../../../utils/i18n';
 
 interface ExtractionStatusProps {
   progress: number; // 0 to 100
 }
 
 export default function ExtractionStatus({ progress }: ExtractionStatusProps) {
+  const { t } = useTranslation();
   const animatedWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function ExtractionStatus({ progress }: ExtractionStatusProps) {
         <View style={styles.spinnerPlaceholder}>
           <Feather name="loader" size={moderateScale(14)} color="#FFFFFF" />
         </View>
-        <Text style={styles.extractionText}>AI is extracting invoice data...</Text>
+        <Text style={styles.extractionText}>{t('ai_extracting_invoice_data')}</Text>
       </View>
       <View style={styles.progressBarTrack}>
         <Animated.View style={[styles.progressBarFill, { width: widthInterpolate }]} />

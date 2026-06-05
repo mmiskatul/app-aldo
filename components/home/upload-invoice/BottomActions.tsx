@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { useTranslation } from '../../../utils/i18n';
 
 interface BottomActionsProps {
   isLoading?: boolean;
@@ -8,6 +9,7 @@ interface BottomActionsProps {
 }
 
 export default function BottomActions({ isLoading = false, onConfirmPress }: BottomActionsProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.bottomActions}>
       <TouchableOpacity 
@@ -18,7 +20,7 @@ export default function BottomActions({ isLoading = false, onConfirmPress }: Bot
         {isLoading ? (
           <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
-          <Text style={styles.confirmButtonText}>Confirm & Save</Text>
+          <Text style={styles.confirmButtonText}>{t('confirm_and_save')}</Text>
         )}
       </TouchableOpacity>
     </View>

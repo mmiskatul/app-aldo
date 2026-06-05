@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
+import { useTranslation } from '../../../utils/i18n';
 
 interface DistributionItem {
   label: string;
@@ -16,6 +17,7 @@ interface ExpenseDistributionProps {
 const COLORS = ['#FA8C4C', '#94A3B8', '#E2E8F0', '#FDBA74', '#64748B'];
 
 export default function ExpenseDistribution({ distribution = [] }: ExpenseDistributionProps) {
+  const { t } = useTranslation();
   const size = moderateScale(100);
   const strokeWidth = moderateScale(12);
   const radius = (size - strokeWidth) / 2;
@@ -28,10 +30,10 @@ export default function ExpenseDistribution({ distribution = [] }: ExpenseDistri
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Expense Distribution</Text>
+          <Text style={styles.title}>{t('expense_distribution')}</Text>
         </View>
         <View style={[styles.content, { justifyContent: 'center', paddingVertical: verticalScale(20) }]}>
-          <Text style={{ color: '#9CA3AF', fontSize: moderateScale(14) }}>No data available</Text>
+          <Text style={{ color: '#9CA3AF', fontSize: moderateScale(14) }}>{t('no_data_available')}</Text>
         </View>
       </View>
     );
@@ -40,7 +42,7 @@ export default function ExpenseDistribution({ distribution = [] }: ExpenseDistri
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Expense Distribution</Text>
+        <Text style={styles.title}>{t('expense_distribution')}</Text>
         <Feather name="info" size={moderateScale(16)} color="#9CA3AF" />
       </View>
 

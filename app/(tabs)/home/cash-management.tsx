@@ -19,6 +19,7 @@ import { useCachedFocusRefresh } from "../../../hooks/useCachedFocusRefresh";
 import { useAppStore } from "../../../store/useAppStore";
 import { getApiDisplayMessage, logApiError } from "../../../utils/apiErrors";
 import { normalizeCashOverviewData } from "../../../utils/restaurantData";
+import { useTranslation } from "../../../utils/i18n";
 
 import CashMetrics from "../../../components/home/cash/CashMetrics";
 import RecentDeposits from "../../../components/home/cash/RecentDeposits";
@@ -57,6 +58,7 @@ const normalizeCashSummary = (summary?: Partial<CashSummary> | null): CashSummar
 
 export default function CashManagementScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   const cashOverviewData = useAppStore((state) => state.cashOverviewData);
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
@@ -196,7 +198,7 @@ export default function CashManagementScreen() {
               color="#FFFFFF"
               style={{ marginRight: scale(8) }}
             />
-            <Text style={styles.addDepositButtonText}>Add Bank Deposit</Text>
+          <Text style={styles.addDepositButtonText}>{t("add_bank_deposit")}</Text>
           </TouchableOpacity>
 
           <ScrollView

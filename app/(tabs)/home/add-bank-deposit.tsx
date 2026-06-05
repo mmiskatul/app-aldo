@@ -64,11 +64,11 @@ export default function AddBankDepositScreen() {
 
       await apiClient.post("/api/v1/restaurant/cash/deposits", payload);
 
-      showSuccessMessage("Bank deposit saved successfully.");
+      showSuccessMessage(t("bank_deposit_saved_successfully"));
       router.back();
     } catch (error) {
       console.error("Error saving deposit:", error);
-      showErrorMessage("Could not save deposit. Please try again.");
+      showErrorMessage(t("could_not_save_deposit"));
     } finally {
       setIsSavingDeposit(false);
     }
@@ -76,7 +76,7 @@ export default function AddBankDepositScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Add Bank Deposit" showBack={true} />
+      <Header title={t("add_bank_deposit")} showBack={true} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -92,16 +92,14 @@ export default function AddBankDepositScreen() {
               <BuildingLibraryIcon size={moderateScale(24)} color="#FFFFFF" />
             </View>
             <View style={styles.bannerTextContainer}>
-              <Text style={styles.bannerTitle}>DAILY RECONCILIATION</Text>
-              <Text style={styles.bannerSubtitle}>
-                Record cash and check drops for today.
-              </Text>
+              <Text style={styles.bannerTitle}>{t("daily_reconciliation").toUpperCase()}</Text>
+              <Text style={styles.bannerSubtitle}>{t("record_cash_and_check_drops_today")}</Text>
             </View>
           </View>
 
           {/* Date */}
           <DatePicker
-            label="Deposit Date"
+            label={t("deposit_date")}
             value={date}
             onChange={setDate}
             leftIcon={
@@ -115,7 +113,7 @@ export default function AddBankDepositScreen() {
 
           {/* Amount */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Amount Deposited</Text>
+            <Text style={styles.label}>{t("amount_deposited")}</Text>
             <View style={styles.textInputContainer}>
               <Text style={styles.prefix}>€ </Text>
               <TextInput
@@ -131,11 +129,11 @@ export default function AddBankDepositScreen() {
 
           {/* Bank Account */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Bank Account</Text>
+            <Text style={styles.label}>{t("bank_account")}</Text>
             <View style={styles.textInputContainer}>
               <TextInput
                 style={styles.textInput}
-                placeholder="Enter bank account name"
+                placeholder={t("enter_bank_account_name")}
                 placeholderTextColor="#9CA3AF"
                 value={selectedAccount}
                 onChangeText={setSelectedAccount}
@@ -145,10 +143,10 @@ export default function AddBankDepositScreen() {
 
           {/* Notes */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Notes (Optional)</Text>
+            <Text style={styles.label}>{t("optional_notes")}</Text>
             <TextInput
               style={styles.textArea}
-              placeholder="e.g. End of shift deposit for Friday night..."
+              placeholder={t("notes_placeholder")}
               placeholderTextColor="#9CA3AF"
               multiline
               textAlignVertical="top"
@@ -177,7 +175,7 @@ export default function AddBankDepositScreen() {
                   color="#FFFFFF"
                   style={styles.saveIcon}
                 />
-                <Text style={styles.saveButtonText}>Save Deposit</Text>
+                <Text style={styles.saveButtonText}>{t("save_deposit")}</Text>
               </>
             )}
           </TouchableOpacity>

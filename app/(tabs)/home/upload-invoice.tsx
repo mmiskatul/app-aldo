@@ -99,6 +99,8 @@ export default function UploadInvoiceScreen() {
           (item: any, idx: number) => ({
             id: idx + 1,
             product: item.product_name || "",
+            category: item.category || "",
+            unitType: item.unit_type || "unit",
             qty: String(item.quantity || ""),
             price: String(item.unit_price || ""),
             total: String(item.total_price || ""),
@@ -114,7 +116,7 @@ export default function UploadInvoiceScreen() {
     } catch (error: any) {
       console.log("Upload Error:", error.response?.data || error.message);
       setIsExtracting(false);
-      showErrorMessage("Failed to extract data from invoice. Please try again.");
+      showErrorMessage(t("failed_to_extract_invoice_data"));
     }
   };
 
@@ -182,9 +184,9 @@ export default function UploadInvoiceScreen() {
     try {
       const payload = {
         document_type: extractionData.document_type || "unknown",
-        document_label: requiredText(extractionData.document_label, "Uploaded Document"),
+        document_label: requiredText(extractionData.document_label, t("uploaded_document")),
         counterparty_name: optionalText(extractionData.counterparty_name),
-        supplier_name: requiredText(extractionData.counterparty_name, "Unknown Supplier"),
+        supplier_name: requiredText(extractionData.supplier_name || extractionData.counterparty_name, "Unknown Supplier"),
         invoice_number: optionalText(extractionData.document_number),
         invoice_date: extractionData.document_date || new Date().toISOString().split("T")[0],
         total_amount: saveTotalAmount,
@@ -195,6 +197,8 @@ export default function UploadInvoiceScreen() {
         profit_amount: Number(extractionData.profit_amount || 0),
         line_items: lineItems.map((item) => ({
           product_name: item.product,
+          category: optionalText(item.category),
+          unit_type: optionalText(item.unitType) || "unit",
           quantity: parseFloat(item.qty) || 0,
           unit_price: parseFloat(item.price) || 0,
           total_price: parseFloat(item.total) || 0,
@@ -215,11 +219,11 @@ export default function UploadInvoiceScreen() {
       clearHomeScreenCache();
       clearAnalyticsScreenCache();
       clearExpensesScreenCache();
-      showSuccessMessage("Invoice saved successfully!");
+      showSuccessMessage(t("invoice_saved_successfully"));
       router.replace("/(tabs)/documents");
     } catch (error: any) {
       console.log("Save Error:", error.response?.data || error.message);
-      showErrorMessage("Failed to save invoice. Please check the data and try again.");
+      showErrorMessage(t("failed_to_save_invoice"));
     } finally {
       setIsSaving(false);
     }
@@ -268,12 +272,9 @@ export default function UploadInvoiceScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="Upload Invoice" showBack={true} />
+      <Header title={t("upload_invoice")} showBack={true} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.description}>
-          Upload supplier invoices and let AI extract important data
-          automatically.
-        </Text>
+        <Text style={styles.description}>{t("upload_invoice_description")}</Text>
 
         {!selectedFile ? (
           <UploadActions onFileSelected={onFileSelected} />
@@ -317,14 +318,22 @@ export default function UploadInvoiceScreen() {
 
             {extractionData && (
               <>
-                <Text style={styles.sectionTitle}>Supplier Information</Text>
+                <Text style={styles.sectionTitle}>{t("supplier_information")}</Text>
                 <SupplierInfo
-                  name={extractionData.counterparty_name}
+                  name={extractionData.supplier_name || extractionData.counterparty_name}
                   invoiceNumber={extractionData.document_number}
                   invoiceDate={extractionData.document_date}
+                  isEditing={isEditing}
+                  onChangeName={(value) =>
+                    setExtractionData((prev: any) => ({
+                      ...prev,
+                      supplier_name: value,
+                      counterparty_name: value,
+                    }))
+                  }
                 />
 
-                <Text style={styles.sectionTitle}>Line Items</Text>
+                <Text style={styles.sectionTitle}>{t("line_items")}</Text>
                 <LineItems
                   isEditing={isEditing}
                   items={lineItems}

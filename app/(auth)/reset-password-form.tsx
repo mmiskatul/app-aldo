@@ -20,6 +20,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Input from "../../components/ui/Input";
 import { getApiBaseUrl } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
+import { useTranslation } from "../../utils/i18n";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -27,6 +28,7 @@ import SplashLogo from "../../assets/images/splash-logo.svg";
 export default function ResetPasswordFormScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
   const { email, code } = useLocalSearchParams<{ email: string; code: string }>();
 
   const [newPassword, setNewPassword] = useState("");
@@ -37,18 +39,18 @@ export default function ResetPasswordFormScreen() {
 
   const handleResetPassword = async () => {
     if (!email || !code) {
-      showErrorMessage("Verification details are missing. Please restart the reset process.");
+      showErrorMessage(t("verification_details_missing"));
       router.replace("/(auth)/forgot-password" as any);
       return;
     }
 
     if (!newPassword || !confirmPassword) {
-      showErrorMessage("Please enter your new password.");
+      showErrorMessage(t("please_enter_new_password"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      showErrorMessage("Passwords do not match.");
+      showErrorMessage(t("passwords_do_not_match"));
       return;
     }
 
@@ -63,12 +65,12 @@ export default function ResetPasswordFormScreen() {
       });
 
       showSuccessMessage(
-        response.data?.message || "Restaurant account password reset successful"
+        response.data?.message || t("password_reset_successful")
       );
       router.replace("/(auth)" as any);
     } catch (error: any) {
       console.log("Reset Password API Error:", error.response?.data || error.message);
-      let errorMessage = "An unexpected error occurred.";
+      let errorMessage = t("unexpected_error");
       const errData = error.response?.data;
 
       if (errData) {
@@ -112,20 +114,18 @@ export default function ResetPasswordFormScreen() {
         >
           <View style={styles.logoContainer}>
             <SplashLogo width={scale(120)} height={scale(120)} />
-            <Text style={styles.logoSubtitle}>AI POWERED RESTAURANT INTELLIGENCE</Text>
+            <Text style={styles.logoSubtitle}>{t("auth_logo_subtitle")}</Text>
           </View>
 
           <View style={styles.headerContainer}>
-            <Text style={styles.headerTitle}>Create New Password</Text>
-            <Text style={styles.headerSubtitle}>
-              Your code is ready. Enter and confirm your new password to complete the reset.
-            </Text>
+            <Text style={styles.headerTitle}>{t("create_new_password_title")}</Text>
+            <Text style={styles.headerSubtitle}>{t("create_new_password_subtitle")}</Text>
           </View>
 
           <View style={styles.formContainer}>
             <Input
-              label="New Password"
-              placeholder="********"
+              label={t("new_password")}
+              placeholder={t("enter_new_password")}
               isPassword
               isPasswordVisible={isPasswordVisible}
               onTogglePasswordVisibility={() => setIsPasswordVisible(!isPasswordVisible)}
@@ -135,8 +135,8 @@ export default function ResetPasswordFormScreen() {
             />
 
             <Input
-              label="Confirm New Password"
-              placeholder="********"
+              label={t("confirm_new_password")}
+              placeholder={t("confirm_new_password")}
               isPassword
               isPasswordVisible={isConfirmPasswordVisible}
               onTogglePasswordVisibility={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}
@@ -153,16 +153,16 @@ export default function ResetPasswordFormScreen() {
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.submitButtonText}>Reset Password</Text>
+                <Text style={styles.submitButtonText}>{t("change_password")}</Text>
               )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>
-              Need a different code?{" "}
+              {t("need_different_code")}{" "}
               <Text style={styles.footerHighlight} onPress={() => router.back()}>
-                Go back
+                {t("go_back")}
               </Text>
             </Text>
           </View>

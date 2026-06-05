@@ -7,12 +7,14 @@ import * as ImagePicker from 'expo-image-picker';
 import ImagePickerModal from '../../../components/ui/ImagePickerModal';
 import { showErrorMessage } from '../../../utils/feedback';
 import { buildFileName, inferMimeType, isImageFile } from '../../../utils/fileMetadata';
+import { useTranslation } from '../../../utils/i18n';
 
 interface UploadActionsProps {
   onFileSelected: (file: {uri: string, type: 'image' | 'pdf', name: string, mimeType: string} | null) => void;
 }
 
 export default function UploadActions({ onFileSelected }: UploadActionsProps) {
+  const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
 
   const pickDocument = async () => {
@@ -41,7 +43,7 @@ export default function UploadActions({ onFileSelected }: UploadActionsProps) {
     setModalVisible(false);
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      showErrorMessage('Sorry, we need camera permissions to make this work!');
+      showErrorMessage(t('camera_permission_required'));
       return;
     }
 
@@ -88,11 +90,11 @@ export default function UploadActions({ onFileSelected }: UploadActionsProps) {
       <View style={styles.actionCardsRow}>
         <TouchableOpacity style={styles.actionCard} activeOpacity={0.7} onPress={() => setModalVisible(true)}>
           <Feather name="camera" size={moderateScale(24)} color="#FA8C4C" style={styles.actionIcon} />
-          <Text style={styles.actionText}>Take Photo</Text>
+          <Text style={styles.actionText}>{t('take_photo')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionCard} activeOpacity={0.7} onPress={pickDocument}>
           <Feather name="file-text" size={moderateScale(24)} color="#FA8C4C" style={styles.actionIcon} />
-          <Text style={styles.actionText}>Upload File</Text>
+          <Text style={styles.actionText}>{t('upload_file')}</Text>
         </TouchableOpacity>
       </View>
 

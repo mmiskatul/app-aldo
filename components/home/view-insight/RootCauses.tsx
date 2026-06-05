@@ -2,18 +2,20 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { ChartBarSquareIcon } from 'react-native-heroicons/outline';
+import { useTranslation } from '../../../utils/i18n';
 
 interface RootCausesProps {
   causes?: string[];
 }
 
 export default function RootCauses({ causes = [] }: RootCausesProps) {
+  const { t } = useTranslation();
   if (!causes || causes.length === 0) return null;
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <ChartBarSquareIcon size={moderateScale(20)} color="#D97706" />
-        <Text style={styles.headerTitle}>Root Causes</Text>
+        <Text style={styles.headerTitle}>{t('root_causes')}</Text>
       </View>
       
       {causes.map((cause, index) => (

@@ -57,7 +57,7 @@ export default function SettingsScreen() {
     } catch (error) {
       logApiError('settings.profile', error);
       if (!silent || !profile) {
-        showErrorMessage(getApiDisplayMessage(error, 'Unable to load profile.'), 'Load failed');
+        showErrorMessage(getApiDisplayMessage(error, t('unable_to_load_profile')), t('load_failed'));
       }
     }
   }, [profile, setProfile]);

@@ -191,15 +191,15 @@ export default function DataManagementScreen() {
 
     setIsDeleting(true);
     try {
-      showInfoMessage(deleteMode === "record" ? "Deleting daily data record..." : "Deleting collected data for this date...");
+      showInfoMessage(deleteMode === "record" ? t("deleting_daily_data_record") : t("deleting_daily_data_collection"));
       if (deleteMode === "record") {
         await apiClient.delete(`/api/v1/restaurant/daily-data/${deleteId}`);
-        showSuccessMessage("Daily data record deleted.");
+        showSuccessMessage(t("daily_data_record_deleted"));
       } else {
         await apiClient.delete("/api/v1/restaurant/daily-data/by-date", {
           params: { business_date: deleteId },
         });
-        showSuccessMessage("Collected data deleted for this date.");
+        showSuccessMessage(t("daily_data_collection_deleted"));
       }
       setDeleteTarget(null);
       clearHomeScreenCache();
@@ -208,7 +208,7 @@ export default function DataManagementScreen() {
       void fetchDailyData(selectedSegment, true, selectedReferenceDateKey);
     } catch (error: any) {
       console.error("Error deleting daily data collection:", error.response?.data || error.message);
-      showErrorMessage(deleteMode === "record" ? "Failed to delete daily data record." : "Failed to delete collected data for this date.");
+      showErrorMessage(deleteMode === "record" ? t("daily_data_delete_failed") : t("daily_data_collection_delete_failed"));
     } finally {
       setIsDeleting(false);
     }
@@ -250,13 +250,13 @@ export default function DataManagementScreen() {
 
   const handleExport = useCallback(async (format: "pdf" | "excel") => {
     if (items.length === 0) {
-      showErrorMessage("No daily data is available to export.");
+      showErrorMessage(t("no_daily_data_available_export"));
       return;
     }
 
     const exportPayload = {
       reportTitle: t("daily_data_dashboard"),
-      reportSubtitle: "Daily data dashboard export for the current selected view.",
+      reportSubtitle: t("daily_data_export_subtitle"),
       periodLabel: `${selectedSegment.toUpperCase()} · ${formatEuropeanDate(selectedReferenceDateKey)}`,
       summary: {
         revenue: items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0),
@@ -313,9 +313,7 @@ export default function DataManagementScreen() {
           dropdownTop={verticalScale(150)}
         />
         <Text style={styles.pageTitle}>{t("daily_data_dashboard")}</Text>
-        <Text style={styles.pageSubtitle}>
-          Track and manage your restaurant performance
-        </Text>
+        <Text style={styles.pageSubtitle}>{t("daily_data_dashboard_subtitle")}</Text>
 
         <DataMetrics
           loading={loading}
@@ -326,7 +324,7 @@ export default function DataManagementScreen() {
           averagePerCover={metrics.averagePerCover}
         />
         <DatePicker
-          label={selectedSegment === "date" ? "Day Date" : selectedSegment === "week" ? "Week Date" : "Month Date"}
+          label={selectedSegment === "date" ? t("day_date") : selectedSegment === "week" ? t("week_date") : t("month_date")}
           value={selectedReferenceDate}
           onChange={setSelectedReferenceDate}
           leftIcon={<Feather name="calendar" size={moderateScale(18)} color="#6B7280" />}
@@ -340,7 +338,7 @@ export default function DataManagementScreen() {
             router.push(`/(tabs)/home/add-daily-data?recordId=${encodeURIComponent(recordId)}` as any)
           }
           onDelete={handleDeleteRequest}
-          onDeleteUnavailable={() => showInfoMessage("Only date cards can be deleted from this dashboard.")}
+          onDeleteUnavailable={() => showInfoMessage(t("only_date_cards_deleted"))}
         />
       </ScrollView>
 
@@ -355,7 +353,7 @@ export default function DataManagementScreen() {
             color="#FFFFFF"
             style={{ marginRight: scale(6) }}
           />
-          <Text style={styles.fabText}>Add Data</Text>
+          <Text style={styles.fabText}>{t("add_data")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -373,11 +371,11 @@ export default function DataManagementScreen() {
               <View style={styles.confirmIconWrap}>
                 <Feather name="trash-2" size={moderateScale(22)} color="#DC2626" />
               </View>
-              <Text style={styles.confirmTitle}>Delete daily data?</Text>
+              <Text style={styles.confirmTitle}>{t("delete_daily_data_title")}</Text>
               <Text style={styles.confirmMessage}>
                 {requestedDelete?.deleteMode === "record"
-                  ? "This daily data record will be permanently deleted."
-                  : "All collected daily data for this date will be permanently deleted."}
+                  ? t("delete_daily_data_record_message")
+                  : t("delete_daily_data_collection_message")}
               </Text>
               <View style={styles.confirmActions}>
                 <TouchableOpacity
@@ -385,14 +383,14 @@ export default function DataManagementScreen() {
                   onPress={handleCancelDelete}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>{t("cancel")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.confirmActionButton, styles.deleteButton]}
                   onPress={handleConfirmDelete}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.deleteButtonText}>Delete</Text>
+                  <Text style={styles.deleteButtonText}>{t("delete")}</Text>
                 </TouchableOpacity>
               </View>
             </View>

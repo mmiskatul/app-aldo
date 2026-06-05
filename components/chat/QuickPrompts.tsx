@@ -1,27 +1,28 @@
 import React from 'react';
 import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
-
-const PROMPTS = [
-  { id: 1, text: "How can I increase revenue?", type: 'primary' },
-  { id: 2, text: "What are my biggest expenses?", type: 'secondary' },
-  { id: 3, text: "Show me today's cover count", type: 'secondary' },
-];
+import { useTranslation } from '../../utils/i18n';
 
 interface QuickPromptsProps {
   onSelectPrompt?: (text: string) => void;
 }
 
 export default function QuickPrompts({ onSelectPrompt }: QuickPromptsProps) {
+  const { t } = useTranslation();
+  const prompts = [
+    { id: 1, text: t('quick_prompt_revenue'), type: 'primary' as const },
+    { id: 2, text: t('quick_prompt_expenses'), type: 'secondary' as const },
+    { id: 3, text: t('quick_prompt_covers'), type: 'secondary' as const },
+  ];
   return (
     <View style={styles.container}>
-      <Text style={styles.subtitle}>Ask AI about your restaurant performance and insights.</Text>
+      <Text style={styles.subtitle}>{t('quick_prompts_subtitle')}</Text>
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {PROMPTS.map((prompt) => (
+        {prompts.map((prompt) => (
           <TouchableOpacity 
             key={prompt.id} 
             style={[styles.pill, prompt.type === 'primary' ? styles.pillPrimary : styles.pillSecondary]}

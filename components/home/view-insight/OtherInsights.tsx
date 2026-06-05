@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { BanknotesIcon, ReceiptPercentIcon } from 'react-native-heroicons/outline';
+import { useTranslation } from '../../../utils/i18n';
 
 interface Insight {
   label: string;
@@ -14,10 +15,11 @@ interface OtherInsightsProps {
 }
 
 export default function OtherInsights({ insights = [] }: OtherInsightsProps) {
+  const { t } = useTranslation();
   if (!insights || insights.length === 0) return null;
   return (
     <View style={styles.container}>
-      <Text style={styles.headerTitle}>Other Related Insights</Text>
+      <Text style={styles.headerTitle}>{t('other_related_insights')}</Text>
       
       <View style={styles.list}>
         {insights.map((insight, index) => {

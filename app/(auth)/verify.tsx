@@ -22,9 +22,11 @@ import SecurityIcon from "../../assets/images/Security Icon.svg";
 import { useAppStore } from "../../store/useAppStore";
 import { getApiBaseUrl } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
+import { useTranslation } from "../../utils/i18n";
 
 export default function VerifyIdentityScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const setUser = useAppStore((state) => state.setUser);
   const pendingRegistration = useAppStore((state) => state.pendingRegistration);
   const clearPendingRegistration = useAppStore((state) => state.setPendingRegistration);
@@ -44,7 +46,7 @@ export default function VerifyIdentityScreen() {
 
   const handleResendCode = async () => {
     if (!email) {
-      showErrorMessage("Missing email. Please restart the signup process.");
+      showErrorMessage(t("missing_email_restart_signup"));
       return false;
     }
     
@@ -56,13 +58,13 @@ export default function VerifyIdentityScreen() {
       showSuccessMessage(
         response.data?.debug_verification_code
           ? `Verification code: ${response.data.debug_verification_code}`
-          : response.data?.message || "Verification code resent to your email."
+          : response.data?.message || t("verification_code_resent")
       );
       setCode(["", "", "", ""]);
       return true;
     } catch (error: any) {
       console.log("Resend API Error:", error.response?.data || error.message);
-      showErrorMessage(getApiErrorMessage(error, "An unexpected error occurred."));
+      showErrorMessage(getApiErrorMessage(error, t("unexpected_error")));
       return false;
     }
   };
@@ -70,12 +72,12 @@ export default function VerifyIdentityScreen() {
   const handleConfirm = async () => {
     const otp = code.join("");
     if (otp.length !== 4) {
-      showErrorMessage("Please enter the 4-digit code.");
+      showErrorMessage(t("enter_4_digit_code"));
       return;
     }
 
     if (!email) {
-      showErrorMessage("Email not found. Please try signing up again.");
+      showErrorMessage(t("email_not_found_signup_again"));
       return;
     }
 
@@ -93,16 +95,16 @@ export default function VerifyIdentityScreen() {
       setUser(data.user, data.tokens);
       clearPendingRegistration(null);
 
-      showSuccessMessage("Email verified successfully!");
+      showSuccessMessage(t("email_verified_successfully"));
       router.replace("/(auth)/subscription" as any);
       
     } catch (error: any) {
       console.log("Verify API Error:", error.response?.data || error.message);
       const errorMessage = getApiErrorMessage(
         error,
-        "An unexpected error occurred during verification."
+        t("verify_unexpected_error")
       );
-      showErrorMessage(errorMessage, "Verification Failed");
+      showErrorMessage(errorMessage, t("verification_failed"));
     } finally {
       setIsLoading(false);
     }
@@ -122,10 +124,8 @@ export default function VerifyIdentityScreen() {
                 <SecurityIcon width={scale(80)} height={scale(80)} />
               </View>
 
-              <Text style={styles.headerTitle}>Verify Identity</Text>
-              <Text style={styles.headerSubtitle}>
-                Enter the 4-digit code sent to your email
-              </Text>
+              <Text style={styles.headerTitle}>{t("verify_identity")}</Text>
+              <Text style={styles.headerSubtitle}>{t("verify_identity_subtitle")}</Text>
 
               {/* OTP Component */}
               <OTPVerification code={code} setCode={setCode} onResend={handleResendCode} />
@@ -138,7 +138,7 @@ export default function VerifyIdentityScreen() {
                 onPress={handleConfirm}
                 disabled={isLoading}
               >
-                <Text style={styles.confirmButtonText}>Confirm</Text>
+                <Text style={styles.confirmButtonText}>{t("confirm")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -149,7 +149,7 @@ export default function VerifyIdentityScreen() {
         <View style={styles.loadingOverlay} pointerEvents="auto">
           <View style={styles.loadingContent}>
             <ActivityIndicator size="large" color="#FA8C4C" />
-            <Text style={styles.loadingText}>Verifying...</Text>
+            <Text style={styles.loadingText}>{t("verifying")}</Text>
           </View>
         </View>
       ) : null}

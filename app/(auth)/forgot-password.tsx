@@ -20,6 +20,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Input from "../../components/ui/Input";
 import { getApiBaseUrl } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
+import { useTranslation } from "../../utils/i18n";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -27,13 +28,14 @@ import SplashLogo from "../../assets/images/splash-logo.svg";
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRequestReset = async () => {
     if (!email) {
-      showErrorMessage("Please enter your email address.");
+      showErrorMessage(t("email_login_placeholder"));
       return;
     }
 
@@ -46,7 +48,7 @@ export default function ForgotPasswordScreen() {
 
       console.log("Forgot Password API Response:", response.data);
 
-      showSuccessMessage("Password reset code sent to your email.");
+      showSuccessMessage(t("password_reset_code_resent"));
 
       router.push({
         pathname: "/(auth)/reset-password",
@@ -55,7 +57,7 @@ export default function ForgotPasswordScreen() {
 
     } catch (error: any) {
       console.log("Forgot Password API Error:", error.response?.data || error.message);
-      let errorMessage = "An unexpected error occurred.";
+      let errorMessage = t("unexpected_error");
       const errData = error.response?.data;
 
       if (errData) {
@@ -99,24 +101,20 @@ export default function ForgotPasswordScreen() {
           {/* Logo Area */}
           <View style={styles.logoContainer}>
             <SplashLogo width={scale(120)} height={scale(120)} />
-            <Text style={styles.logoSubtitle}>
-              AI POWERED RESTAURANT INTELLIGENCE
-            </Text>
+            <Text style={styles.logoSubtitle}>{t("auth_logo_subtitle")}</Text>
           </View>
 
           {/* Header Title */}
           <View style={styles.headerContainer}>
-            <Text style={styles.headerTitle}>Forgot Password?</Text>
-            <Text style={styles.headerSubtitle}>
-              Enter your email address to receive a password reset code.
-            </Text>
+            <Text style={styles.headerTitle}>{t("forgot_password_title")}</Text>
+            <Text style={styles.headerSubtitle}>{t("forgot_password_subtitle")}</Text>
           </View>
 
           {/* Form */}
           <View style={styles.formContainer}>
             <Input
-              label="Email Address"
-              placeholder="Enter email address"
+              label={t("email_address")}
+              placeholder={t("email_login_placeholder")}
               keyboardType="email-address"
               autoCapitalize="none"
               value={email}
@@ -134,7 +132,7 @@ export default function ForgotPasswordScreen() {
               {isLoading ? (
                 <ActivityIndicator color={"#FFFFFF"} />
               ) : (
-                <Text style={styles.submitButtonText}>Send Reset Code</Text>
+                <Text style={styles.submitButtonText}>{t("send_reset_code")}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -142,12 +140,12 @@ export default function ForgotPasswordScreen() {
           {/* Footer */}
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>
-              Remembered your password?{" "}
+              {t("remembered_password")}{" "}
               <Text
                 style={styles.footerHighlight}
                 onPress={() => router.back()}
               >
-                Login
+                {t("login_button")}
               </Text>
             </Text>
           </View>

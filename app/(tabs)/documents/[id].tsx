@@ -168,6 +168,8 @@ export default function DocumentDetailsScreen() {
           total_amount: editableData.total_amount,
           line_items: editableData.line_items.map((item: any) => ({
             product_name: item.product_name,
+            category: item.category || null,
+            unit_type: item.unit_type || "unit",
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
@@ -406,6 +408,7 @@ export default function DocumentDetailsScreen() {
           ).map((item: any, idx: number) => ({
             id: String(idx),
             name: item.product_name,
+            category: item.category || '',
             qty: item.quantity,
             vatRate: item.vat_rate || 10,
             vatAmount: calculateLineVat(item),

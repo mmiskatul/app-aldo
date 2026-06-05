@@ -4,6 +4,7 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Skeleton, { SkeletonCard } from '../../ui/Skeleton';
+import { useTranslation } from '../../../utils/i18n';
 
 export type DataHistorySegment = 'date' | 'week' | 'month';
 
@@ -31,12 +32,6 @@ interface DataHistoryListProps {
   onDeleteUnavailable?: () => void;
 }
 
-const SEGMENTS: { key: DataHistorySegment; label: string }[] = [
-  { key: 'date', label: 'Date' },
-  { key: 'week', label: 'Week' },
-  { key: 'month', label: 'Month' },
-];
-
 const shortId = (value: string) => {
   const trimmed = value.trim();
   return trimmed.length > 8 ? trimmed.slice(-8) : trimmed;
@@ -52,23 +47,29 @@ export default function DataHistoryList({
   onDeleteUnavailable,
 }: DataHistoryListProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const segments: { key: DataHistorySegment; label: string }[] = [
+    { key: 'date', label: t('date_tab') },
+    { key: 'week', label: t('week_tab') },
+    { key: 'month', label: t('month_tab') },
+  ];
   const emptyTitle =
     selectedSegment === 'date'
-      ? 'No date data found'
+      ? t('no_date_data_found')
       : selectedSegment === 'week'
-        ? 'No weekly data found'
-        : 'No monthly data found';
+        ? t('no_weekly_data_found')
+        : t('no_monthly_data_found');
   const emptySubtitle =
     selectedSegment === 'date'
-      ? 'No row data found for this date view.'
+      ? t('no_row_data_date_view')
       : selectedSegment === 'week'
-        ? 'No row data found for this week view.'
-        : 'No row data found for this month view.';
+        ? t('no_row_data_week_view')
+        : t('no_row_data_month_view');
 
   return (
     <View style={styles.container}>
       <View style={styles.segmentContainer}>
-        {SEGMENTS.map((tab) => {
+        {segments.map((tab) => {
           const isActive = selectedSegment === tab.key;
           return (
             <TouchableOpacity
@@ -115,7 +116,7 @@ export default function DataHistoryList({
                 <Text style={styles.entryLabel}>{entry.label}</Text>
                 <Text style={styles.entryDate}>{entry.date}</Text>
                 {selectedSegment === 'date' && entry.recordId ? (
-                  <Text style={styles.entryId}>ID {shortId(entry.recordId)}</Text>
+                  <Text style={styles.entryId}>{t('id_short')} {shortId(entry.recordId)}</Text>
                 ) : null}
               </View>
               <View style={styles.cardActions}>
@@ -159,15 +160,15 @@ export default function DataHistoryList({
 
             <View style={styles.dataGrid}>
               <View style={styles.dataCol}>
-                <Text style={styles.dataLabel}>REVENUE</Text>
+                <Text style={styles.dataLabel}>{t('revenue_short').toUpperCase()}</Text>
                 <Text style={styles.dataValue}>{entry.revenue}</Text>
               </View>
               <View style={styles.dataCol}>
-                <Text style={styles.dataLabel}>COVERS</Text>
+                <Text style={styles.dataLabel}>{t('covers_short').toUpperCase()}</Text>
                 <Text style={styles.dataValue}>{entry.covers}</Text>
               </View>
               <View style={styles.dataCol}>
-                <Text style={styles.dataLabel}>AVG.</Text>
+                <Text style={styles.dataLabel}>{t('average_short').toUpperCase()}</Text>
                 <Text style={styles.dataValue}>{entry.average}</Text>
               </View>
             </View>

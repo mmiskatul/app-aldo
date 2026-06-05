@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { useTranslation } from "../../utils/i18n";
 
 interface OTPVerificationProps {
   code: string[];
@@ -16,6 +17,7 @@ export default function OTPVerification({
   initialTimeLeft = 45,
   onResend,
 }: OTPVerificationProps) {
+  const { t } = useTranslation();
   const inputRefs = useRef<Array<TextInput | null>>([null, null, null, null]);
   const [timeLeft, setTimeLeft] = useState(initialTimeLeft);
   const [isResending, setIsResending] = useState(false);
@@ -82,7 +84,7 @@ export default function OTPVerification({
         {timeLeft > 0 ? (
           <>
             <Feather name="clock" size={moderateScale(14)} color="#4B5563" />
-            <Text style={styles.resendText}>Resend code in</Text>
+            <Text style={styles.resendText}>{t("resend_code_in")}</Text>
             <Text style={styles.resendTimer}>
               00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
             </Text>
@@ -113,7 +115,7 @@ export default function OTPVerification({
                 { color: isResending ? "#9CA3AF" : "#FA8C4C", fontWeight: "600", marginLeft: 0 },
               ]}
             >
-              {isResending ? "Resending..." : "Resend code now"}
+              {isResending ? t("resending") : t("resend_code_now")}
             </Text>
           </TouchableOpacity>
         )}

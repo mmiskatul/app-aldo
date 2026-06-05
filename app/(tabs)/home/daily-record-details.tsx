@@ -280,15 +280,15 @@ export default function DailyRecordDetailsScreen() {
 
   const handleExport = async (format: "pdf" | "excel") => {
     if (!record) {
-      showErrorMessage("No daily data is available to export.");
+      showErrorMessage(t("no_daily_data_available_export"));
       return;
     }
 
     const exportPayload = {
       reportTitle: t("daily_record_details"),
       reportSubtitle: showGroupedHeader
-        ? "Grouped daily data collection export."
-        : "Single daily record export.",
+        ? t("grouped_daily_data_export")
+        : t("single_daily_record_export"),
       periodLabel: formatBusinessDate(record.business_date, selectedSegment, locale, (date) => t("week_of", { date })),
       summary: {
         revenue: Number(record.total_revenue || 0),

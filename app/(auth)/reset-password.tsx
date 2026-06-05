@@ -19,6 +19,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import OTPVerification from "../../components/ui/OTPVerification";
 import { getApiBaseUrl } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
+import { useTranslation } from "../../utils/i18n";
 
 // @ts-ignore
 import SplashLogo from "../../assets/images/splash-logo.svg";
@@ -26,6 +27,7 @@ import SplashLogo from "../../assets/images/splash-logo.svg";
 export default function ResetPasswordScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useTranslation();
   const { email } = useLocalSearchParams<{ email: string }>();
 
   const [code, setCode] = useState(["", "", "", ""]);
@@ -33,7 +35,7 @@ export default function ResetPasswordScreen() {
 
   const handleResendCode = async () => {
     if (!email) {
-      showErrorMessage("Email not found. Please go back and enter your email again.");
+      showErrorMessage(t("email_not_found_enter_again"));
       return;
     }
 
@@ -44,11 +46,11 @@ export default function ResetPasswordScreen() {
         email,
       });
 
-      showSuccessMessage(response.data?.message || "Password reset code resent to your email.");
+      showSuccessMessage(response.data?.message || t("password_reset_code_resent"));
     } catch (error: any) {
       console.log("Resend API Error:", error.response?.data || error.message);
       const errData = error.response?.data;
-      let errorMessage = "An unexpected error occurred.";
+      let errorMessage = t("unexpected_error");
 
       if (errData) {
         if (typeof errData === "string") {
@@ -75,12 +77,12 @@ export default function ResetPasswordScreen() {
   const handleVerifyCode = () => {
     const otp = code.join("");
     if (otp.length !== 4) {
-      showErrorMessage("Please enter the complete 4-digit code.");
+      showErrorMessage(t("enter_complete_4_digit_code"));
       return;
     }
 
     if (!email) {
-      showErrorMessage("Email not found. Please restart the process.");
+      showErrorMessage(t("email_not_found_restart_process"));
       return;
     }
 
@@ -109,20 +111,19 @@ export default function ResetPasswordScreen() {
         >
           <View style={styles.logoContainer}>
             <SplashLogo width={scale(120)} height={scale(120)} />
-            <Text style={styles.logoSubtitle}>AI POWERED RESTAURANT INTELLIGENCE</Text>
+            <Text style={styles.logoSubtitle}>{t("auth_logo_subtitle")}</Text>
           </View>
 
           <View style={styles.headerContainer}>
-            <Text style={styles.headerTitle}>Verify Reset Code</Text>
+            <Text style={styles.headerTitle}>{t("verify_reset_code_title")}</Text>
             <Text style={styles.headerSubtitle}>
-              Enter the 4-digit code sent to your email. After verification, you will continue to the
-              new password screen.
+              {t("verify_reset_code_subtitle")}
             </Text>
           </View>
 
           <View style={styles.formContainer}>
             <View style={styles.otpWrapper}>
-              <Text style={styles.otpLabel}>Verification Code</Text>
+              <Text style={styles.otpLabel}>{t("verification_code_label")}</Text>
               <OTPVerification code={code} setCode={setCode} onResend={handleResendCode} />
             </View>
 
@@ -134,16 +135,16 @@ export default function ResetPasswordScreen() {
               {isResending ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.submitButtonText}>Verify Code</Text>
+                <Text style={styles.submitButtonText}>{t("verify_code")}</Text>
               )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.footerContainer}>
             <Text style={styles.footerText}>
-              Changed your mind?{" "}
+              {t("changed_your_mind")}{" "}
               <Text style={styles.footerHighlight} onPress={() => router.back()}>
-                Go back
+                {t("go_back")}
               </Text>
             </Text>
           </View>

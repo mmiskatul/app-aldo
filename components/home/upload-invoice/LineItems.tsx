@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, ScrollView, View, Text, StyleSheet, TextInput, TouchableOpacity, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useTranslation } from '../../../utils/i18n';
+import { getInventoryCategories, InventoryMetaItem } from '../../../api/inventoryMeta';
 
 interface LineItemsProps {
   isEditing?: boolean;
@@ -41,6 +42,30 @@ export default function LineItems({
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [draftItem, setDraftItem] = useState<any | null>(null);
   const [vatPickerOpen, setVatPickerOpen] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<InventoryMetaItem[]>([]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadCategories = async () => {
+      try {
+        const items = await getInventoryCategories();
+        if (isActive) {
+          setCategoryOptions(items);
+        }
+      } catch {
+        if (isActive) {
+          setCategoryOptions([]);
+        }
+      }
+    };
+
+    void loadCategories();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const selectedLabel = useMemo(() => {
     if (selectedIndex === null || !items[selectedIndex]) {
@@ -48,6 +73,16 @@ export default function LineItems({
     }
     return items[selectedIndex].product || '';
   }, [items, selectedIndex]);
+
+  const filteredCategoryOptions = useMemo(() => {
+    const query = String(draftItem?.category || '').trim().toLowerCase();
+    if (query.length < 2) {
+      return [];
+    }
+    return categoryOptions
+      .filter((item) => item.name.toLowerCase().includes(query))
+      .slice(0, 6);
+  }, [categoryOptions, draftItem?.category]);
 
   const openEditor = (index: number) => {
     setSelectedIndex(index);
@@ -150,6 +185,29 @@ export default function LineItems({
                     onChangeText={(text) => updateDraft('product', text)}
                     placeholder={t('product_name_placeholder')}
                   />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>{t('category')}</Text>
+                  <TextInput
+                    style={styles.fieldInput}
+                    value={String(draftItem?.category ?? '')}
+                    onChangeText={(text) => updateDraft('category', text)}
+                    placeholder={t('select_category')}
+                  />
+                  {filteredCategoryOptions.length > 0 ? (
+                    <View style={styles.suggestionList}>
+                      {filteredCategoryOptions.map((item) => (
+                        <TouchableOpacity
+                          key={item.id}
+                          style={styles.suggestionItem}
+                          onPress={() => updateDraft('category', item.name)}
+                        >
+                          <Text style={styles.suggestionText}>{item.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
                 </View>
 
                 <View style={styles.rowFields}>
@@ -449,6 +507,24 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(10, 0.3),
     color: '#EA580C',
     fontWeight: '800',
+  },
+  suggestionList: {
+    marginTop: verticalScale(8),
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderRadius: scale(10),
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(10),
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+  },
+  suggestionText: {
+    fontSize: moderateScale(12, 0.3),
+    color: '#111827',
   },
   modalBackdrop: {
     flex: 1,

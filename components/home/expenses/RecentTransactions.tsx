@@ -4,6 +4,7 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { formatEuropeanDate } from '../../../utils/date';
+import { useTranslation } from '../../../utils/i18n';
 
 interface ExpenseItem {
   id: string;
@@ -58,13 +59,14 @@ const resolveTransactionRoute = (tx: ExpenseItem) => {
 
 export default function RecentTransactions({ items = [] }: RecentTransactionsProps) {
   const router = useRouter();
+  const { t } = useTranslation();
 
   if (items.length === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.sectionTitle}>RECENT TRANSACTIONS</Text>
+        <Text style={styles.sectionTitle}>{t('recent_transactions').toUpperCase()}</Text>
         <View style={[styles.transactionCard, { justifyContent: 'center', paddingVertical: verticalScale(30) }]}>
-          <Text style={styles.emptyText}>No transactions found</Text>
+          <Text style={styles.emptyText}>{t('no_transactions_found')}</Text>
         </View>
       </View>
     );
@@ -72,7 +74,7 @@ export default function RecentTransactions({ items = [] }: RecentTransactionsPro
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>RECENT TRANSACTIONS</Text>
+      <Text style={styles.sectionTitle}>{t('recent_transactions').toUpperCase()}</Text>
 
       {items.map((tx) => (
         <TouchableOpacity

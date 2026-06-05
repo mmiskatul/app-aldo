@@ -16,6 +16,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore";
 import { formatApiDate } from "../../../utils/date";
+import { useTranslation } from "../../../utils/i18n";
 
 import ExpenseDistribution from "../../../components/home/expenses/ExpenseDistribution";
 import QuickSummary from "../../../components/home/expenses/QuickSummary";
@@ -24,6 +25,7 @@ import { ListRouteSkeleton } from "../../../components/ui/RouteSkeletons";
 
 export default function ExpensesScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const expensesScreenCache = useAppStore((state) => state.expensesScreenCache);
   const setExpensesScreenCache = useAppStore((state) => state.setExpensesScreenCache);
   const [activeFilter, setActiveFilter] = useState("Today");
@@ -101,16 +103,14 @@ export default function ExpensesScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FA8C4C" />
         }
       >
-        <Text style={styles.pageSubtitle}>
-          Track and manage all restaurant operational costs
-        </Text>
+        <Text style={styles.pageSubtitle}>{t("expenses_subtitle")}</Text>
 
         <TouchableOpacity 
           style={styles.addExpenseButton}
           onPress={() => router.push('/(tabs)/home/add-expense')}
         >
           <Feather name="plus" size={moderateScale(20)} color="#FFFFFF" style={{ marginRight: scale(8) }} />
-          <Text style={styles.addExpenseButtonText}>Add Expense</Text>
+          <Text style={styles.addExpenseButtonText}>{t("add_expense")}</Text>
         </TouchableOpacity>
 
         <DatePicker
@@ -156,7 +156,7 @@ export default function ExpensesScreen() {
           </>
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No data available</Text>
+            <Text style={styles.emptyText}>{t("no_data_available")}</Text>
           </View>
         )}
       </ScrollView>

@@ -4,6 +4,7 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Cash01Icon, ShoppingCart01Icon, Wallet01Icon } from '@hugeicons/core-free-icons';
 import Skeleton, { SkeletonCard } from '../../ui/Skeleton';
+import { useTranslation } from '../../../utils/i18n';
 
 interface DataMetricsProps {
   loading?: boolean;
@@ -22,6 +23,7 @@ export default function DataMetrics({
   covers,
   averagePerCover,
 }: DataMetricsProps) {
+  const { t } = useTranslation();
   if (loading) {
     return (
       <View style={styles.container}>
@@ -51,7 +53,7 @@ export default function DataMetrics({
     <View style={styles.container}>
       <View style={styles.metricCard}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Total Revenue</Text>
+          <Text style={styles.cardTitle}>{t('total_revenue_label')}</Text>
           <HugeiconsIcon icon={Cash01Icon} size={moderateScale(16)} color="#FA8C4C" />
         </View>
         <Text style={styles.amountText}>{revenue}</Text>
@@ -59,7 +61,7 @@ export default function DataMetrics({
 
       <View style={styles.metricCard}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Total Expenses</Text>
+          <Text style={styles.cardTitle}>{t('total_expenses_label')}</Text>
           <HugeiconsIcon icon={ShoppingCart01Icon} size={moderateScale(16)} color="#FA8C4C" />
         </View>
         <Text style={styles.amountText}>{expenses}</Text>
@@ -67,7 +69,7 @@ export default function DataMetrics({
 
       <View style={styles.metricCard}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Net Profit</Text>
+          <Text style={styles.cardTitle}>{t('net_profit')}</Text>
           <HugeiconsIcon icon={Wallet01Icon} size={moderateScale(16)} color="#FA8C4C" />
         </View>
         <Text style={styles.amountText}>{profit}</Text>
@@ -75,12 +77,12 @@ export default function DataMetrics({
 
       <View style={styles.splitRow}>
         <View style={styles.splitCard}>
-          <Text style={styles.cardTitleSmall}>Total Coperti</Text>
+          <Text style={styles.cardTitleSmall}>{t('total_covers_label')}</Text>
           <Text style={styles.amountTextSmall}>{covers}</Text>
         </View>
 
         <View style={styles.splitCard}>
-          <Text style={styles.cardTitleSmall}>Avg. Rev/Cover</Text>
+          <Text style={styles.cardTitleSmall}>{t('average_rev_cover_label')}</Text>
           <Text style={styles.amountTextSmall}>{averagePerCover}</Text>
         </View>
       </View>

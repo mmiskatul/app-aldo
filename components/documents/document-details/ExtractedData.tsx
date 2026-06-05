@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useTranslation } from '../../../utils/i18n';
+import { getInventoryCategories, InventoryMetaItem } from '../../../api/inventoryMeta';
 
 interface ExtractedItem {
   id: string;
   name: string;
+  category?: string;
   qty: number;
   unitPrice: string;
   totalPrice: string;
@@ -23,6 +25,32 @@ const RECOMMENDED_VAT_RATES = [4, 5, 10, 22];
 
 export default function ExtractedData({ items, isEditing, onItemChange }: ExtractedDataProps) {
   const { t } = useTranslation();
+  const [categoryOptions, setCategoryOptions] = useState<InventoryMetaItem[]>([]);
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadCategories = async () => {
+      try {
+        const loaded = await getInventoryCategories();
+        if (isActive) {
+          setCategoryOptions(loaded);
+        }
+      } catch {
+        if (isActive) {
+          setCategoryOptions([]);
+        }
+      }
+    };
+
+    void loadCategories();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>{t('extracted_data')}</Text>
@@ -30,6 +58,12 @@ export default function ExtractedData({ items, isEditing, onItemChange }: Extrac
       <View style={styles.card}>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
+          const filteredCategoryOptions = categoryOptions
+            .filter((option) => {
+              const query = String(item.category || '').trim().toLowerCase();
+              return query.length >= 2 && option.name.toLowerCase().includes(query);
+            })
+            .slice(0, 6);
           return (
             <View key={item.id || index} style={[styles.itemRow, !isLast && styles.itemBorder]}>
               <View style={styles.itemDetails}>
@@ -41,6 +75,30 @@ export default function ExtractedData({ items, isEditing, onItemChange }: Extrac
                       onChangeText={(text) => onItemChange?.(index, 'product_name', text)}
                       placeholder={t('product_name')}
                     />
+                    <TextInput
+                      style={styles.inputCategory}
+                      value={String(item.category || '')}
+                      onChangeText={(text) => onItemChange?.(index, 'category', text)}
+                      placeholder={t('select_category')}
+                      onFocus={() => setActiveCategoryIndex(index)}
+                      onBlur={() => setTimeout(() => setActiveCategoryIndex((current) => (current === index ? null : current)), 120)}
+                    />
+                    {activeCategoryIndex === index && filteredCategoryOptions.length > 0 ? (
+                      <View style={styles.suggestionList}>
+                        {filteredCategoryOptions.map((option) => (
+                          <TouchableOpacity
+                            key={option.id}
+                            style={styles.suggestionItem}
+                            onPress={() => {
+                              onItemChange?.(index, 'category', option.name);
+                              setActiveCategoryIndex(null);
+                            }}
+                          >
+                            <Text style={styles.suggestionText}>{option.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
                     <View style={styles.editMetaRow}>
                       <Text style={styles.itemMeta}>{t('qty')}: </Text>
                       <TextInput
@@ -82,6 +140,7 @@ export default function ExtractedData({ items, isEditing, onItemChange }: Extrac
                 ) : (
                   <>
                     <Text style={styles.itemName}>{item.name}</Text>
+                    {item.category ? <Text style={styles.itemMeta}>{t('category')}: {item.category}</Text> : null}
                     <Text style={styles.itemMeta}>{t('qty')}: {item.qty} x {item.unitPrice}</Text>
                     <Text style={styles.itemMeta}>IVA {item.vatRate || 10}%: EUR {Number(item.vatAmount || 0).toFixed(2)}</Text>
                   </>
@@ -150,6 +209,14 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(4),
     paddingVertical: verticalScale(2),
   },
+  inputCategory: {
+    fontSize: moderateScale(12, 0.3),
+    color: '#4B5563',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    marginBottom: verticalScale(6),
+    paddingVertical: verticalScale(2),
+  },
   inputSmall: {
     fontSize: moderateScale(11, 0.3),
     color: '#4B5563',
@@ -198,5 +265,23 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(10, 0.3),
     color: '#374151',
     textAlign: 'center',
+  },
+  suggestionList: {
+    marginBottom: verticalScale(6),
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderRadius: scale(10),
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(10),
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+  },
+  suggestionText: {
+    fontSize: moderateScale(12, 0.3),
+    color: '#111827',
   },
 });
