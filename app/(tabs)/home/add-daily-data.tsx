@@ -67,6 +67,7 @@ interface DailyDataEditResponse {
   opening_cash: number;
   closing_cash: number;
   notes?: string;
+  stock_usage?: DailyDataInventoryUsageEntry[];
   inventory_usage: DailyDataInventoryUsageEntry[];
 }
 
@@ -203,9 +204,16 @@ export default function AddDailyDataScreen() {
       opening_cash: formatNumberForInput(Number(record.opening_cash || 0)),
       closing_cash: formatNumberForInput(Number(record.closing_cash || 0)),
     });
+    const stockUsage =
+      "stock_usage" in record && Array.isArray(record.stock_usage)
+        ? record.stock_usage
+        : undefined;
+    const usageEntries: DailyDataInventoryUsageEntry[] = stockUsage?.length
+      ? stockUsage
+      : (record.inventory_usage || []);
     setInventoryUsage(
-      record.inventory_usage?.length
-        ? record.inventory_usage.map((item, index) => ({
+      usageEntries?.length
+        ? usageEntries.map((item: DailyDataInventoryUsageEntry, index: number) => ({
             rowId: `${item.inventory_item_id}-${index}`,
             inventoryItemId: item.inventory_item_id,
             productName: item.product_name,
@@ -495,7 +503,7 @@ export default function AddDailyDataScreen() {
     try {
       const payload = {
         method: selectedMethod === "method1" ? "method_1" : "method_2",
-        inventory_usage: usedInventoryPayload,
+        stock_usage: usedInventoryPayload,
         ...(selectedMethod === "method1"
           ? {
               method_one: {
