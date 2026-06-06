@@ -514,7 +514,7 @@ export default function DailyRecordDetailsScreen() {
                 void handleExport("pdf");
               }}
             >
-              <Text style={styles.exportOptionText}>PDF</Text>
+              <Text style={styles.exportOptionText}>{t("export_pdf")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.exportOption}
@@ -523,7 +523,7 @@ export default function DailyRecordDetailsScreen() {
                 void handleExport("excel");
               }}
             >
-              <Text style={styles.exportOptionText}>Excel</Text>
+              <Text style={styles.exportOptionText}>{t("export_excel")}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>

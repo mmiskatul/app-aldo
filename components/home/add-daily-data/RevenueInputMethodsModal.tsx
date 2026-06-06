@@ -1,6 +1,7 @@
 import React from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { useTranslation } from "../../../utils/i18n";
 
 interface RevenueInputMethodsModalProps {
   visible: boolean;
@@ -11,6 +12,8 @@ export default function RevenueInputMethodsModal({
   visible,
   onClose,
 }: RevenueInputMethodsModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal
       visible={visible}
@@ -27,37 +30,37 @@ export default function RevenueInputMethodsModal({
         <View style={styles.modalCard}>
           <View style={styles.handle} />
 
-          <Text style={styles.title}>Revenue Input Methods</Text>
+          <Text style={styles.title}>{t("revenue_input_methods_title")}</Text>
           <Text style={styles.subtitle}>
-            Choose the logic that fits your restaurant&apos;s operational flow.
+            {t("revenue_input_methods_subtitle")}
           </Text>
 
           <View style={styles.methodBlock}>
             <View style={styles.methodTitleRow}>
-              <Text style={styles.methodTitle}>Method 1</Text>
+              <Text style={styles.methodTitle}>{t("method_1")}</Text>
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>DETAILED</Text>
+                <Text style={styles.badgeText}>{t("detailed_badge")}</Text>
               </View>
             </View>
             <Text style={styles.methodDescription}>
-              Best for restaurants that track detailed daily financial operations. Allows detailed tracking of cash register activity including cash in, cash out, withdrawals, and cash expenses.
+              {t("method_1_description")}
             </Text>
           </View>
 
           <View style={styles.methodBlock}>
             <View style={styles.methodTitleRow}>
-              <Text style={styles.methodTitle}>Method 2</Text>
+              <Text style={styles.methodTitle}>{t("method_2")}</Text>
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>SMART</Text>
+                <Text style={styles.badgeText}>{t("smart_badge")}</Text>
               </View>
             </View>
             <Text style={styles.methodDescription}>
-              Simplified input for restaurants that already know their daily revenue breakdown. Uses only enter payment types and customer covers, while the system helps estimate the cash balance using opening and closing cash.
+              {t("method_2_description")}
             </Text>
           </View>
 
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>Close</Text>
+            <Text style={styles.closeButtonText}>{t("close")}</Text>
           </TouchableOpacity>
         </View>
       </View>

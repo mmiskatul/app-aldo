@@ -18,12 +18,14 @@ import { getUserTickets, TicketListItem } from '../../../api/support';
 import { formatReadableDate } from '../../../utils/date';
 import { buildSettingsHref, normalizeOrigin } from '../../../utils/settingsNavigation';
 import { getSupportPriorityPresentation, getSupportStatusPresentation } from '../../../utils/supportPresentation';
+import { useTranslation } from '../../../utils/i18n';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 // ─── Ticket Card ─────────────────────────────────────────────────────────────
 
 const TicketCard = ({ item, onPress }: { item: TicketListItem; onPress: () => void }) => {
+  const { t } = useTranslation();
   const status = getSupportStatusPresentation(item.status);
   const priority = getSupportPriorityPresentation(item.priority);
 
@@ -41,7 +43,7 @@ const TicketCard = ({ item, onPress }: { item: TicketListItem; onPress: () => vo
       <View style={styles.cardFooter}>
         <View style={styles.footerLeft}>
           <View style={[styles.badge, { backgroundColor: priority.bg }]}>
-            <Text style={[styles.badgeText, { color: priority.text }]}>{priority.label} Priority</Text>
+            <Text style={[styles.badgeText, { color: priority.text }]}>{priority.label} {t('priority')}</Text>
           </View>
         </View>
         <View style={styles.dateRow}>
@@ -58,6 +60,7 @@ const TicketCard = ({ item, onPress }: { item: TicketListItem; onPress: () => vo
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
 export default function TicketsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { origin } = useLocalSearchParams<{ origin?: string | string[] }>();
   const settingsOrigin = normalizeOrigin(origin);
@@ -75,7 +78,7 @@ export default function TicketsScreen() {
       console.log('[Tickets] Response:', JSON.stringify(res, null, 2));
       setTickets(res.items);
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Failed to load tickets.';
+      const msg = err?.response?.data?.message ?? err?.message ?? t('tickets_load_failed');
       setError(msg);
     } finally {
       setLoading(false);
@@ -95,24 +98,24 @@ export default function TicketsScreen() {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Feather name="inbox" size={moderateScale(48)} color="#D1D5DB" />
-      <Text style={styles.emptyTitle}>No tickets yet</Text>
-      <Text style={styles.emptySubtitle}>Your submitted support tickets will appear here.</Text>
+      <Text style={styles.emptyTitle}>{t('no_tickets_yet')}</Text>
+      <Text style={styles.emptySubtitle}>{t('tickets_empty_subtitle')}</Text>
     </View>
   );
 
   return (
     <View style={styles.safeArea}>
-      <Header title="My Tickets" showBack={true} />
+      <Header title={t('my_tickets')} showBack={true} />
 
       {loading ? (
         <ListRouteSkeleton withAction={false} itemCount={4} />
       ) : error ? (
         <View style={styles.emptyContainer}>
           <Feather name="alert-circle" size={moderateScale(48)} color="#FCA5A5" />
-          <Text style={styles.emptyTitle}>Something went wrong</Text>
+          <Text style={styles.emptyTitle}>{t('something_went_wrong')}</Text>
           <Text style={styles.emptySubtitle}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => fetchTickets()} activeOpacity={0.8}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryText}>{t('try_again')}</Text>
           </TouchableOpacity>
         </View>
       ) : (

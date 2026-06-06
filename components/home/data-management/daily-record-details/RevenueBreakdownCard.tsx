@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { scale, verticalScale, moderateScale } from "react-native-size-matters";
 import { Feather } from "@expo/vector-icons";
+import { useTranslation } from "../../../../utils/i18n";
 
 interface RevenueBreakdownItem {
   label: string;
@@ -23,6 +24,8 @@ const formatCurrency = (value: number) =>
   }).format(Number.isFinite(value) ? value : 0);
 
 export default function RevenueBreakdownCard({ items }: RevenueBreakdownCardProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -32,7 +35,7 @@ export default function RevenueBreakdownCard({ items }: RevenueBreakdownCardProp
           color="#A16207"
           style={styles.icon}
         />
-        <Text style={styles.title}>Revenue Breakdown</Text>
+        <Text style={styles.title}>{t("revenue_breakdown")}</Text>
       </View>
 
       {items.map((item, index) => (

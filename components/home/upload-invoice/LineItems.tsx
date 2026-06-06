@@ -139,11 +139,11 @@ export default function LineItems({
   return (
     <View style={styles.tableCard}>
       <View style={styles.tableHead}>
-        <Text style={[styles.tableHeadText, { flex: 2.2 }]}>PRODUCT</Text>
-        <Text style={[styles.tableHeadText, { flex: 1, textAlign: 'center' }]}>QTY</Text>
-        <Text style={[styles.tableHeadText, { flex: 1, textAlign: 'right' }]}>PRICE</Text>
-        <Text style={[styles.tableHeadText, { flex: 1.1, textAlign: 'center' }]}>IVA</Text>
-        <Text style={[styles.tableHeadText, { flex: 1, textAlign: 'right' }]}>TOTAL</Text>
+        <Text style={[styles.tableHeadText, { flex: 2.2 }]}>{t('product').toUpperCase()}</Text>
+        <Text style={[styles.tableHeadText, { flex: 1, textAlign: 'center' }]}>{t('qty').toUpperCase()}</Text>
+        <Text style={[styles.tableHeadText, { flex: 1, textAlign: 'right' }]}>{t('price').toUpperCase()}</Text>
+        <Text style={[styles.tableHeadText, { flex: 1.1, textAlign: 'center' }]}>{t('iva').toUpperCase()}</Text>
+        <Text style={[styles.tableHeadText, { flex: 1, textAlign: 'right' }]}>{t('total').toUpperCase()}</Text>
       </View>
 
       {items.map((item, index) => {
@@ -224,7 +224,7 @@ export default function LineItems({
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>{t('edit_line_item')}</Text>
                 <TouchableOpacity onPress={closeEditor} style={styles.modalCloseButton}>
-                  <Text style={styles.modalCloseText}>X</Text>
+                  <Text style={styles.modalCloseText}>{t('close_symbol')}</Text>
                 </TouchableOpacity>
               </View>
               <Text style={styles.modalSubtitle} numberOfLines={2}>
@@ -293,7 +293,7 @@ export default function LineItems({
                   <Text style={styles.fieldLabel}>{t('vat_rate')}</Text>
                   <View style={styles.vatComboBox}>
                     <View style={styles.vatComboPrefix}>
-                      <Text style={styles.vatComboPrefixText}>VAT</Text>
+                      <Text style={styles.vatComboPrefixText}>{t('vat')}</Text>
                     </View>
                     <TextInput
                       style={styles.vatComboInput}

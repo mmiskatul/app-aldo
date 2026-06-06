@@ -85,7 +85,7 @@ export default function ActionFilterBar({
                 if (onExport) onExport("pdf");
               }}
             >
-              <Text style={styles.exportOptionText}>PDF</Text>
+              <Text style={styles.exportOptionText}>{t("export_pdf")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -95,7 +95,7 @@ export default function ActionFilterBar({
                 if (onExport) onExport("excel");
               }}
             >
-              <Text style={styles.exportOptionText}>Excel</Text>
+              <Text style={styles.exportOptionText}>{t("export_excel")}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>

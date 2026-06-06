@@ -20,9 +20,11 @@ import DatePicker from "../../../components/ui/DatePicker";
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore";
 import { formatApiDate } from "../../../utils/date";
+import { useTranslation } from "../../../utils/i18n";
 
 export default function AddExpenseScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const clearAnalyticsScreenCache = useAppStore((state) => state.clearAnalyticsScreenCache);
   const clearExpensesScreenCache = useAppStore((state) => state.clearExpensesScreenCache);
@@ -32,7 +34,14 @@ export default function AddExpenseScreen() {
   const [loading, setLoading] = useState(false);
   
   // Category State
-  const [categories, setCategories] = useState(["Food", "Utilities", "Rent", "Supplies", "Marketing", "Others"]);
+  const [categories, setCategories] = useState([
+    t("category_food"),
+    t("category_utilities"),
+    t("category_rent"),
+    t("category_supplies"),
+    t("category_marketing"),
+    t("category_others"),
+  ]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [isCategoryListVisible, setIsCategoryListVisible] = useState(false);
   
@@ -87,7 +96,7 @@ export default function AddExpenseScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Add Expenses" showBack={true} />
+      <Header title={t("add_expense")} showBack={true} />
 
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
@@ -99,13 +108,13 @@ export default function AddExpenseScreen() {
         >
           {/* Category Dropdown */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Expense Category</Text>
+            <Text style={styles.label}>{t("expense_category")}</Text>
             <TouchableOpacity 
               style={styles.dropdownInput}
               onPress={() => setIsCategoryListVisible(true)}
             >
               <Text style={selectedCategory ? styles.dropdownText : styles.dropdownPlaceholder}>
-                {selectedCategory || "Select a category"}
+                {selectedCategory || t("select_category")}
               </Text>
               <Feather name="chevron-down" size={moderateScale(20)} color="#6B7280" />
             </TouchableOpacity>
@@ -115,13 +124,13 @@ export default function AddExpenseScreen() {
               onPress={() => setIsNewCategoryModalVisible(true)}
             >
               <Feather name="plus" size={moderateScale(12)} color="#FA8C4C" style={{ marginRight: scale(4) }} />
-              <Text style={styles.newCategoryText}>Create New Category</Text>
+              <Text style={styles.newCategoryText}>{t("create_new_category")}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Amount */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Amount</Text>
+            <Text style={styles.label}>{t("amount")}</Text>
             <View style={styles.textInputContainer}>
               <Text style={styles.prefix}>€ </Text>
               <TextInput 
@@ -137,17 +146,17 @@ export default function AddExpenseScreen() {
 
           {/* Date */}
           <DatePicker 
-            label="Date"
+          label={t("date")}
             value={date}
             onChange={setDate}
           />
 
           {/* Notes */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Notes</Text>
+            <Text style={styles.label}>{t("notes")}</Text>
             <TextInput 
               style={styles.textArea} 
-              placeholder="Add details about this expense..." 
+              placeholder={t("expense_notes_placeholder")} 
               placeholderTextColor="#9CA3AF"
               multiline
               textAlignVertical="top"
@@ -168,7 +177,7 @@ export default function AddExpenseScreen() {
             ) : (
               <>
                 <Feather name="save" size={moderateScale(18)} color="#FFFFFF" style={styles.saveIcon} />
-                <Text style={styles.saveButtonText}>Save Expense</Text>
+                <Text style={styles.saveButtonText}>{t("save_expense")}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -185,7 +194,7 @@ export default function AddExpenseScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.categoryListContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Category</Text>
+              <Text style={styles.modalTitle}>{t("select_category")}</Text>
               <TouchableOpacity onPress={() => setIsCategoryListVisible(false)}>
                 <Feather name="x" size={moderateScale(24)} color="#111827" />
               </TouchableOpacity>
@@ -232,10 +241,10 @@ export default function AddExpenseScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.newCategoryContainer}>
-            <Text style={styles.modalTitle}>Create New Category</Text>
+            <Text style={styles.modalTitle}>{t("create_new_category")}</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Enter category name..."
+              placeholder={t("enter_category_name")}
               value={newCategoryName}
               onChangeText={setNewCategoryName}
               autoFocus
@@ -245,13 +254,13 @@ export default function AddExpenseScreen() {
                 style={styles.cancelButton}
                 onPress={() => setIsNewCategoryModalVisible(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t("cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.confirmButton}
                 onPress={handleCreateCategory}
               >
-                <Text style={styles.confirmButtonText}>Create</Text>
+                <Text style={styles.confirmButtonText}>{t("create")}</Text>
               </TouchableOpacity>
             </View>
           </View>

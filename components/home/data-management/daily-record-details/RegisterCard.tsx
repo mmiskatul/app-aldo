@@ -2,21 +2,24 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from '../../../../utils/i18n';
 
 export default function RegisterCard() {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Feather name="inbox" size={moderateScale(16)} color="#FA8C4C" style={styles.icon} />
-        <Text style={styles.title}>Register</Text>
+        <Text style={styles.title}>{t('register')}</Text>
       </View>
       
       <View style={styles.item}>
-        <Text style={styles.labelSmall}>OPENING</Text>
+        <Text style={styles.labelSmall}>{t('opening').toUpperCase()}</Text>
         <Text style={styles.value}>€150</Text>
       </View>
       <View style={styles.item}>
-        <Text style={styles.labelSmall}>CLOSING</Text>
+        <Text style={styles.labelSmall}>{t('closing').toUpperCase()}</Text>
         <Text style={styles.value}>€420</Text>
       </View>
     </View>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { useTranslation } from '../../../utils/i18n';
 
 interface Props {
   selected: 'method1' | 'method2';
@@ -8,19 +9,21 @@ interface Props {
 }
 
 export default function MethodSelector({ selected, onSelect }: Props) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <TouchableOpacity 
         style={[styles.button, selected === 'method1' && styles.selectedButton]}
         onPress={() => onSelect('method1')}
       >
-        <Text style={[styles.text, selected === 'method1' && styles.selectedText]}>Method 1</Text>
+        <Text style={[styles.text, selected === 'method1' && styles.selectedText]}>{t('method_1')}</Text>
       </TouchableOpacity>
       <TouchableOpacity 
         style={[styles.button, selected === 'method2' && styles.selectedButton]}
         onPress={() => onSelect('method2')}
       >
-        <Text style={[styles.text, selected === 'method2' && styles.selectedText]}>Method 2</Text>
+        <Text style={[styles.text, selected === 'method2' && styles.selectedText]}>{t('method_2')}</Text>
       </TouchableOpacity>
     </View>
   );

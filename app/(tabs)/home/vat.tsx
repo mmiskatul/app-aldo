@@ -18,12 +18,14 @@ import { useAppStore } from "../../../store/useAppStore";
 import { showErrorMessage } from "../../../utils/feedback";
 import { getApiDisplayMessage, logApiError } from "../../../utils/apiErrors";
 import { normalizeVatOverviewData } from "../../../utils/restaurantData";
+import { useTranslation } from "../../../utils/i18n";
 
 // @ts-ignore
 const HugeiconsIcon = HugeiconsModule.HugeiconsIcon || HugeiconsModule.default?.HugeiconsIcon || (HugeiconsModule as any);
 const VAT_OVERVIEW_CACHE_TTL_MS = 60 * 1000;
 
 export default function VatScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const vatOverviewData = useAppStore((state) => state.vatOverviewData);
   const setVatOverviewData = useAppStore((state) => state.setVatOverviewData);
@@ -47,7 +49,7 @@ export default function VatScreen() {
       setError(null);
     } catch (error) {
       logApiError("vat.overview", error);
-      setError(getApiDisplayMessage(error, "Unable to load VAT overview."));
+      setError(getApiDisplayMessage(error, t("vat_overview_load_failed")));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -106,42 +108,42 @@ export default function VatScreen() {
           </head>
           <body>
             <div class="header">
-              <h1>VAT Report</h1>
-              <p class="date">Generated on: ${new Date().toLocaleDateString()}</p>
+              <h1>${t("vat_report")}</h1>
+              <p class="date">${t("generated_on")}: ${new Date().toLocaleDateString()}</p>
             </div>
             
             <div class="summary-box">
-              <h2>Estimated VAT Balance</h2>
+              <h2>${t("estimated_vat_balance")}</h2>
               <p class="amount">€${vatOverviewData?.estimated_vat_balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00'}</p>
             </div>
             
             <table>
               <thead>
                 <tr>
-                  <th>Component</th>
-                  <th>Amount</th>
+                  <th>${t("component")}</th>
+                  <th>${t("amount")}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>VAT Payable</td>
+                  <td>${t("vat_payable")}</td>
                   <td>€${vatOverviewData?.vat_payable?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00'}</td>
                 </tr>
                 <tr>
-                  <td>VAT Recoverable</td>
+                  <td>${t("vat_recoverable")}</td>
                   <td class="positive">€${vatOverviewData?.vat_receivable?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00'}</td>
                 </tr>
                 <tr>
-                  <td><strong>Net VAT</strong></td>
+                  <td><strong>${t("net_vat")}</strong></td>
                   <td><strong>€${vatOverviewData?.estimated_vat_balance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '0.00'}</strong></td>
                 </tr>
               </tbody>
             </table>
             
-            <p><strong>Filing Deadline:</strong> ${vatOverviewData?.filing_deadline ? new Date(vatOverviewData.filing_deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A'}</p>
+            <p><strong>${t("filing_deadline")}:</strong> ${vatOverviewData?.filing_deadline ? new Date(vatOverviewData.filing_deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : t('not_available')}</p>
             
             <div class="footer">
-              <p>This report is generated automatically from your fetched invoices and receipts.</p>
+              <p>${t("vat_report_footer")}</p>
             </div>
           </body>
         </html>
@@ -152,11 +154,11 @@ export default function VatScreen() {
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
       } else {
-        showErrorMessage("Sharing is not available on this device.");
+        showErrorMessage(t("sharing_not_available"));
       }
     } catch (error) {
       console.error("Error generating PDF:", error);
-      showErrorMessage("Failed to generate VAT report PDF.");
+      showErrorMessage(t("vat_pdf_generate_failed"));
     } finally {
       setDownloading(false);
     }
@@ -193,7 +195,7 @@ export default function VatScreen() {
 
   return (
     <View style={styles.container}>
-      <Header title="VAT" showBack={true} />
+      <Header title={t("vat")} showBack={true} />
       <ScrollView 
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#FA8C4C"]} />}
@@ -202,30 +204,30 @@ export default function VatScreen() {
         <ListRouteSkeleton itemCount={3} />
       ) : error && !vatOverviewData ? (
         <StateCard
-          title="Unable to load VAT"
+          title={t("unable_to_load_vat")}
           description={error}
           tone="error"
-          actionLabel="Try Again"
+          actionLabel={t("try_again")}
           actionLoading={retrying}
           onAction={() => void handleRetry()}
         />
       ) : !vatOverviewData ? (
         <StateCard
-          title="No VAT data yet"
-          description="VAT totals will appear here after invoices and restaurant records have been processed."
+          title={t("no_vat_data_yet")}
+          description={t("no_vat_data_description")}
         />
       ) : (
         <>
           {/* VAT Card */}
           <VatBalance balance={vatOverviewData?.estimated_vat_balance ?? 0} />
 
-      <Text style={styles.sectionTitle}>Monthly Breakdown</Text>
+      <Text style={styles.sectionTitle}>{t("monthly_breakdown")}</Text>
 
       {/* VAT Payable Card */}
       <View style={styles.breakdownCard}>
         <View style={styles.breakdownHeader}>
           <View>
-            <Text style={styles.breakdownLabel}>VAT PAYABLE</Text>
+            <Text style={styles.breakdownLabel}>{t("vat_payable").toUpperCase()}</Text>
             <Text style={styles.breakdownAmount}>€{vatOverviewData?.vat_payable?.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) ?? '0.00'}</Text>
           </View>
           <View style={[styles.iconBox, { backgroundColor: '#FFF0E5' }]}>
@@ -234,7 +236,7 @@ export default function VatScreen() {
         </View>
         <View style={styles.breakdownFooter}>
           <Feather name="info" size={moderateScale(12)} color="#9CA3AF" />
-          <Text style={styles.breakdownFooterText}>Calculated from all automatically fetched invoices</Text>
+          <Text style={styles.breakdownFooterText}>{t("vat_calculated_from_invoices")}</Text>
         </View>
       </View>
 
@@ -242,7 +244,7 @@ export default function VatScreen() {
       <View style={styles.breakdownCard}>
         <View style={styles.breakdownHeader}>
           <View>
-            <Text style={styles.breakdownLabel}>VAT RECOVERABLE</Text>
+            <Text style={styles.breakdownLabel}>{t("vat_recoverable").toUpperCase()}</Text>
             <Text style={styles.breakdownAmount}>€{vatOverviewData?.vat_receivable?.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) ?? '0.00'}</Text>
           </View>
           <View style={[styles.iconBox, { backgroundColor: '#E6F4EA' }]}>
@@ -256,11 +258,11 @@ export default function VatScreen() {
       {/* Action Buttons */}
       <TouchableOpacity style={styles.fileReturnButton} activeOpacity={0.8}>
         <View>
-          <Text style={styles.fileReturnTitle}>File VAT Return</Text>
-          <Text style={styles.fileReturnSubtitle}>Deadline: {vatOverviewData?.filing_deadline ? new Date(vatOverviewData.filing_deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</Text>
+          <Text style={styles.fileReturnTitle}>{t("file_vat_return")}</Text>
+          <Text style={styles.fileReturnSubtitle}>{t("deadline")}: {vatOverviewData?.filing_deadline ? new Date(vatOverviewData.filing_deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : t('not_available')}</Text>
         </View>
         <View style={styles.reviewPill}>
-          <Text style={styles.reviewPillText}>Review</Text>
+          <Text style={styles.reviewPillText}>{t("review")}</Text>
         </View>
       </TouchableOpacity>
 
@@ -270,7 +272,7 @@ export default function VatScreen() {
         ) : (
           <>
             <Feather name="download" size={moderateScale(18)} color="#FFFFFF" />
-            <Text style={styles.downloadButtonText}>Download VAT Report</Text>
+            <Text style={styles.downloadButtonText}>{t("download_vat_report")}</Text>
           </>
         )}
       </TouchableOpacity>

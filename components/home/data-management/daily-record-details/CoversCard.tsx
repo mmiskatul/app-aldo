@@ -2,28 +2,31 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from '../../../../utils/i18n';
 
 export default function CoversCard() {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Feather name="users" size={moderateScale(16)} color="#111827" style={styles.icon} />
-        <Text style={styles.title}>Coperti</Text>
+        <Text style={styles.title}>{t('covers')}</Text>
       </View>
       
       <View style={styles.row}>
-        <Text style={styles.label}>Lunch Coperti</Text>
+        <Text style={styles.label}>{t('lunch_coperti')}</Text>
         <Text style={styles.value}>45</Text>
       </View>
       <View style={styles.row}>
-        <Text style={styles.label}>Dinner Coperti</Text>
+        <Text style={styles.label}>{t('dinner_coperti')}</Text>
         <Text style={styles.value}>60</Text>
       </View>
       
       <View style={styles.divider} />
       
       <View style={styles.row}>
-        <Text style={styles.totalLabel}>TOTAL</Text>
+        <Text style={styles.totalLabel}>{t('total').toUpperCase()}</Text>
         <Text style={styles.totalValue}>105</Text>
       </View>
     </View>

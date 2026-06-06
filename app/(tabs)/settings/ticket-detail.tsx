@@ -16,6 +16,7 @@ import Header from '../../../components/ui/Header';
 import { DetailRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import { getTicketById, TicketDetail, TicketMessage } from '../../../api/support';
 import { getSupportPriorityPresentation, getSupportStatusPresentation } from '../../../utils/supportPresentation';
+import { useTranslation } from '../../../utils/i18n';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,7 @@ const formatDateTime = (iso: string) => {
 // ─── Message Bubble ──────────────────────────────────────────────────────────
 
 const MessageBubble = ({ msg }: { msg: TicketMessage }) => {
+  const { t } = useTranslation();
   const isUser = msg.author_role === 'user';
 
   return (
@@ -37,7 +39,7 @@ const MessageBubble = ({ msg }: { msg: TicketMessage }) => {
       <View style={styles.bubbleHeader}>
         <View style={[styles.authorDot, { backgroundColor: isUser ? '#FA8B4F' : '#6366F1' }]} />
         <Text style={styles.authorName}>{msg.author_name}</Text>
-        <Text style={styles.bubbleRole}>{isUser ? 'You' : 'Support'}</Text>
+        <Text style={styles.bubbleRole}>{isUser ? t('you') : t('support')}</Text>
       </View>
 
       <Text style={styles.bubbleBody}>{msg.body}</Text>
@@ -61,6 +63,7 @@ const MessageBubble = ({ msg }: { msg: TicketMessage }) => {
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
 export default function TicketDetailScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -77,7 +80,7 @@ export default function TicketDetailScreen() {
       console.log('[TicketDetail] Response:', JSON.stringify(res, null, 2));
       setTicket(res);
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? err?.message ?? 'Failed to load ticket.');
+      setError(err?.response?.data?.message ?? err?.message ?? t('ticket_load_failed'));
     } finally {
       setLoading(false);
     }
@@ -88,7 +91,7 @@ export default function TicketDetailScreen() {
   if (loading) {
     return (
       <View style={styles.safeArea}>
-        <Header title="Ticket Details" showBack={true} />
+        <Header title={t('ticket_details')} showBack={true} />
         <DetailRouteSkeleton />
       </View>
     );
@@ -97,13 +100,13 @@ export default function TicketDetailScreen() {
   if (error || !ticket) {
     return (
       <View style={styles.safeArea}>
-        <Header title="Ticket Details" showBack={true} />
+        <Header title={t('ticket_details')} showBack={true} />
         <View style={styles.centered}>
           <Feather name="alert-circle" size={moderateScale(48)} color="#FCA5A5" />
-          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorTitle}>{t('something_went_wrong')}</Text>
           <Text style={styles.errorSub}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchTicket} activeOpacity={0.8}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryText}>{t('try_again')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -115,7 +118,7 @@ export default function TicketDetailScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Ticket Details" showBack={true} />
+      <Header title={t('ticket_details')} showBack={true} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -134,7 +137,7 @@ export default function TicketDetailScreen() {
 
           <View style={styles.metaRow}>
             <View style={[styles.badge, { backgroundColor: priority.bg }]}>
-              <Text style={[styles.badgeText, { color: priority.text }]}>{priority.label} Priority</Text>
+              <Text style={[styles.badgeText, { color: priority.text }]}>{priority.label} {t('priority')}</Text>
             </View>
             <View style={styles.metaDate}>
               <Feather name="clock" size={moderateScale(12)} color="#9CA3AF" />
@@ -145,14 +148,14 @@ export default function TicketDetailScreen() {
           {ticket.resolved_at && (
             <View style={styles.resolvedRow}>
               <Feather name="check-circle" size={moderateScale(13)} color="#065F46" />
-              <Text style={styles.resolvedText}>Resolved: {formatDateTime(ticket.resolved_at)}</Text>
+              <Text style={styles.resolvedText}>{t('resolved')}: {formatDateTime(ticket.resolved_at)}</Text>
             </View>
           )}
         </View>
 
         {/* ── Messages ── */}
         <Text style={styles.sectionTitle}>
-          Conversation <Text style={styles.sectionCount}>({ticket.messages.length})</Text>
+          {t('conversation')} <Text style={styles.sectionCount}>({ticket.messages.length})</Text>
         </Text>
 
         {ticket.messages.map((msg, idx) => (

@@ -7,10 +7,12 @@ import { getRestrictedAccessStatus, useAppStore } from "../../../store/useAppSto
 import { getCurrentUser } from "../../../api/auth";
 import { showSuccessMessage } from "../../../utils/feedback";
 import { buildSettingsHref, normalizeOrigin } from "../../../utils/settingsNavigation";
+import { useTranslation } from "../../../utils/i18n";
 
 const ACCESS_REFRESH_INTERVAL_MS = 8000;
 
 export default function RestrictedAccessScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { origin } = useLocalSearchParams<{ origin?: string | string[] }>();
   const settingsOrigin = normalizeOrigin(origin);
@@ -38,7 +40,7 @@ export default function RestrictedAccessScreen() {
 
       if (getRestrictedAccessStatus(refreshedUser) === null) {
         if (showRestoredMessage) {
-          showSuccessMessage("Your account access has been restored.", "Access Restored");
+          showSuccessMessage(t("account_access_restored"), t("access_restored"));
         }
         router.replace("/(tabs)/home" as any);
       }
@@ -101,7 +103,7 @@ export default function RestrictedAccessScreen() {
           activeOpacity={0.85}
           onPress={() => router.push(buildSettingsHref('/(tabs)/settings/help-center', settingsOrigin))}
         >
-          <Text style={styles.helpButtonText}>Go To Help Center</Text>
+          <Text style={styles.helpButtonText}>{t("go_to_help_center")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -111,7 +113,7 @@ export default function RestrictedAccessScreen() {
           disabled={isRefreshing}
         >
           <Text style={styles.refreshButtonText}>
-            {isRefreshing ? "Checking..." : "Check Access Again"}
+            {isRefreshing ? t("checking") : t("check_access_again")}
           </Text>
         </TouchableOpacity>
       </View>

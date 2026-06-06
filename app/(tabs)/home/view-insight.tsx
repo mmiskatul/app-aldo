@@ -226,7 +226,7 @@ export default function ViewInsightScreen() {
       >
         <TouchableOpacity style={styles.exportButton}>
           <ArrowDownTrayIcon size={moderateScale(20)} color="#FFFFFF" />
-          <Text style={styles.exportText}>Export</Text>
+          <Text style={styles.exportText}>{t("export")}</Text>
         </TouchableOpacity>
       </View>
     </View>
