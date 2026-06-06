@@ -132,14 +132,14 @@ interface HomeOverviewResponse {
   available_periods: string[];
   weekly: {
     metrics: MetricCard[];
-    cash_management: CashItem[];
+    cash_management?: CashItem[];
     vat_balance: number;
     revenue: RevenuePoint[];
     featured_insight?: FeaturedInsight | null;
   };
   monthly: {
     metrics: MetricCard[];
-    cash_management: CashItem[];
+    cash_management?: CashItem[];
     vat_balance: number;
     revenue: RevenuePoint[];
     featured_insight?: FeaturedInsight | null;
@@ -162,7 +162,7 @@ const cashOverviewToHomeItems = (overview: CashOverviewResponse, period: PeriodK
   const cashDeposit = Number(summary.bank_deposits ?? summary.bank_deposits_total ?? 0);
   const posPayments = Number(summary.pos_payments ?? 0);
   const cashAvailable = Number(summary.cash_available ?? 0);
-  const totalCollection = cashAvailable + posPayments;
+  const totalCollection = Number(summary.total_collected ?? 0);
 
   return [
     {
@@ -315,10 +315,6 @@ export default function TabsIndex() {
       weekly: data.weekly.revenue,
       monthly: data.monthly.revenue,
     };
-    const nextCashByPeriod = {
-      weekly: data.weekly.cash_management,
-      monthly: data.monthly.cash_management,
-    };
     const nextInsightByPeriod: Partial<Record<PeriodKey, FeaturedInsight | null>> = {};
 
     if (includeFeaturedInsight && data.weekly.featured_insight !== undefined) {
@@ -330,7 +326,6 @@ export default function TabsIndex() {
 
     setShellData(nextShellData);
     setMetricsByPeriod(nextMetricsByPeriod);
-    setCashByPeriod(nextCashByPeriod);
     setRevenueByPeriod(nextRevenueByPeriod);
     setVatBalance(data[period].vat_balance);
     if (data.recent_activity?.length) {
@@ -343,7 +338,6 @@ export default function TabsIndex() {
     setHomeScreenCache({
       shellData: nextShellData,
       metricsByPeriod: nextMetricsByPeriod,
-      cashByPeriod: nextCashByPeriod,
       revenueByPeriod: nextRevenueByPeriod,
       vatBalance: data[period].vat_balance,
       fetchedAt: Date.now(),
@@ -366,7 +360,7 @@ export default function TabsIndex() {
       params: {
         period,
         include_metrics: true,
-        include_cash_management: true,
+        include_cash_management: false,
         include_revenue: true,
         include_featured_insight: includeFeaturedInsight,
         include_recent_activity: false,

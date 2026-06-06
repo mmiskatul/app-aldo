@@ -114,6 +114,8 @@ export default function AddDailyDataScreen() {
   const router = useRouter();
   const { recordId } = useLocalSearchParams<{ recordId?: string | string[] }>();
   const insets = useSafeAreaInsets();
+  const footerBottomInset = Math.max(insets.bottom, verticalScale(20));
+  const footerReservedSpace = verticalScale(118) + footerBottomInset;
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
   const bumpInventoryRefreshToken = useAppStore((state) => state.bumpInventoryRefreshToken);
@@ -572,6 +574,7 @@ export default function AddDailyDataScreen() {
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? verticalScale(12) : 0}
       >
         {isLoadingRecord ? (
           <View style={styles.loadingRecordContainer}>
@@ -582,7 +585,10 @@ export default function AddDailyDataScreen() {
           <>
             <ScrollView
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: footerReservedSpace },
+              ]}
               keyboardShouldPersistTaps="handled"
             >
               <Text style={styles.pageTitle}>
@@ -697,7 +703,7 @@ export default function AddDailyDataScreen() {
               </View>
             </ScrollView>
 
-            <View style={[styles.bottomFooter, { paddingBottom: Math.max(insets.bottom, verticalScale(16)) }]}>
+            <View style={[styles.bottomFooter, { paddingBottom: footerBottomInset }]}>
               <TouchableOpacity
                 style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
                 onPress={handleSave}
