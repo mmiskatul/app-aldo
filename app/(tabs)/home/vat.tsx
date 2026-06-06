@@ -72,6 +72,7 @@ export default function VatScreen() {
     hasCache: Boolean(vatOverviewData),
     fetchedAt: vatOverviewData?.fetched_at ?? null,
     ttlMs: VAT_OVERVIEW_CACHE_TTL_MS,
+    refreshOnFocus: 'always',
     loadOnEmpty: () => {
       void fetchVatOverview();
     },

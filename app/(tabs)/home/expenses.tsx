@@ -12,7 +12,7 @@ import {
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
 import DatePicker from "../../../components/ui/DatePicker";
-import { useFocusEffect } from "@react-navigation/native";
+import { useCachedFocusRefresh } from "../../../hooks/useCachedFocusRefresh";
 import apiClient from "../../../api/apiClient";
 import { useAppStore } from "../../../store/useAppStore";
 import { formatApiDate } from "../../../utils/date";
@@ -22,6 +22,8 @@ import ExpenseDistribution from "../../../components/home/expenses/ExpenseDistri
 import QuickSummary from "../../../components/home/expenses/QuickSummary";
 import RecentTransactions from "../../../components/home/expenses/RecentTransactions";
 import { ListRouteSkeleton } from "../../../components/ui/RouteSkeletons";
+
+const EXPENSES_CACHE_TTL_MS = 60 * 1000;
 
 export default function ExpensesScreen() {
   const router = useRouter();
@@ -63,15 +65,18 @@ export default function ExpensesScreen() {
     }
   }, [selectedReferenceDateKey, setExpensesScreenCache]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!expensesScreenCache.data) {
-        void fetchExpenses(false, selectedReferenceDateKey);
-        return;
-      }
+  useCachedFocusRefresh({
+    hasCache: Boolean(expensesScreenCache.data),
+    fetchedAt: expensesScreenCache.fetchedAt,
+    ttlMs: EXPENSES_CACHE_TTL_MS,
+    refreshOnFocus: "always",
+    loadOnEmpty: () => {
+      void fetchExpenses(false, selectedReferenceDateKey);
+    },
+    refreshStale: () => {
       void fetchExpenses(true, selectedReferenceDateKey);
-    }, [expensesScreenCache.data, fetchExpenses, selectedReferenceDateKey])
-  );
+    },
+  });
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -94,7 +99,7 @@ export default function ExpensesScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Expenses" showBack={true} />
+      <Header title={t("expenses")} showBack={true} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -114,7 +119,7 @@ export default function ExpensesScreen() {
         </TouchableOpacity>
 
         <DatePicker
-          label="Expense Date"
+          label={t("expense_date")}
           value={selectedReferenceDate}
           onChange={setSelectedReferenceDate}
           leftIcon={<Feather name="calendar" size={moderateScale(18)} color="#6B7280" />}

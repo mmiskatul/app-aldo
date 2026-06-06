@@ -117,6 +117,7 @@ export default function CashManagementScreen() {
     hasCache: Boolean(cashOverviewData?.periods?.today),
     fetchedAt: cashOverviewData?.fetched_at ?? null,
     ttlMs: CASH_OVERVIEW_CACHE_TTL_MS,
+    refreshOnFocus: "always",
     loadOnEmpty: () => {
       void fetchCashOverview();
     },

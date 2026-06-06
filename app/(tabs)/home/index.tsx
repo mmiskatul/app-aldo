@@ -192,7 +192,6 @@ const REVENUE_TRIGGER_Y = 260;
 const INSIGHT_TRIGGER_Y = 520;
 const RECENT_ACTIVITY_TRIGGER_Y = 760;
 const HOME_SECTION_LOAD_DELAY_MS = 160;
-const HOME_CACHE_TTL_MS = 60_000;
 const SUPPORTING_DATA_TTL_MS = 120_000;
 export default function TabsIndex() {
   const insets = useSafeAreaInsets();
@@ -242,9 +241,8 @@ export default function TabsIndex() {
     if (!force && now - lastSupportingDataRefreshRef.current < SUPPORTING_DATA_TTL_MS) {
       return;
     }
-    const [analyticsRes, cashOverviewRes, profileRes] = await Promise.allSettled([
+    const [analyticsRes, profileRes] = await Promise.allSettled([
       apiClient.get("/api/v1/restaurant/analytics/overview"),
-      apiClient.get("/api/v1/restaurant/cash/overview"),
       apiClient.get("/api/v1/restaurant/settings/profile"),
     ]);
 
@@ -254,19 +252,13 @@ export default function TabsIndex() {
       console.log("Analytics preload error:", analyticsRes.reason?.response?.data || analyticsRes.reason?.message);
     }
 
-    if (cashOverviewRes.status === "fulfilled") {
-      setCashOverviewData(cashOverviewRes.value.data);
-    } else {
-      console.log("Cash overview preload error:", cashOverviewRes.reason?.response?.data || cashOverviewRes.reason?.message);
-    }
-
     if (profileRes.status === "fulfilled") {
       setProfile(profileRes.value.data);
     } else {
       console.log("Profile preload error:", profileRes.reason?.response?.data || profileRes.reason?.message);
     }
     lastSupportingDataRefreshRef.current = now;
-  }, [setAnalyticsData, setCashOverviewData, setProfile]);
+  }, [setAnalyticsData, setProfile]);
 
   const fetchHomeShell = useCallback(async () => {
     const response = await apiClient.get("/api/v1/restaurant/home", {
@@ -369,8 +361,11 @@ export default function TabsIndex() {
     applyHomeOverview(response.data, period, includeFeaturedInsight);
   }, [applyHomeOverview]);
 
-  const fetchMetricsSection = useCallback(async (period: PeriodKey) => {
-    setMetricsLoading(true);
+  const fetchMetricsSection = useCallback(async (period: PeriodKey, options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setMetricsLoading(true);
+    }
     try {
       const response = await apiClient.get<HomeSectionMetricResponse>("/api/v1/restaurant/home/metrics", {
         params: { period },
@@ -386,12 +381,17 @@ export default function TabsIndex() {
     } catch (error: any) {
       console.log("Home metrics error:", error.response?.data || error.message);
     } finally {
-      setMetricsLoading(false);
+      if (!silent) {
+        setMetricsLoading(false);
+      }
     }
   }, [setHomeScreenCache]);
 
-  const fetchCashSection = useCallback(async (period: PeriodKey) => {
-    setCashLoading(true);
+  const fetchCashSection = useCallback(async (period: PeriodKey, options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setCashLoading(true);
+    }
     try {
       const response = await apiClient.get<CashOverviewResponse>("/api/v1/restaurant/cash/overview");
       setCashOverviewData(response.data);
@@ -407,12 +407,17 @@ export default function TabsIndex() {
     } catch (error: any) {
       console.log("Home cash section error:", error.response?.data || error.message);
     } finally {
-      setCashLoading(false);
+      if (!silent) {
+        setCashLoading(false);
+      }
     }
   }, [setCashOverviewData, setHomeScreenCache]);
 
-  const fetchVatSection = useCallback(async () => {
-    setVatLoading(true);
+  const fetchVatSection = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setVatLoading(true);
+    }
     try {
       const response = await apiClient.get<HomeSectionVatBalanceResponse>("/api/v1/restaurant/home/vat-balance");
       setVatBalance(response.data.balance);
@@ -420,12 +425,17 @@ export default function TabsIndex() {
     } catch (error: any) {
       console.log("Home VAT error:", error.response?.data || error.message);
     } finally {
-      setVatLoading(false);
+      if (!silent) {
+        setVatLoading(false);
+      }
     }
   }, []);
 
-  const fetchRevenueSection = useCallback(async (period: PeriodKey) => {
-    setRevenueLoading(true);
+  const fetchRevenueSection = useCallback(async (period: PeriodKey, options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setRevenueLoading(true);
+    }
     try {
       const response = await apiClient.get<HomeSectionRevenueResponse>("/api/v1/restaurant/home/revenue", {
         params: { period },
@@ -441,7 +451,9 @@ export default function TabsIndex() {
     } catch (error: any) {
       console.log("Home revenue error:", error.response?.data || error.message);
     } finally {
-      setRevenueLoading(false);
+      if (!silent) {
+        setRevenueLoading(false);
+      }
     }
   }, [setHomeScreenCache]);
 
@@ -466,8 +478,11 @@ export default function TabsIndex() {
     }
   }, [setHomeScreenCache]);
 
-  const fetchRecentActivitySection = useCallback(async () => {
-    setRecentActivityLoading(true);
+  const fetchRecentActivitySection = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setRecentActivityLoading(true);
+    }
     try {
       const response = await apiClient.get<HomeSectionRecentActivityResponse>("/api/v1/restaurant/home/recent-activity");
       setRecentActivity(response.data.items);
@@ -475,7 +490,9 @@ export default function TabsIndex() {
     } catch (error: any) {
       console.log("Home recent activity error:", error.response?.data || error.message);
     } finally {
-      setRecentActivityLoading(false);
+      if (!silent) {
+        setRecentActivityLoading(false);
+      }
     }
   }, []);
 
@@ -528,11 +545,12 @@ export default function TabsIndex() {
         insight: false,
         recentActivity: false,
       };
-      await fetchHomeOverview(period);
-      if (force || recentActivity === null) {
-        void fetchRecentActivitySection();
-      }
-      void hydrateSupportingData(force);
+      await Promise.allSettled([
+        fetchHomeOverview(period),
+        fetchCashSection(period, { silent: true }),
+        fetchRecentActivitySection({ silent: true }),
+        hydrateSupportingData(force),
+      ]);
     } catch (error: any) {
       console.log("Home shell error:", error.response?.data || error.message);
     } finally {
@@ -549,23 +567,16 @@ export default function TabsIndex() {
       hasFocusedRef.current = true;
       previousPeriodRef.current = activePeriod;
       const hasCachedShell = !!homeScreenCache.shellData;
-      const isCacheFresh =
-        typeof homeScreenCache.fetchedAt === "number" &&
-        Date.now() - homeScreenCache.fetchedAt < HOME_CACHE_TTL_MS;
 
       if (!hasCachedShell) {
         void fetchHomeData(activePeriod, false, true);
         return () => {};
       }
 
-      if (!isCacheFresh) {
-        void fetchHomeData(activePeriod, true, false);
-      } else {
-        void hydrateSupportingData(false);
-      }
+      void fetchHomeData(activePeriod, true, false);
       return () => {
       };
-    }, [activePeriod, fetchHomeData, hasSubscription, homeScreenCache.fetchedAt, homeScreenCache.shellData, hydrateSupportingData])
+    }, [activePeriod, fetchHomeData, hasSubscription, homeScreenCache.shellData])
   );
 
   useEffect(() => {

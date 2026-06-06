@@ -66,6 +66,7 @@ export default function SettingsScreen() {
     hasCache: Boolean(profile),
     fetchedAt: profileFetchedAt,
     ttlMs: PROFILE_CACHE_TTL_MS,
+    refreshOnFocus: 'always',
     loadOnEmpty: () => {
       void fetchProfile(false);
     },

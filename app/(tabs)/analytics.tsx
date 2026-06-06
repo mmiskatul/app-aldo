@@ -354,6 +354,7 @@ export default function AnalyticsScreen() {
     hasCache: hasCachedPeriodData,
     fetchedAt: analyticsScreenCache.fetchedAt,
     ttlMs: ANALYTICS_CACHE_TTL_MS,
+    refreshOnFocus: 'always',
     loadOnEmpty: () => {
       void fetchAnalyticsScreenData(activePeriod, false);
     },

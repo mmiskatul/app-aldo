@@ -85,6 +85,7 @@ export default function DocumentsScreen() {
     hasCache: hasFetchedDocuments,
     fetchedAt: documentsScreenCache.fetchedAt,
     ttlMs: DOCUMENTS_CACHE_TTL_MS,
+    refreshOnFocus: "always",
     loadOnEmpty: () => {
       void fetchDocuments();
     },

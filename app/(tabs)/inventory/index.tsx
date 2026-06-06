@@ -252,6 +252,7 @@ export default function InventoryScreen() {
     hasCache: hasCachedInventory,
     fetchedAt: inventoryListFetchedAt,
     ttlMs: INVENTORY_CACHE_TTL_MS,
+    refreshOnFocus: 'always',
     loadOnEmpty: () => {
       lastHandledRefreshTokenRef.current = inventoryRefreshToken;
       void fetchInventory('', { silent: false });

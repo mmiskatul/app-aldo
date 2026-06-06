@@ -10,6 +10,7 @@ interface UseCachedFocusRefreshOptions {
   ttlMs: number;
   loadOnEmpty: () => void;
   refreshStale: () => void;
+  refreshOnFocus?: 'stale' | 'always';
 }
 
 export const useCachedFocusRefresh = ({
@@ -19,6 +20,7 @@ export const useCachedFocusRefresh = ({
   ttlMs,
   loadOnEmpty,
   refreshStale,
+  refreshOnFocus = 'stale',
 }: UseCachedFocusRefreshOptions) => {
   const loadOnEmptyRef = React.useRef(loadOnEmpty);
   const refreshStaleRef = React.useRef(refreshStale);
@@ -58,18 +60,25 @@ export const useCachedFocusRefresh = ({
           lastActionKeyRef.current = actionKey;
           loadOnEmptyRef.current();
         }
-        return undefined;
+        return () => {
+          lastActionKeyRef.current = null;
+        };
       }
 
-      if (!isCacheFresh(fetchedAt, ttlMs)) {
-        const actionKey = `stale:${String(fetchedAt)}`;
+      const shouldRefresh =
+        refreshOnFocus === 'always' || !isCacheFresh(fetchedAt, ttlMs);
+
+      if (shouldRefresh) {
+        const actionKey = `${refreshOnFocus}:${String(fetchedAt)}`;
         if (lastActionKeyRef.current !== actionKey) {
           lastActionKeyRef.current = actionKey;
           refreshStaleRef.current();
         }
       }
 
-      return undefined;
-    }, [enabled, fetchedAt, hasCache, ttlMs]),
+      return () => {
+        lastActionKeyRef.current = null;
+      };
+    }, [enabled, fetchedAt, hasCache, refreshOnFocus, ttlMs]),
   );
 };
