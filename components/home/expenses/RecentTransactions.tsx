@@ -52,7 +52,13 @@ const resolveTransactionRoute = (tx: ExpenseItem) => {
     return `/(tabs)/home/daily-record-details?dataId=${tx.source_id}`;
   }
   if (tx.source_kind === 'inventory' && tx.source_inventory_item_id) {
-    return `/(tabs)/inventory/${tx.source_inventory_item_id}`;
+    return {
+      pathname: '/(tabs)/inventory/[id]',
+      params: {
+        id: tx.source_inventory_item_id,
+        origin: '/(tabs)/inventory',
+      },
+    } as any;
   }
   return `/(tabs)/home/expense-details?id=${tx.id}`;
 };

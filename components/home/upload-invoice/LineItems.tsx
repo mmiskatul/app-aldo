@@ -43,6 +43,7 @@ export default function LineItems({
   const [draftItem, setDraftItem] = useState<any | null>(null);
   const [vatPickerOpen, setVatPickerOpen] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<InventoryMetaItem[]>([]);
+  const [activeInlineCategoryIndex, setActiveInlineCategoryIndex] = useState<number | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -84,6 +85,17 @@ export default function LineItems({
       .slice(0, 6);
   }, [categoryOptions, draftItem?.category]);
 
+  const getFilteredInlineCategoryOptions = (categoryValue: string) => {
+    const query = String(categoryValue || '').trim().toLowerCase();
+    if (query.length < 2) {
+      return [];
+    }
+
+    return categoryOptions
+      .filter((item) => item.name.toLowerCase().includes(query))
+      .slice(0, 6);
+  };
+
   const openEditor = (index: number) => {
     setSelectedIndex(index);
     setDraftItem({ ...items[index] });
@@ -114,6 +126,16 @@ export default function LineItems({
     closeEditor();
   };
 
+  const updateInlineItem = (index: number, field: string, value: string) => {
+    const nextItems = [...items];
+    const nextItem = { ...nextItems[index], [field]: value };
+    nextItems[index] =
+      field === 'qty' || field === 'price' || field === 'vatRate'
+        ? calculateLineFields(nextItem)
+        : nextItem;
+    onItemsChange(nextItems);
+  };
+
   return (
     <View style={styles.tableCard}>
       <View style={styles.tableHead}>
@@ -141,6 +163,42 @@ export default function LineItems({
               <View style={styles.productCellHeader}>
                 <Text style={styles.tableCellMain} numberOfLines={2}>{item.product}</Text>
               </View>
+              {isEditing ? (
+                <View style={styles.inlineCategoryWrap}>
+                  <TextInput
+                    style={styles.inlineCategoryInput}
+                    value={String(item.category ?? '')}
+                    onChangeText={(text) => updateInlineItem(index, 'category', text)}
+                    placeholder={t('select_category')}
+                    placeholderTextColor="#9CA3AF"
+                    onFocus={() => setActiveInlineCategoryIndex(index)}
+                    onBlur={() =>
+                      setTimeout(
+                        () => setActiveInlineCategoryIndex((current) => (current === index ? null : current)),
+                        120,
+                      )
+                    }
+                  />
+                  {activeInlineCategoryIndex === index && getFilteredInlineCategoryOptions(String(item.category || '')).length > 0 ? (
+                    <View style={styles.inlineSuggestionList}>
+                      {getFilteredInlineCategoryOptions(String(item.category || '')).map((option) => (
+                        <TouchableOpacity
+                          key={option.id}
+                          style={styles.inlineSuggestionItem}
+                          onPress={() => {
+                            updateInlineItem(index, 'category', option.name);
+                            setActiveInlineCategoryIndex(null);
+                          }}
+                        >
+                          <Text style={styles.inlineSuggestionText}>{option.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              ) : item.category ? (
+                <Text style={styles.tableCellMeta} numberOfLines={1}>{item.category}</Text>
+              ) : null}
             </View>
             <Text style={[styles.tableCellSub, { flex: 1, textAlign: 'center' }]}>{item.qty}</Text>
             <Text style={[styles.tableCellSub, { flex: 1, textAlign: 'right' }]}>EUR {item.price}</Text>
@@ -376,11 +434,50 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '600',
   },
+  tableCellMeta: {
+    marginTop: verticalScale(4),
+    fontSize: moderateScale(10, 0.3),
+    color: '#6B7280',
+    fontWeight: '600',
+  },
   productCellHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: scale(8),
+  },
+  inlineCategoryWrap: {
+    marginTop: verticalScale(6),
+  },
+  inlineCategoryInput: {
+    minHeight: verticalScale(32),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: scale(8),
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(6),
+    fontSize: moderateScale(11, 0.3),
+    color: '#374151',
+    backgroundColor: '#FFFFFF',
+  },
+  inlineSuggestionList: {
+    marginTop: verticalScale(4),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: scale(8),
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  inlineSuggestionItem: {
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(8),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  inlineSuggestionText: {
+    fontSize: moderateScale(11, 0.3),
+    color: '#374151',
+    fontWeight: '600',
   },
   tableCellSub: {
     fontSize: moderateScale(12, 0.3),

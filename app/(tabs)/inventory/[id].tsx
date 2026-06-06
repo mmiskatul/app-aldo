@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Href, router, useLocalSearchParams } from 'expo-router';
 import apiClient from '../../../api/apiClient';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -70,8 +70,9 @@ export default function ItemDetailScreen() {
   const inventoryDetailCache = useAppStore((state) => state.inventoryDetailCache);
   const setInventoryDetailCacheItem = useAppStore((state) => state.setInventoryDetailCacheItem);
   const removeInventoryDetailCacheItem = useAppStore((state) => state.removeInventoryDetailCacheItem);
-  const { id } = useLocalSearchParams();
+  const { id, origin } = useLocalSearchParams<{ id?: string | string[]; origin?: string | string[] }>();
   const itemId = Array.isArray(id) ? id[0] : id;
+  const originHref = Array.isArray(origin) ? origin[0] : origin;
   const cachedItem = itemId ? inventoryDetailCache[itemId] : null;
   const initialItem = hasCompleteDetailCache(cachedItem) ? cachedItem : null;
   const [item, setItem] = useState<InventoryDetailResponse | null>(initialItem);
@@ -207,6 +208,11 @@ export default function ItemDetailScreen() {
         title={viewModel.name}
         subtitle={viewModel.category}
         showBack={true}
+        onBackPress={
+          originHref
+            ? () => router.replace(originHref as Href<string>)
+            : undefined
+        }
       />
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>

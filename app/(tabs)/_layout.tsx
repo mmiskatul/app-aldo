@@ -163,6 +163,12 @@ export default function TabLayout() {
             />
           ),
         }}
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            router.replace("/(tabs)/inventory" as any);
+          },
+        }}
       />
       <Tabs.Screen
         name="documents"
