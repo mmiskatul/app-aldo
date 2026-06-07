@@ -4,14 +4,14 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scale, verticalScale } from 'react-native-size-matters';
 
-import Header from '../../components/ui/Header';
-import StateCard from '../../components/ui/StateCard';
-import SupplierPriceAlerts, { type SupplierAlertItem } from '../../components/analytics/SupplierPriceAlerts';
-import apiClient from '../../api/apiClient';
-import { useAppStore } from '../../store/useAppStore';
-import { getApiDisplayMessage, logApiError } from '../../utils/apiErrors';
-import { useTranslation } from '../../utils/i18n';
-import { resolveLocalizedText } from '../../utils/localizedContent';
+import Header from '../components/ui/Header';
+import StateCard from '../components/ui/StateCard';
+import SupplierPriceAlerts, { type SupplierAlertItem } from '../components/analytics/SupplierPriceAlerts';
+import apiClient from '../api/apiClient';
+import { useAppStore } from '../store/useAppStore';
+import { getApiDisplayMessage, logApiError } from '../utils/apiErrors';
+import { useTranslation } from '../utils/i18n';
+import { resolveLocalizedText } from '../utils/localizedContent';
 
 type PeriodKey = 'weekly' | 'monthly';
 

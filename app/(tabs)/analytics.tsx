@@ -694,7 +694,7 @@ export default function AnalyticsScreen() {
                 previewLimit={3}
                 onSeeAll={() =>
                   router.push({
-                    pathname: '/(tabs)/analytics-alerts',
+                    pathname: '/analytics-alerts',
                     params: { period: activePeriod },
                   } as any)
                 }

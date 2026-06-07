@@ -70,7 +70,7 @@ const resolveNotificationRoute = (item: NotificationItem) => {
         ? `/(tabs)/home/expense-details?id=${sourceEntityId}`
         : item.route;
     case "analytics_alert":
-      return item.route || "/(tabs)/analytics-alerts";
+      return item.route || "/analytics-alerts";
     default:
       return item.route;
   }
