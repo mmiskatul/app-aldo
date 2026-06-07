@@ -3,6 +3,12 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import type { AuthenticatedUser } from "../api/auth";
+import type {
+  PublicLegalDocument,
+  RestaurantNotificationSettings,
+  RestaurantSubscriptionSettings,
+  UserSubscriptionPlan,
+} from "../api/settings";
 
 const DEFAULT_APP_LANGUAGE = "it" as const;
 
@@ -360,6 +366,17 @@ export interface NotificationsScreenCache {
   fetchedAt: number | null;
 }
 
+export interface SettingsSubscriptionCache {
+  subscription: RestaurantSubscriptionSettings | null;
+  plans: UserSubscriptionPlan[];
+  fetchedAt: number | null;
+}
+
+export interface SettingsNotificationsCache {
+  settings: RestaurantNotificationSettings | null;
+  fetchedAt: number | null;
+}
+
 export interface SupportTicketsCacheItem {
   id: string;
   ticket_number: string;
@@ -475,6 +492,8 @@ interface AppState {
   documentsScreenCache: DocumentsScreenCache;
   expensesScreenCache: ExpensesScreenCache;
   notificationsScreenCache: NotificationsScreenCache;
+  settingsSubscriptionCache: SettingsSubscriptionCache;
+  settingsNotificationsCache: SettingsNotificationsCache;
   supportTicketsScreenCache: SupportTicketsScreenCache;
   supportTicketDetailCache: Record<string, SupportTicketDetailCacheItem>;
   dailyDataScreenCache: DailyDataScreenCache;
@@ -505,6 +524,10 @@ interface AppState {
   clearExpensesScreenCache: () => void;
   setNotificationsScreenCache: (payload: NotificationsScreenCache) => void;
   clearNotificationsScreenCache: () => void;
+  setSettingsSubscriptionCache: (payload: SettingsSubscriptionCache) => void;
+  clearSettingsSubscriptionCache: () => void;
+  setSettingsNotificationsCache: (payload: SettingsNotificationsCache) => void;
+  clearSettingsNotificationsCache: () => void;
   setSupportTicketsScreenCache: (payload: SupportTicketsScreenCache) => void;
   clearSupportTicketsScreenCache: () => void;
   setSupportTicketDetailCacheItem: (ticketId: string, payload: SupportTicketDetailCacheItem) => void;
@@ -575,6 +598,15 @@ export const useAppStore = create<AppState>()(
       },
       notificationsScreenCache: {
         items: [],
+        fetchedAt: null,
+      },
+      settingsSubscriptionCache: {
+        subscription: null,
+        plans: [],
+        fetchedAt: null,
+      },
+      settingsNotificationsCache: {
+        settings: null,
         fetchedAt: null,
       },
       supportTicketsScreenCache: {
@@ -709,6 +741,23 @@ export const useAppStore = create<AppState>()(
             fetchedAt: null,
           },
         }),
+      setSettingsSubscriptionCache: (payload) => set({ settingsSubscriptionCache: payload }),
+      clearSettingsSubscriptionCache: () =>
+        set({
+          settingsSubscriptionCache: {
+            subscription: null,
+            plans: [],
+            fetchedAt: null,
+          },
+        }),
+      setSettingsNotificationsCache: (payload) => set({ settingsNotificationsCache: payload }),
+      clearSettingsNotificationsCache: () =>
+        set({
+          settingsNotificationsCache: {
+            settings: null,
+            fetchedAt: null,
+          },
+        }),
       setSupportTicketsScreenCache: (payload) => set({ supportTicketsScreenCache: payload }),
       clearSupportTicketsScreenCache: () =>
         set({
@@ -794,6 +843,15 @@ export const useAppStore = create<AppState>()(
           },
           notificationsScreenCache: {
             items: [],
+            fetchedAt: null,
+          },
+          settingsSubscriptionCache: {
+            subscription: null,
+            plans: [],
+            fetchedAt: null,
+          },
+          settingsNotificationsCache: {
+            settings: null,
             fetchedAt: null,
           },
           supportTicketsScreenCache: {

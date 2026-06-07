@@ -22,12 +22,14 @@ import { useAppStore } from "../../../store/useAppStore";
 import { getLocale, useTranslation } from "../../../utils/i18n";
 import { generateDailyDataExcelExport, generateDailyDataPdfExport } from "../../../utils/exportData";
 import { showErrorMessage } from "../../../utils/feedback";
+import type { LocalizedText } from "../../../utils/localizedContent";
 
 type DetailSegment = "date" | "week" | "month";
 
 interface DailyDataSection {
   key: string;
   title: string;
+  title_translations?: LocalizedText;
   fields: SectionDataField[];
 }
 
@@ -476,6 +478,7 @@ export default function DailyRecordDetailsScreen() {
               <SectionDataCard
                 key={section.key}
                 title={section.title}
+                title_translations={section.title_translations}
                 fields={section.fields || []}
               />
             ))}

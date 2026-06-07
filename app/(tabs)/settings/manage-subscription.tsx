@@ -18,6 +18,9 @@ import { useAppStore } from '../../../store/useAppStore';
 import { formatReadableDate, formatSubscriptionStatus } from '../../../utils/date';
 import { showDialog, showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 import { useTranslation } from '../../../utils/i18n';
+import { isCacheFresh } from '../../../utils/cache';
+
+const SETTINGS_SUBSCRIPTION_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const LOCALIZED_PLAN_NAME_KEYS: Record<string, string> = {
   'Core Plan': 'subscription_plan_core_name',
@@ -45,6 +48,8 @@ export default function ManageSubscriptionScreen() {
   const setUser = useAppStore((state) => state.setUser);
   const clearHomeScreenCache = useAppStore((state) => state.clearHomeScreenCache);
   const clearAnalyticsScreenCache = useAppStore((state) => state.clearAnalyticsScreenCache);
+  const settingsSubscriptionCache = useAppStore((state) => state.settingsSubscriptionCache);
+  const setSettingsSubscriptionCache = useAppStore((state) => state.setSettingsSubscriptionCache);
 
   const loadSubscriptionData = React.useCallback(async () => {
     setLoading(true);
@@ -55,6 +60,11 @@ export default function ManageSubscriptionScreen() {
       ]);
       setSubscription(subscriptionSettings);
       setPlans(plansResponse.plans);
+      setSettingsSubscriptionCache({
+        subscription: subscriptionSettings,
+        plans: plansResponse.plans,
+        fetchedAt: Date.now(),
+      });
       if (subscriptionSettings.billing_cycle) {
         setBillingCycle(subscriptionSettings.billing_cycle);
       }
@@ -66,8 +76,21 @@ export default function ManageSubscriptionScreen() {
   }, [i18n]);
 
   useEffect(() => {
+    if (settingsSubscriptionCache.subscription) {
+      setSubscription(settingsSubscriptionCache.subscription);
+      setPlans(settingsSubscriptionCache.plans);
+      if (settingsSubscriptionCache.subscription.billing_cycle) {
+        setBillingCycle(settingsSubscriptionCache.subscription.billing_cycle);
+      }
+      setLoading(false);
+      if (isCacheFresh(settingsSubscriptionCache.fetchedAt, SETTINGS_SUBSCRIPTION_CACHE_TTL_MS)) {
+        return;
+      }
+      void loadSubscriptionData();
+      return;
+    }
     void loadSubscriptionData();
-  }, [loadSubscriptionData]);
+  }, [loadSubscriptionData, settingsSubscriptionCache]);
 
   const hasActiveSubscription =
     subscription?.selection_required === false &&

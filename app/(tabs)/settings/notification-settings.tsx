@@ -29,6 +29,7 @@ import {
   registerForPushNotificationsAsync,
 } from '../../../utils/pushNotifications';
 import { useTranslation } from '../../../utils/i18n';
+import { isCacheFresh } from '../../../utils/cache';
 
 type NotificationKey = keyof RestaurantNotificationSettings;
 
@@ -73,11 +74,14 @@ const DEFAULT_SETTINGS: RestaurantNotificationSettings = {
   low_stock_alerts: true,
   marketing_notifications: false,
 };
+const SETTINGS_NOTIFICATIONS_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export default function NotificationSettingsScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const profile = useAppStore((state) => state.profile);
+  const settingsNotificationsCache = useAppStore((state) => state.settingsNotificationsCache);
+  const setSettingsNotificationsCache = useAppStore((state) => state.setSettingsNotificationsCache);
   const [settings, setSettings] =
     useState<RestaurantNotificationSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
@@ -91,6 +95,10 @@ export default function NotificationSettingsScreen() {
     try {
       const data = await getRestaurantNotificationSettings();
       setSettings(data);
+      setSettingsNotificationsCache({
+        settings: data,
+        fetchedAt: Date.now(),
+      });
     } catch (err: any) {
       setError(
         err?.response?.data?.message ??
@@ -103,8 +111,17 @@ export default function NotificationSettingsScreen() {
   }, [i18n]);
 
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    if (settingsNotificationsCache.settings) {
+      setSettings(settingsNotificationsCache.settings);
+      setLoading(false);
+      if (isCacheFresh(settingsNotificationsCache.fetchedAt, SETTINGS_NOTIFICATIONS_CACHE_TTL_MS)) {
+        return;
+      }
+      void fetchSettings();
+      return;
+    }
+    void fetchSettings();
+  }, [fetchSettings, settingsNotificationsCache]);
 
   const toggleSwitch = async (id: NotificationKey) => {
     const previous = settings;
@@ -132,6 +149,10 @@ export default function NotificationSettingsScreen() {
         [id]: nextValue,
       });
       setSettings(updated);
+      setSettingsNotificationsCache({
+        settings: updated,
+        fetchedAt: Date.now(),
+      });
       setLastUpdatedKey(id);
       showSuccessMessage(t('notification_updated_successfully'));
     } catch (err: any) {

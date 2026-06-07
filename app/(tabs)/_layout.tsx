@@ -14,6 +14,7 @@ import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
 import StartupSplash from "../../components/app/StartupSplash";
 import { getRestrictedAccessStatus, useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../utils/i18n";
+import { prefetchAppTabData } from "../../utils/bootstrapPrefetch";
 
 const hugeiconsAny = HugeiconsModule as any;
 const HugeiconsIcon = hugeiconsAny.HugeiconsIcon || hugeiconsAny.default?.HugeiconsIcon || hugeiconsAny;
@@ -75,6 +76,16 @@ export default function TabLayout() {
       isMounted = false;
     };
   }, [hasHydrated, logout, setUser, tokens, user]);
+
+  useEffect(() => {
+    if (!hasHydrated || !user || !tokens?.access_token) {
+      return;
+    }
+    if (!hasCompletedOnboarding(user) || isRestrictedAccess) {
+      return;
+    }
+    void prefetchAppTabData(false);
+  }, [hasHydrated, isRestrictedAccess, tokens?.access_token, user]);
 
   if (!hasHydrated || isSessionChecking) {
     return <StartupSplash />;

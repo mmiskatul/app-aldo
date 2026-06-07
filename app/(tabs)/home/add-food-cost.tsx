@@ -58,7 +58,7 @@ export default function AddFoodCostScreen() {
 
   return (
     <View style={styles.safeArea}>
-      <Header title="Add Food Cost" showBack={true} />
+      <Header title="Add Daily Food Cost" showBack={true} />
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
@@ -102,7 +102,7 @@ export default function AddFoodCostScreen() {
             ) : (
               <>
                 <Feather name="save" size={moderateScale(18)} color="#FFFFFF" style={styles.buttonIcon} />
-                <Text style={styles.buttonText}>Save Food Cost</Text>
+                <Text style={styles.buttonText}>Save Daily Food Cost</Text>
               </>
             )}
           </TouchableOpacity>

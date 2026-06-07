@@ -490,7 +490,7 @@ export default function InventoryScreen() {
                 onPress={() => router.push('/(tabs)/home/add-food-cost')}
               >
                 <Feather name="plus" size={moderateScale(14)} color="#FFFFFF" />
-                <Text style={styles.foodCostButtonText}>Add Food Cost</Text>
+                <Text style={styles.foodCostButtonText}>Add Daily Food Cost</Text>
               </TouchableOpacity>
             </View>
 

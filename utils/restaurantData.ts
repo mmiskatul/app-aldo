@@ -1,4 +1,5 @@
 import type {
+  AnalyticsData,
   AnalyticsScreenCache,
   CashOverviewData,
   DocumentListCacheItem,
@@ -130,6 +131,63 @@ export const normalizeAnalyticsInsight = (value: unknown) => {
     ai_provider: asNullableString(record.ai_provider),
     title_translations: record.title_translations as { en?: string | null; it?: string | null } | null | undefined,
     subtitle_translations: record.subtitle_translations as { en?: string | null; it?: string | null } | null | undefined,
+  };
+};
+
+export const normalizeAnalyticsOverview = (value: unknown): AnalyticsData => {
+  const record = asRecord(value);
+  return {
+    insight_banner: normalizeAnalyticsInsight(record.insight_banner) ?? {
+      title: "",
+      subtitle: "",
+    },
+    revenue_total: asNumber(record.revenue_total, 0),
+    revenue_change_percent: asNumber(record.revenue_change_percent, 0),
+    weekly_revenue: asArray(record.weekly_revenue, (item) => {
+      const next = asRecord(item);
+      return {
+        label: asString(next.label),
+        value: asNumber(next.value, 0),
+      };
+    }),
+    metric_tiles: asArray(record.metric_tiles, (item) => {
+      const next = asRecord(item);
+      return {
+        label: asString(next.label),
+        value: typeof next.value === "string" ? next.value : asNumber(next.value, 0),
+        change_percent: asNumber(next.change_percent, 0),
+        subtitle: asString(next.subtitle),
+      };
+    }),
+    summary_stats: normalizeAnalyticsSummaryItems(record.summary_stats) ?? [],
+    revenue_comparison: normalizeAnalyticsComparisonItems(record.revenue_comparison) ?? [],
+    covers_total: asNumber(record.covers_total, 0),
+    covers_activity: asArray(record.covers_activity, (item) => {
+      const next = asRecord(item);
+      return {
+        label: asString(next.label),
+        value: asNumber(next.value, 0),
+      };
+    }),
+    avg_revenue_per_cover: asNumber(record.avg_revenue_per_cover, 0),
+    cost_breakdown: asArray(record.cost_breakdown, (item) => {
+      const next = asRecord(item);
+      return {
+        label: asString(next.label),
+        value: asNumber(next.value, 0),
+      };
+    }),
+    supplier_price_alerts: asArray(record.supplier_price_alerts, (item) => {
+      const next = asRecord(item);
+      return {
+        title: asString(next.title),
+        subtitle: asString(next.subtitle),
+        impact: asString(next.impact),
+        ai_provider: asNullableString(next.ai_provider),
+        title_translations: next.title_translations,
+        subtitle_translations: next.subtitle_translations,
+      };
+    }),
   };
 };
 

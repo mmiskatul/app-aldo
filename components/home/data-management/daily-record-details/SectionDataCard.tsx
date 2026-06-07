@@ -2,16 +2,20 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { useTranslation, type TranslationKey } from "../../../../utils/i18n";
+import { resolveLocalizedText, type LocalizedText } from "../../../../utils/localizedContent";
+import { useAppStore } from "../../../../store/useAppStore";
 
 export interface SectionDataField {
   key: string;
   label: string;
+  label_translations?: LocalizedText;
   value: number | string | null;
   value_type: "currency" | "integer" | "text";
 }
 
 interface SectionDataCardProps {
   title: string;
+  title_translations?: LocalizedText;
   fields: SectionDataField[];
 }
 
@@ -70,9 +74,14 @@ const fieldLabelKeyByApiLabel: Record<string, TranslationKey> = {
   "Total Cash On Hand": "total_cash_on_hand",
 };
 
-export default function SectionDataCard({ title, fields }: SectionDataCardProps) {
+export default function SectionDataCard({ title, title_translations, fields }: SectionDataCardProps) {
   const { t } = useTranslation();
-  const localizedTitle = sectionTitleKeyByApiTitle[title] ? t(sectionTitleKeyByApiTitle[title]) : title;
+  const appLanguage = useAppStore((state) => state.appLanguage);
+  const localizedTitle = resolveLocalizedText(
+    appLanguage,
+    title_translations,
+    sectionTitleKeyByApiTitle[title] ? t(sectionTitleKeyByApiTitle[title]) : title,
+  );
 
   return (
     <View style={styles.container}>
@@ -83,7 +92,11 @@ export default function SectionDataCard({ title, fields }: SectionDataCardProps)
           style={[styles.row, index === fields.length - 1 ? styles.rowLast : null]}
         >
           <Text style={styles.label}>
-            {fieldLabelKeyByApiLabel[field.label] ? t(fieldLabelKeyByApiLabel[field.label]) : field.label}
+            {resolveLocalizedText(
+              appLanguage,
+              field.label_translations,
+              fieldLabelKeyByApiLabel[field.label] ? t(fieldLabelKeyByApiLabel[field.label]) : field.label,
+            )}
           </Text>
           <Text
             style={[
