@@ -23,6 +23,8 @@ type ApiErrorRecord = {
     url?: string;
     headers?: Record<string, string>;
     _retry?: boolean;
+    skipSubscriptionRedirect?: boolean;
+    skipOnboardingRedirect?: boolean;
   };
 };
 
@@ -180,12 +182,17 @@ apiClient.interceptors.response.use(
     const subscriptionErrorCode = normalizedError.response?.data?.error?.code;
     if (
       normalizedError.response?.status === 403 &&
-      subscriptionErrorCode === "subscription_required"
+      subscriptionErrorCode === "subscription_required" &&
+      !normalizedError.config?.skipSubscriptionRedirect
     ) {
       markLocalSubscriptionRequired(error);
       redirectToSubscriptionStatus();
     }
-    if (normalizedError.response?.status === 403 && subscriptionErrorCode === "onboarding_required") {
+    if (
+      normalizedError.response?.status === 403 &&
+      subscriptionErrorCode === "onboarding_required" &&
+      !normalizedError.config?.skipOnboardingRedirect
+    ) {
       redirectToOnboarding();
     }
 

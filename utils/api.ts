@@ -149,13 +149,19 @@ export const getApiErrorMessage = (
 
   const status = Number(error?.response?.status || 0);
   const contentType = getResponseContentType(error);
+  const structuredErrorMessage =
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.message ||
+    error?.response?.data?.detail;
 
   if (
-    status === 404 ||
-    status === 405 ||
     contentType.includes("text/html") ||
     contentType.includes("text/plain")
   ) {
+    return `The app is calling ${apiUrl}, but that URL does not look like the FastAPI backend. Check EXPO_PUBLIC_API_URL and make sure it points to the API server.`;
+  }
+
+  if ((status === 404 || status === 405) && !structuredErrorMessage) {
     return `The app is calling ${apiUrl}, but that URL does not look like the FastAPI backend. Check EXPO_PUBLIC_API_URL and make sure it points to the API server.`;
   }
 
@@ -174,9 +180,7 @@ export const getApiErrorMessage = (
   }
 
   return (
-    error?.response?.data?.error?.message ||
-    error?.response?.data?.message ||
-    error?.response?.data?.detail ||
+    structuredErrorMessage ||
     error?.message ||
     fallback
   );

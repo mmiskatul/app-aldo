@@ -265,7 +265,7 @@ const isInventoryLinkedExpense = (item: ExpenseMetricItem) =>
   item.source_kind === "inventory" || item.source_kind === "document";
 
 const orderHomeMetrics = (metrics: MetricCard[]) => {
-  const order = ["revenue", OTHER_EXPENSE_LABEL, INVENTORY_EXPENSE_LABEL, FOOD_COST_LABEL, "profit"];
+  const order = ["revenue", "expenses", OTHER_EXPENSE_LABEL, FOOD_COST_LABEL, "profit", INVENTORY_EXPENSE_LABEL];
   const orderIndex = new Map(order.map((label, index) => [label, index]));
 
   return [...metrics].sort((left, right) => {
@@ -469,33 +469,37 @@ export default function TabsIndex() {
   }, [setAnalyticsData, setProfile]);
 
   const fetchHomeShell = useCallback(async () => {
-    const response = await apiClient.get("/api/v1/restaurant/home", {
-      params: {
-        include_metrics: false,
-        include_cash_management: false,
-        include_revenue: false,
-        include_featured_insight: false,
-        include_recent_activity: false,
-      },
-    });
+    try {
+      const response = await apiClient.get("/api/v1/restaurant/home", {
+        params: {
+          include_metrics: false,
+          include_cash_management: false,
+          include_revenue: false,
+          include_featured_insight: false,
+          include_recent_activity: false,
+        },
+      });
 
-    const nextShellData = {
-      greeting_name: response.data.greeting_name,
-      restaurant_name: response.data.restaurant_name,
-      preferred_language: response.data.preferred_language,
-      available_periods: response.data.available_periods,
-      quick_actions: response.data.quick_actions,
-    };
+      const nextShellData = {
+        greeting_name: response.data.greeting_name,
+        restaurant_name: response.data.restaurant_name,
+        preferred_language: response.data.preferred_language,
+        available_periods: response.data.available_periods,
+        quick_actions: response.data.quick_actions,
+      };
 
-    setShellData(nextShellData);
-    setHomeScreenCache({ shellData: nextShellData });
+      setShellData(nextShellData);
+      setHomeScreenCache({ shellData: nextShellData });
 
-    if (response.data.available_periods?.length > 0) {
-      setActivePeriod((currentPeriod) =>
-        response.data.available_periods.includes(currentPeriod)
-          ? currentPeriod
-          : response.data.available_periods[0]
-      );
+      if (response.data.available_periods?.length > 0) {
+        setActivePeriod((currentPeriod) =>
+          response.data.available_periods.includes(currentPeriod)
+            ? currentPeriod
+            : response.data.available_periods[0]
+        );
+      }
+    } catch (error: any) {
+      console.log("Home shell preload error:", error?.response?.data || error?.message);
     }
   }, [setHomeScreenCache]);
 
@@ -740,7 +744,7 @@ export default function TabsIndex() {
     scheduleSection(force || !revenueByPeriod[period], 3, () => fetchRevenueSection(period));
 
     if (tasks.length > 0) {
-      await Promise.all(tasks);
+      await Promise.allSettled(tasks);
     }
   }, [cashByPeriod, fetchCashSection, fetchMetricsSection, fetchRevenueSection, fetchVatSection, metricsByPeriod, revenueByPeriod, vatBalance, waitForDelay]);
 
@@ -831,7 +835,7 @@ export default function TabsIndex() {
     setLoading(true);
     setTopCardsRefreshing(true);
     try {
-      await Promise.all([
+      await Promise.allSettled([
         fetchHomeOverview(activePeriod),
         fetchTopPrioritySections(activePeriod, true),
         fetchRecentActivitySection(),
@@ -989,6 +993,7 @@ export default function TabsIndex() {
           revenue={currentRevenue}
           period={activePeriod}
           loading={refreshing || ((shellLoading || revenueLoading) && !currentRevenue)}
+          onPress={() => navigateFromHome("/(tabs)/home/revenue-entries")}
         />
         <AIInsightBox
           insight={localizedCurrentInsight ?? undefined}

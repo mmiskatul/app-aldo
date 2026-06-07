@@ -45,6 +45,13 @@ interface InventoryApiItem {
 
 interface InventoryListResponse {
   total_inventory_value?: number | string | null;
+  food_cost_entries?: {
+    id: string;
+    title: string;
+    amount: number;
+    expense_date: string;
+    created_at: string;
+  }[];
   usage_summary?: {
     total_quantity_used?: number;
     total_usage_cost?: number;
@@ -170,6 +177,7 @@ export default function InventoryScreen() {
   const [items, setItems] = useState<InventoryCardItem[]>(inventoryListCache);
   const [totalValue, setTotalValue] = useState(calculateInventoryValueFromCache(inventoryListCache));
   const [usageSummary, setUsageSummary] = useState<InventoryUsageSummary>(emptyUsageSummary);
+  const [foodCostEntries, setFoodCostEntries] = useState<NonNullable<InventoryListResponse['food_cost_entries']>>([]);
   const hasCachedInventory = inventoryListCache.length > 0;
   const hasLoadedInventory = inventoryListFetchedAt !== null;
   const [valueLoading, setValueLoading] = useState(!hasCachedInventory);
@@ -213,6 +221,7 @@ export default function InventoryScreen() {
       setItems(nextItems);
       setTotalValue(resolveInventoryTotalValue(response.data));
       setUsageSummary(response.data.usage_summary || emptyUsageSummary);
+      setFoodCostEntries(response.data.food_cost_entries || []);
       setValueLoading(false);
       if (query.trim().length === 0) {
         setInventoryListCache(nextItems);
@@ -470,6 +479,38 @@ export default function InventoryScreen() {
           </View>
         </View>
         <View style={styles.listWrap}>
+          <View style={styles.foodCostCard}>
+            <View style={styles.foodCostHeader}>
+              <View>
+                <Text style={styles.foodCostTitle}>Food Cost</Text>
+                <Text style={styles.foodCostSubtitle}>Direct food cost entries</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.foodCostButton}
+                onPress={() => router.push('/(tabs)/home/add-food-cost')}
+              >
+                <Feather name="plus" size={moderateScale(14)} color="#FFFFFF" />
+                <Text style={styles.foodCostButtonText}>Add Food Cost</Text>
+              </TouchableOpacity>
+            </View>
+
+            {foodCostEntries.length > 0 ? (
+              foodCostEntries.slice(0, 5).map((entry) => (
+                <View key={entry.id} style={styles.foodCostRow}>
+                  <View style={styles.foodCostMeta}>
+                    <Text style={styles.foodCostRowTitle} numberOfLines={1}>{entry.title}</Text>
+                    <Text style={styles.foodCostRowDate}>{formatShortDate(entry.expense_date)}</Text>
+                  </View>
+                  <Text style={styles.foodCostRowAmount}>
+                    €{toSafeNumber(entry.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.statusEmptyText}>No food cost entries yet.</Text>
+            )}
+          </View>
+
           {loading ? (
             <>
               <InventoryCardSkeleton />
@@ -734,7 +775,75 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#6B7280',
   },
-  listWrap: { paddingHorizontal: scale(20) },
+  listWrap: {
+    paddingHorizontal: scale(20),
+    gap: verticalScale(12),
+  },
+  foodCostCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: scale(16),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: scale(16),
+    gap: verticalScale(12),
+  },
+  foodCostHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: scale(12),
+  },
+  foodCostTitle: {
+    fontSize: moderateScale(15, 0.3),
+    fontWeight: '700',
+    color: '#111827',
+  },
+  foodCostSubtitle: {
+    fontSize: moderateScale(11, 0.3),
+    color: '#6B7280',
+    marginTop: verticalScale(2),
+  },
+  foodCostButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+    backgroundColor: '#FA8C4C',
+    borderRadius: scale(10),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(10),
+  },
+  foodCostButtonText: {
+    color: '#FFFFFF',
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: '700',
+  },
+  foodCostRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: verticalScale(10),
+  },
+  foodCostMeta: {
+    flex: 1,
+    marginRight: scale(12),
+  },
+  foodCostRowTitle: {
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: '600',
+    color: '#111827',
+  },
+  foodCostRowDate: {
+    fontSize: moderateScale(11, 0.3),
+    color: '#6B7280',
+    marginTop: verticalScale(2),
+  },
+  foodCostRowAmount: {
+    fontSize: moderateScale(13, 0.3),
+    fontWeight: '700',
+    color: '#FA8C4C',
+  },
   skeletonCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: scale(12),

@@ -172,6 +172,12 @@ const isSubscriptionSelectionRequiredError = (error: any) => {
   return error?.response?.status === 403 && error?.response?.data?.error?.code === "subscription_required";
 };
 
+const isExpectedOptionalSetupLoadError = (error: any) => {
+  const status = Number(error?.response?.status || 0);
+  const code = String(error?.response?.data?.error?.code || "").toLowerCase();
+  return status === 403 && (code === "subscription_required" || code === "onboarding_required");
+};
+
 export default function SetupScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -221,29 +227,61 @@ export default function SetupScreen() {
         if (!isMounted) {
           return;
         }
-        let onboarding: OnboardingProfileResponse | null = null;
-        let restaurantProfile: OnboardingProfileResponse | null = null;
-        try {
-          const onboardingResponse = await apiClient.get<OnboardingProfileResponse | null>("/api/v1/onboarding/profile");
-          onboarding = onboardingResponse.data;
-        } catch (onboardingError: any) {
-          console.log("Optional onboarding profile load failed:", onboardingError?.response?.data || onboardingError?.message);
-        }
-        try {
-          const restaurantProfileResponse = await apiClient.get<OnboardingProfileResponse | null>(
-            "/api/v1/restaurant/settings/profile"
-          );
-          restaurantProfile = restaurantProfileResponse.data;
-        } catch (restaurantProfileError: any) {
-          console.log(
-            "Optional restaurant profile load failed:",
-            restaurantProfileError?.response?.data || restaurantProfileError?.message
-          );
-        }
 
         if (hasCompletedOnboarding(user)) {
           setUser(user, tokens);
           router.replace("/(tabs)/home" as any);
+          return;
+        }
+
+        setRestaurantName(user.restaurant_name || "");
+        setRestaurantType("");
+        setCity("");
+        setSeats("");
+        setAverageSpend("");
+        setProfilePhoto(
+          user.profile_image_url || user.avatar_url || null
+        );
+        setInteriorPhoto(null);
+        setExteriorPhoto(null);
+        setBusinessGoals([DEFAULT_BUSINESS_GOAL]);
+        setBiggestProblem("");
+        setImprovementGoal("");
+        setFeatureScreens(FALLBACK_FEATURE_SCREENS);
+        setLoadingInitialData(false);
+
+        let onboarding: OnboardingProfileResponse | null = null;
+        let restaurantProfile: OnboardingProfileResponse | null = null;
+        try {
+          const onboardingResponse = await apiClient.get<OnboardingProfileResponse | null>("/api/v1/onboarding/profile", {
+            skipSubscriptionRedirect: true,
+            skipOnboardingRedirect: true,
+          } as any);
+          onboarding = onboardingResponse.data;
+        } catch (onboardingError: any) {
+          if (!isExpectedOptionalSetupLoadError(onboardingError)) {
+            console.log("Optional onboarding profile load failed:", onboardingError?.response?.data || onboardingError?.message);
+          }
+        }
+        try {
+          const restaurantProfileResponse = await apiClient.get<OnboardingProfileResponse | null>(
+            "/api/v1/restaurant/settings/profile",
+            {
+              skipSubscriptionRedirect: true,
+              skipOnboardingRedirect: true,
+            } as any,
+          );
+          restaurantProfile = restaurantProfileResponse.data;
+        } catch (restaurantProfileError: any) {
+          if (!isExpectedOptionalSetupLoadError(restaurantProfileError)) {
+            console.log(
+              "Optional restaurant profile load failed:",
+              restaurantProfileError?.response?.data || restaurantProfileError?.message
+            );
+          }
+        }
+
+        if (!isMounted) {
           return;
         }
 
@@ -278,7 +316,11 @@ export default function SetupScreen() {
         } else {
           try {
             const featureResponse = await apiClient.get<{ screens: OnboardingFeatureScreen[] }>(
-              "/api/v1/onboarding/feature-screens"
+              "/api/v1/onboarding/feature-screens",
+              {
+                skipSubscriptionRedirect: true,
+                skipOnboardingRedirect: true,
+              } as any,
             );
             if (Array.isArray(featureResponse.data?.screens) && featureResponse.data.screens.length > 0) {
               setFeatureScreens(featureResponse.data.screens);

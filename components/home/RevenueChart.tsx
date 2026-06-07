@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { useLocale, useTranslation } from '../../utils/i18n';
@@ -14,6 +14,7 @@ interface RevenueChartProps {
   revenue?: RevenuePoint[];
   period?: string;
   loading?: boolean;
+  onPress?: () => void;
 }
 
 const CHART_WIDTH = scale(286);
@@ -100,7 +101,7 @@ const normalizeLabel = (label: string, period: string, locale: string) => {
     : trimmedLabel.toUpperCase();
 };
 
-export default function RevenueChart({ revenue = [], period = 'weekly', loading = false }: RevenueChartProps) {
+export default function RevenueChart({ revenue = [], period = 'weekly', loading = false, onPress }: RevenueChartProps) {
   const { t } = useTranslation();
   const locale = useLocale();
   const { width: windowWidth } = useWindowDimensions();
@@ -117,7 +118,7 @@ export default function RevenueChart({ revenue = [], period = 'weekly', loading 
     return Math.max(chartMax - step * index, 0);
   });
 
-  return (
+  const content = (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>
@@ -231,6 +232,16 @@ export default function RevenueChart({ revenue = [], period = 'weekly', loading 
       )}
     </View>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity activeOpacity={0.92} onPress={onPress}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({

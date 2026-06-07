@@ -40,6 +40,30 @@ export default function HomeLayout() {
         }}
       />
       <Stack.Screen
+        name="add-revenue"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="add-food-cost"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="revenue-entries"
+        options={{
+          headerShown: false,
+          presentation: "card",
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
         name="daily-record-details"
         options={{
           headerShown: false,

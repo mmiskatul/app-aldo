@@ -153,12 +153,12 @@ export default function MetricDetailsScreen() {
       case "food cost":
         return {
           label: t("metric_action_manage_food_cost"),
-          route: "/(tabs)/documents/upload-invoice" as const,
+          route: "/(tabs)/home/add-food-cost" as const,
         };
       case "revenue":
         return {
           label: t("metric_action_add_revenue"),
-          route: "/(tabs)/home/add-daily-data" as const,
+          route: "/(tabs)/home/add-revenue" as const,
         };
       default:
         return null;

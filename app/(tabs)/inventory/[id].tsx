@@ -150,16 +150,7 @@ export default function ItemDetailScreen() {
         },
       });
     } catch (error: any) {
-      const status = Number(error?.response?.status || 0);
-      if (status === 404 || status === 405) {
-        console.error('[inventory.delete]', error?.response?.data || error?.message || error);
-        showErrorMessage(
-          t('unable_to_delete_item'),
-          t('delete_failed'),
-        );
-      } else {
-        showApiError('inventory.delete', error, t('unable_to_delete_item'), t('delete_failed'));
-      }
+      showApiError('inventory.delete', error, t('unable_to_delete_item'), t('delete_failed'));
     } finally {
       setDeleting(false);
     }
