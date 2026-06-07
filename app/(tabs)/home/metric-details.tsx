@@ -42,6 +42,9 @@ export default function MetricDetailsScreen() {
   const value = Number(getFirstParam(params.value) || 0);
   const changePercent = Number(getFirstParam(params.changePercent) || 0);
   const currency = getFirstParam(params.currency) || "EUR";
+  const comparisonLabel = getFirstParam(params.comparisonLabel) || "";
+  const currentPeriodLabel = getFirstParam(params.currentPeriodLabel) || "";
+  const previousPeriodLabel = getFirstParam(params.previousPeriodLabel) || "";
 
   const metricTitle = useMemo(() => {
     switch (metricLabel) {
@@ -202,6 +205,9 @@ export default function MetricDetailsScreen() {
               >
                 {`${changePercent >= 0 ? "+" : "-"}${Math.abs(changePercent).toFixed(1)}%`}
               </Text>
+              {previousPeriodLabel ? (
+                <Text style={styles.metaSubtext}>{previousPeriodLabel}</Text>
+              ) : null}
             </View>
           </View>
         </View>
@@ -224,8 +230,14 @@ export default function MetricDetailsScreen() {
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{t("comparison_note_title")}</Text>
           <Text style={styles.sectionBody}>
-            {period === "monthly" ? t("comparison_note_monthly") : t("comparison_note_weekly")}
+            {comparisonLabel || (period === "monthly" ? t("comparison_note_monthly") : t("comparison_note_weekly"))}
           </Text>
+          {currentPeriodLabel || previousPeriodLabel ? (
+            <View style={styles.comparisonMetaWrap}>
+              {currentPeriodLabel ? <Text style={styles.comparisonMetaText}>{`Current: ${currentPeriodLabel}`}</Text> : null}
+              {previousPeriodLabel ? <Text style={styles.comparisonMetaText}>{`Previous: ${previousPeriodLabel}`}</Text> : null}
+            </View>
+          ) : null}
         </View>
 
         {actionConfig ? (
@@ -298,6 +310,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#111827",
   },
+  metaSubtext: {
+    marginTop: verticalScale(4),
+    fontSize: moderateScale(11, 0.3),
+    lineHeight: moderateScale(16, 0.3),
+    color: "#6B7280",
+  },
   sectionCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: scale(18),
@@ -315,6 +333,15 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(13, 0.3),
     lineHeight: moderateScale(20, 0.3),
     color: "#4B5563",
+  },
+  comparisonMetaWrap: {
+    marginTop: verticalScale(10),
+    gap: verticalScale(4),
+  },
+  comparisonMetaText: {
+    fontSize: moderateScale(12, 0.3),
+    lineHeight: moderateScale(18, 0.3),
+    color: "#6B7280",
   },
   actionButton: {
     marginTop: verticalScale(6),

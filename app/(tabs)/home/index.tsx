@@ -25,6 +25,9 @@ interface MetricCard {
   value: number;
   change_percent: number;
   currency: string;
+  comparison_label?: string | null;
+  current_period_label?: string | null;
+  previous_period_label?: string | null;
 }
 
 interface CashItem {
@@ -934,6 +937,9 @@ export default function TabsIndex() {
         value: String(metric.value),
         changePercent: String(metric.change_percent),
         currency: metric.currency,
+        comparisonLabel: metric.comparison_label || "",
+        currentPeriodLabel: metric.current_period_label || "",
+        previousPeriodLabel: metric.previous_period_label || "",
       },
     } as any);
   }, [activePeriod, router]);

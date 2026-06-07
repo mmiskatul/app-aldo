@@ -75,9 +75,20 @@ interface KPIGridProps {
     value: number;
     change_percent: number;
     currency: string;
+    comparison_label?: string | null;
+    current_period_label?: string | null;
+    previous_period_label?: string | null;
   }[];
   loading?: boolean;
-  onMetricPress?: (metric: { label: string; value: number; change_percent: number; currency: string }) => void;
+  onMetricPress?: (metric: {
+    label: string;
+    value: number;
+    change_percent: number;
+    currency: string;
+    comparison_label?: string | null;
+    current_period_label?: string | null;
+    previous_period_label?: string | null;
+  }) => void;
 }
 
 export default function KPIGrid({ metrics, loading = false, onMetricPress }: KPIGridProps) {

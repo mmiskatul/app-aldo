@@ -27,14 +27,30 @@ type HomeOverviewResponse = {
   preferred_language: string;
   available_periods: string[];
   weekly: {
-    metrics: { label: string; value: number; change_percent: number; currency: string }[];
+    metrics: {
+      label: string;
+      value: number;
+      change_percent: number;
+      currency: string;
+      comparison_label?: string | null;
+      current_period_label?: string | null;
+      previous_period_label?: string | null;
+    }[];
     cash_management?: { label: string; amount: number; subtitle: string }[];
     vat_balance: number;
     revenue: { label: string; value: number }[];
     featured_insight?: any;
   };
   monthly: {
-    metrics: { label: string; value: number; change_percent: number; currency: string }[];
+    metrics: {
+      label: string;
+      value: number;
+      change_percent: number;
+      currency: string;
+      comparison_label?: string | null;
+      current_period_label?: string | null;
+      previous_period_label?: string | null;
+    }[];
     cash_management?: { label: string; amount: number; subtitle: string }[];
     vat_balance: number;
     revenue: { label: string; value: number }[];
@@ -109,7 +125,15 @@ const formatShortDate = (value?: string | null) => {
 };
 
 const orderHomeMetrics = (
-  metrics: { label: string; value: number; change_percent: number; currency: string }[],
+  metrics: {
+    label: string;
+    value: number;
+    change_percent: number;
+    currency: string;
+    comparison_label?: string | null;
+    current_period_label?: string | null;
+    previous_period_label?: string | null;
+  }[],
 ) => {
   const order = ["revenue", "expenses", "other expense", "food cost", "profit", "inventory expense"];
   const orderIndex = new Map(order.map((label, index) => [label, index]));

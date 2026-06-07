@@ -199,6 +199,9 @@ export interface HomeMetricCacheItem {
   value: number;
   change_percent: number;
   currency: string;
+  comparison_label?: string | null;
+  current_period_label?: string | null;
+  previous_period_label?: string | null;
 }
 
 export interface HomeCashCacheItem {
