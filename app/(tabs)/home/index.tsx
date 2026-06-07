@@ -237,7 +237,7 @@ const sumInventoryUsageCost = (
 
 const calculateChangePercent = (currentValue: number, previousValue: number) => {
   if (previousValue === 0) {
-    return currentValue === 0 ? 0 : 100;
+    return currentValue === 0 ? 0 : currentValue;
   }
 
   return ((currentValue - previousValue) / previousValue) * 100;
