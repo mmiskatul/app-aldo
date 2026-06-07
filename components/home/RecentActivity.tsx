@@ -269,9 +269,7 @@ export default function RecentActivity({
             <TouchableOpacity activeOpacity={0.7} onPress={onSeeAll} hitSlop={styles.seeAllHitSlop}>
               <Text style={styles.seeAllText}>{t('see_all')}</Text>
             </TouchableOpacity>
-          ) : (
-            <Text style={styles.seeAllText}>{t('see_all')}</Text>
-          )}
+          ) : null}
         </View>
       )}
 

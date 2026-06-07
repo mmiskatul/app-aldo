@@ -22,7 +22,7 @@ export default function SupplierPriceAlerts({ alerts, previewLimit, onSeeAll }: 
   const visibleAlerts = typeof previewLimit === 'number' && previewLimit > 0
     ? alerts.slice(0, previewLimit)
     : alerts;
-  const canSeeAll = typeof previewLimit === 'number' && alerts.length > previewLimit && !!onSeeAll;
+  const canSeeAll = alerts.length > 0 && !!onSeeAll;
 
   if (!alerts || alerts.length === 0) {
     return (

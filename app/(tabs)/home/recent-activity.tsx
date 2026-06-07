@@ -60,7 +60,7 @@ export default function RecentActivityScreen() {
       }
       const response = await apiClient.get<RecentActivityResponse>("/api/v1/restaurant/home/recent-activity", {
         params: {
-          limit: 50,
+          limit: 200,
           diverse: false,
         },
       });
