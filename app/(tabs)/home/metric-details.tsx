@@ -7,7 +7,7 @@ import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import Header from "../../../components/ui/Header";
 import { useTranslation } from "../../../utils/i18n";
 
-type SupportedMetricLabel = "revenue" | "expenses" | "food cost" | "profit";
+type SupportedMetricLabel = "revenue" | "expenses" | "other expense" | "inventory expense" | "food cost" | "profit";
 
 const getFirstParam = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
 
@@ -17,6 +17,10 @@ const parseMetricLabel = (value?: string | string[]): SupportedMetricLabel => {
   switch (normalized) {
     case "expenses":
       return "expenses";
+    case "other expense":
+      return "other expense";
+    case "inventory expense":
+      return "inventory expense";
     case "food cost":
       return "food cost";
     case "profit":
@@ -43,6 +47,10 @@ export default function MetricDetailsScreen() {
     switch (metricLabel) {
       case "expenses":
         return t("expenses");
+      case "other expense":
+        return t("other_expense");
+      case "inventory expense":
+        return t("inventory_expense");
       case "food cost":
         return t("food_cost");
       case "profit":
@@ -73,6 +81,26 @@ export default function MetricDetailsScreen() {
             t("metric_formula_expenses_line_1"),
             t("metric_formula_expenses_line_2"),
             t("metric_formula_expenses_line_3"),
+          ],
+        };
+      case "other expense":
+        return {
+          title: t("metric_formula_other_expense_title"),
+          description: t("metric_formula_other_expense_description"),
+          bullets: [
+            t("metric_formula_other_expense_line_1"),
+            t("metric_formula_other_expense_line_2"),
+            t("metric_formula_other_expense_line_3"),
+          ],
+        };
+      case "inventory expense":
+        return {
+          title: t("metric_formula_inventory_expense_title"),
+          description: t("metric_formula_inventory_expense_description"),
+          bullets: [
+            t("metric_formula_inventory_expense_line_1"),
+            t("metric_formula_inventory_expense_line_2"),
+            t("metric_formula_inventory_expense_line_3"),
           ],
         };
       case "food cost":
@@ -112,9 +140,15 @@ export default function MetricDetailsScreen() {
   const actionConfig = useMemo(() => {
     switch (metricLabel) {
       case "expenses":
+      case "other expense":
         return {
           label: t("metric_action_add_expenses"),
           route: "/(tabs)/home/add-expense" as const,
+        };
+      case "inventory expense":
+        return {
+          label: t("metric_action_manage_food_cost"),
+          route: "/(tabs)/documents/upload-invoice" as const,
         };
       case "food cost":
         return {

@@ -6,6 +6,7 @@ import {
   ClipboardDocumentListIcon,
   ShoppingBagIcon,
   ChartPieIcon,
+  ArchiveBoxIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
 } from 'react-native-heroicons/outline';
@@ -96,6 +97,18 @@ export default function KPIGrid({ metrics, loading = false, onMetricPress }: KPI
           iconColor: '#EF4444',
           iconBgColor: '#FEE2E2',
         };
+      case 'other expense':
+        return {
+          IconComponent: ClipboardDocumentListIcon,
+          iconColor: '#EF4444',
+          iconBgColor: '#FEE2E2',
+        };
+      case 'inventory expense':
+        return {
+          IconComponent: ArchiveBoxIcon,
+          iconColor: '#0284C7',
+          iconBgColor: '#E0F2FE',
+        };
       case 'food cost':
         return {
           IconComponent: ShoppingBagIcon,
@@ -123,6 +136,10 @@ export default function KPIGrid({ metrics, loading = false, onMetricPress }: KPI
         return t('revenue');
       case 'expenses':
         return t('expenses');
+      case 'other expense':
+        return t('expenses');
+      case 'inventory expense':
+        return t('inventory_expense');
       case 'food cost':
         return t('food_cost');
       case 'profit':

@@ -18,6 +18,7 @@ import RevenueChart from "../../../components/home/RevenueChart";
 import VatBalance from "../../../components/home/VatBalance";
 import { generatePdfExport, generateExcelExport } from "../../../utils/exportData";
 import { resolveLocalizedText } from "../../../utils/localizedContent";
+import { formatApiDate } from "../../../utils/date";
 
 interface MetricCard {
   label: string;
@@ -79,6 +80,44 @@ interface HomeShellData {
 interface HomeSectionMetricResponse {
   period: "weekly" | "monthly";
   items: MetricCard[];
+}
+
+interface DailyDataInventoryUsageEntry {
+  inventory_item_id: string;
+  quantity_used?: number | null;
+  unit_cost?: number | null;
+  total_cost?: number | null;
+}
+
+interface DailyDataMetricItem {
+  inventory_usage?: DailyDataInventoryUsageEntry[];
+}
+
+interface DailyDataMetricResponse {
+  items: DailyDataMetricItem[];
+}
+
+interface InventoryMetricItem {
+  id: string;
+  unit_price?: number | null;
+}
+
+interface InventoryMetricResponse {
+  items: InventoryMetricItem[];
+}
+
+interface ExpenseMetricItem {
+  amount?: number | null;
+  source_kind?: string | null;
+}
+
+interface ExpenseMetricPeriod {
+  items?: ExpenseMetricItem[];
+}
+
+interface ExpensesMetricResponse {
+  this_week?: ExpenseMetricPeriod;
+  this_month?: ExpenseMetricPeriod;
 }
 
 interface CashOverviewPeriod {
@@ -151,6 +190,90 @@ interface HomeOverviewResponse {
 type PeriodKey = "weekly" | "monthly";
 
 const cashOverviewPeriodKey = (period: PeriodKey) => period === "weekly" ? "this_week" : "this_month";
+const FOOD_COST_LABEL = "food cost";
+const INVENTORY_EXPENSE_LABEL = "inventory expense";
+const OTHER_EXPENSE_LABEL = "other expense";
+
+const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const shiftDateByDays = (date: Date, days: number) => {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+};
+
+const shiftDateByMonths = (date: Date, months: number) => {
+  const nextDate = new Date(date);
+  nextDate.setMonth(nextDate.getMonth() + months);
+  return nextDate;
+};
+
+const previousReferenceDateForPeriod = (period: PeriodKey, referenceDate: Date) =>
+  period === "weekly" ? shiftDateByDays(referenceDate, -7) : shiftDateByMonths(referenceDate, -1);
+
+const viewForPeriod = (period: PeriodKey) => period === "weekly" ? "week" : "month";
+
+const sumInventoryUsageCost = (
+  items: DailyDataMetricItem[],
+  inventoryUnitPriceById: Map<string, number>,
+) =>
+  items.reduce((total, record) => total + (record.inventory_usage || []).reduce((usageTotal, usageItem) => {
+    const explicitTotalCost = Number(usageItem.total_cost);
+    if (Number.isFinite(explicitTotalCost)) {
+      return usageTotal + explicitTotalCost;
+    }
+
+    const quantityUsed = Number(usageItem.quantity_used || 0);
+    const explicitUnitCost = Number(usageItem.unit_cost);
+    const resolvedUnitCost = Number.isFinite(explicitUnitCost)
+      ? explicitUnitCost
+      : Number(inventoryUnitPriceById.get(usageItem.inventory_item_id) || 0);
+
+    return usageTotal + (quantityUsed * resolvedUnitCost);
+  }, 0), 0);
+
+const calculateChangePercent = (currentValue: number, previousValue: number) => {
+  if (previousValue === 0) {
+    return currentValue === 0 ? 0 : 100;
+  }
+
+  return ((currentValue - previousValue) / previousValue) * 100;
+};
+
+const mergeFoodCostMetric = (metrics: MetricCard[], foodCostMetric: MetricCard) => {
+  const existingIndex = metrics.findIndex((item) => item.label.trim().toLowerCase() === FOOD_COST_LABEL);
+  if (existingIndex === -1) {
+    return [...metrics, foodCostMetric];
+  }
+
+  return metrics.map((item, index) => index === existingIndex ? foodCostMetric : item);
+};
+
+const mergeMetric = (metrics: MetricCard[], nextMetric: MetricCard) => {
+  const existingIndex = metrics.findIndex((item) => item.label.trim().toLowerCase() === nextMetric.label.trim().toLowerCase());
+  if (existingIndex === -1) {
+    return [...metrics, nextMetric];
+  }
+
+  return metrics.map((item, index) => index === existingIndex ? nextMetric : item);
+};
+
+const sumExpenseAmount = (items: ExpenseMetricItem[], matcher: (item: ExpenseMetricItem) => boolean) =>
+  items.reduce((total, item) => matcher(item) ? total + Number(item.amount || 0) : total, 0);
+
+const isInventoryLinkedExpense = (item: ExpenseMetricItem) =>
+  item.source_kind === "inventory" || item.source_kind === "document";
+
+const orderHomeMetrics = (metrics: MetricCard[]) => {
+  const order = ["revenue", OTHER_EXPENSE_LABEL, INVENTORY_EXPENSE_LABEL, FOOD_COST_LABEL, "profit"];
+  const orderIndex = new Map(order.map((label, index) => [label, index]));
+
+  return [...metrics].sort((left, right) => {
+    const leftIndex = orderIndex.get(left.label.trim().toLowerCase()) ?? Number.MAX_SAFE_INTEGER;
+    const rightIndex = orderIndex.get(right.label.trim().toLowerCase()) ?? Number.MAX_SAFE_INTEGER;
+    return leftIndex - rightIndex;
+  });
+};
 
 const cashOverviewToHomeItems = (overview: CashOverviewResponse, period: PeriodKey): CashItem[] => {
   const summary = overview.periods[cashOverviewPeriodKey(period)]?.summary;
@@ -236,6 +359,91 @@ export default function TabsIndex() {
   const previousPeriodRef = useRef<PeriodKey>("weekly");
   const lastSupportingDataRefreshRef = useRef(0);
 
+  const calculateInventoryFoodCostMetric = useCallback(async (period: PeriodKey, currency = "EUR"): Promise<MetricCard> => {
+    const referenceDate = startOfDay(new Date());
+    const previousReferenceDate = previousReferenceDateForPeriod(period, referenceDate);
+    const paramsForDate = (date: Date) => ({
+      page: 1,
+      page_size: 100,
+      view: viewForPeriod(period),
+      reference_date: formatApiDate(date),
+    });
+
+    const [currentPeriodResponse, previousPeriodResponse, inventoryResponse] = await Promise.all([
+      apiClient.get<DailyDataMetricResponse>("/api/v1/restaurant/daily-data", {
+        params: paramsForDate(referenceDate),
+      }),
+      apiClient.get<DailyDataMetricResponse>("/api/v1/restaurant/daily-data", {
+        params: paramsForDate(previousReferenceDate),
+      }),
+      apiClient.get<InventoryMetricResponse>("/api/v1/restaurant/inventory", {
+        params: {
+          page: 1,
+          page_size: 200,
+        },
+      }),
+    ]);
+
+    const inventoryUnitPriceById = new Map<string, number>(
+      (inventoryResponse.data.items || []).map((item) => [item.id, Number(item.unit_price || 0)]),
+    );
+    const currentValue = sumInventoryUsageCost(currentPeriodResponse.data.items || [], inventoryUnitPriceById);
+    const previousValue = sumInventoryUsageCost(previousPeriodResponse.data.items || [], inventoryUnitPriceById);
+
+    return {
+      label: FOOD_COST_LABEL,
+      value: currentValue,
+      change_percent: calculateChangePercent(currentValue, previousValue),
+      currency,
+    };
+  }, []);
+
+  const calculateSeparatedExpenseMetrics = useCallback(async (period: PeriodKey, currency = "EUR") => {
+    const referenceDate = startOfDay(new Date());
+    const previousReferenceDate = previousReferenceDateForPeriod(period, referenceDate);
+    const periodKey = period === "weekly" ? "this_week" : "this_month";
+
+    const [currentExpensesResponse, previousExpensesResponse] = await Promise.all([
+      apiClient.get<ExpensesMetricResponse>("/api/v1/restaurant/expenses", {
+        params: {
+          reference_date: formatApiDate(referenceDate),
+        },
+      }),
+      apiClient.get<ExpensesMetricResponse>("/api/v1/restaurant/expenses", {
+        params: {
+          reference_date: formatApiDate(previousReferenceDate),
+        },
+      }),
+    ]);
+
+    const currentItems = currentExpensesResponse.data[periodKey]?.items || [];
+    const previousItems = previousExpensesResponse.data[periodKey]?.items || [];
+
+    const currentInventoryExpense = sumExpenseAmount(currentItems, isInventoryLinkedExpense);
+    const previousInventoryExpense = sumExpenseAmount(previousItems, isInventoryLinkedExpense);
+    const currentOtherExpense = sumExpenseAmount(currentItems, (item) => !isInventoryLinkedExpense(item));
+    const previousOtherExpense = sumExpenseAmount(previousItems, (item) => !isInventoryLinkedExpense(item));
+
+    return {
+      inventoryExpenseMetric: {
+        label: INVENTORY_EXPENSE_LABEL,
+        value: currentInventoryExpense,
+        change_percent: calculateChangePercent(currentInventoryExpense, previousInventoryExpense),
+        currency,
+      } satisfies MetricCard,
+      otherExpenseMetric: {
+        label: OTHER_EXPENSE_LABEL,
+        value: currentOtherExpense,
+        change_percent: calculateChangePercent(currentOtherExpense, previousOtherExpense),
+        currency,
+      } satisfies MetricCard,
+    };
+  }, []);
+
+  const applyDerivedMetricsToMetrics = useCallback(async (period: PeriodKey, metrics: MetricCard[]) => {
+    return orderHomeMetrics(metrics);
+  }, []);
+
   const hydrateSupportingData = useCallback(async (force = false) => {
     const now = Date.now();
     if (!force && now - lastSupportingDataRefreshRef.current < SUPPORTING_DATA_TTL_MS) {
@@ -291,7 +499,7 @@ export default function TabsIndex() {
     }
   }, [setHomeScreenCache]);
 
-  const applyHomeOverview = useCallback((data: HomeOverviewResponse, period: PeriodKey, includeFeaturedInsight = false) => {
+  const applyHomeOverview = useCallback(async (data: HomeOverviewResponse, period: PeriodKey, includeFeaturedInsight = false) => {
     const nextShellData = {
       greeting_name: data.greeting_name,
       restaurant_name: data.restaurant_name || "",
@@ -299,9 +507,13 @@ export default function TabsIndex() {
       available_periods: data.available_periods,
       quick_actions: data.quick_actions,
     };
+    const [weeklyMetrics, monthlyMetrics] = await Promise.all([
+      applyDerivedMetricsToMetrics("weekly", data.weekly.metrics || []),
+      applyDerivedMetricsToMetrics("monthly", data.monthly.metrics || []),
+    ]);
     const nextMetricsByPeriod = {
-      weekly: data.weekly.metrics,
-      monthly: data.monthly.metrics,
+      weekly: weeklyMetrics,
+      monthly: monthlyMetrics,
     };
     const nextRevenueByPeriod = {
       weekly: data.weekly.revenue,
@@ -344,7 +556,7 @@ export default function TabsIndex() {
           : data.available_periods[0] as PeriodKey
       );
     }
-  }, [setHomeScreenCache]);
+  }, [applyDerivedMetricsToMetrics, setHomeScreenCache]);
 
   const fetchHomeOverview = useCallback(async (period: PeriodKey) => {
     const includeFeaturedInsight = false;
@@ -358,7 +570,7 @@ export default function TabsIndex() {
         include_recent_activity: false,
       },
     });
-    applyHomeOverview(response.data, period, includeFeaturedInsight);
+    await applyHomeOverview(response.data, period, includeFeaturedInsight);
   }, [applyHomeOverview]);
 
   const fetchMetricsSection = useCallback(async (period: PeriodKey, options?: { silent?: boolean }) => {
@@ -370,9 +582,10 @@ export default function TabsIndex() {
       const response = await apiClient.get<HomeSectionMetricResponse>("/api/v1/restaurant/home/metrics", {
         params: { period },
       });
+      const nextItems = await applyDerivedMetricsToMetrics(period, response.data.items || []);
       let nextMetricsByPeriod: Partial<Record<PeriodKey, MetricCard[]>> | null = null;
       setMetricsByPeriod((current) => {
-        nextMetricsByPeriod = { ...current, [period]: response.data.items };
+        nextMetricsByPeriod = { ...current, [period]: nextItems };
         return nextMetricsByPeriod;
       });
       if (nextMetricsByPeriod) {
@@ -385,7 +598,7 @@ export default function TabsIndex() {
         setMetricsLoading(false);
       }
     }
-  }, [setHomeScreenCache]);
+  }, [applyDerivedMetricsToMetrics, setHomeScreenCache]);
 
   const fetchCashSection = useCallback(async (period: PeriodKey, options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
