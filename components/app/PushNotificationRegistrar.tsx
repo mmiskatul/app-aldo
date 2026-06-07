@@ -101,7 +101,12 @@ export default function PushNotificationRegistrar() {
   ]);
 
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const route = String(response.notification.request.content.data?.route || '').trim();
+      if (route) {
+        router.push(route as any);
+        return;
+      }
       router.push('/notifications' as any);
     });
 

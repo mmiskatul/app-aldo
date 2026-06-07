@@ -4,12 +4,26 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { Feather } from '@expo/vector-icons';
 import { useTranslation } from '../../utils/i18n';
 
-interface SupplierPriceAlertsProps {
-  alerts: any[];
+export interface SupplierAlertItem {
+  title?: string;
+  subtitle?: string;
+  impact?: string;
+  ai_provider?: string | null;
 }
 
-export default function SupplierPriceAlerts({ alerts }: SupplierPriceAlertsProps) {
+interface SupplierPriceAlertsProps {
+  alerts: SupplierAlertItem[];
+  previewLimit?: number;
+  onSeeAll?: () => void;
+}
+
+export default function SupplierPriceAlerts({ alerts, previewLimit, onSeeAll }: SupplierPriceAlertsProps) {
   const { t } = useTranslation();
+  const visibleAlerts = typeof previewLimit === 'number' && previewLimit > 0
+    ? alerts.slice(0, previewLimit)
+    : alerts;
+  const canSeeAll = typeof previewLimit === 'number' && alerts.length > previewLimit && !!onSeeAll;
+
   if (!alerts || alerts.length === 0) {
     return (
       <View style={styles.container}>
@@ -27,12 +41,14 @@ export default function SupplierPriceAlerts({ alerts }: SupplierPriceAlertsProps
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('revenue_monitoring_alerts')}</Text>
-        <TouchableOpacity>
-          <Text style={styles.viewAll}>{t('see_all').toUpperCase()}</Text>
-        </TouchableOpacity>
+        {canSeeAll ? (
+          <TouchableOpacity onPress={onSeeAll}>
+            <Text style={styles.viewAll}>{t('see_all').toUpperCase()}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
-      {alerts.map((alert, index) => (
+      {visibleAlerts.map((alert, index) => (
         <View key={index} style={styles.alertCard}>
           <View style={styles.iconContainer}>
             <Feather name="trending-up" size={moderateScale(18)} color="#EF4444" />

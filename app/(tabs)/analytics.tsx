@@ -1,6 +1,7 @@
 import React, { startTransition } from 'react';
 import { ActivityIndicator, View, ScrollView, StyleSheet, RefreshControl, Text, TouchableOpacity } from 'react-native';
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
+import { useRouter } from 'expo-router';
 
 import { useCachedFocusRefresh } from '../../hooks/useCachedFocusRefresh';
 import Header from '../../components/ui/Header';
@@ -183,6 +184,7 @@ const hasPeriodAnalyticsData = (
 
 export default function AnalyticsScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const appLanguage = useAppStore((state) => state.appLanguage);
   const analyticsScreenCache = useAppStore((state) => state.analyticsScreenCache);
   const setAnalyticsScreenCache = useAppStore((state) => state.setAnalyticsScreenCache);
@@ -687,7 +689,16 @@ export default function AnalyticsScreen() {
               />
             ) : null}
             {supplierAlertsByPeriod[activePeriod] ? (
-              <SupplierPriceAlerts alerts={localizedSupplierAlerts} />
+              <SupplierPriceAlerts
+                alerts={localizedSupplierAlerts}
+                previewLimit={3}
+                onSeeAll={() =>
+                  router.push({
+                    pathname: '/(tabs)/analytics-alerts',
+                    params: { period: activePeriod },
+                  } as any)
+                }
+              />
             ) : null}
           </>
         )}

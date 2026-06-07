@@ -69,6 +69,8 @@ const resolveNotificationRoute = (item: NotificationItem) => {
       return sourceEntityId
         ? `/(tabs)/home/expense-details?id=${sourceEntityId}`
         : item.route;
+    case "analytics_alert":
+      return item.route || "/(tabs)/analytics-alerts";
     default:
       return item.route;
   }
@@ -105,6 +107,12 @@ const getIconForType = (type?: string) => {
         IconComponent: BoltIcon,
         iconBgColor: "#FEF3C7",
         iconColor: "#D97706",
+      };
+    case "analytics_alert":
+      return {
+        IconComponent: BoltIcon,
+        iconBgColor: "#FEE2E2",
+        iconColor: "#EF4444",
       };
     default:
       return {
@@ -183,12 +191,8 @@ export default function NotificationsScreen() {
 
     try {
       const response = await apiClient.get<NotificationFeedResponse>(
-        "/api/v1/restaurant/home/recent-activity",
+        "/api/v1/restaurant/notifications/feed",
         {
-          params: {
-            limit: 25,
-            diverse: false,
-          },
           timeout: Math.min(API_REQUEST_TIMEOUT_MS, NOTIFICATIONS_REQUEST_TIMEOUT_MS),
         }
       );
