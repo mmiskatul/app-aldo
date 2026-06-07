@@ -7,6 +7,7 @@ interface RevenueTrendChartProps {
   weeklyRevenue: { label: string; value: number }[];
   totalRevenue: number;
   changePercent: number;
+  period?: 'weekly' | 'monthly';
 }
 
 const formatCurrency = (value: number) => `€${Math.round(value).toLocaleString()}`;
@@ -15,6 +16,7 @@ export default function RevenueTrendChart({
   weeklyRevenue,
   totalRevenue,
   changePercent,
+  period = 'weekly',
 }: RevenueTrendChartProps) {
   const { t } = useTranslation();
   const maxValue = Math.max(...weeklyRevenue.map((item) => item.value), 1);
@@ -32,7 +34,7 @@ export default function RevenueTrendChart({
             {changePercent >= 0 ? '+' : ''}
             {changePercent}%
           </Text>
-          <Text style={styles.trendSub}>{t('last_week')}</Text>
+          <Text style={styles.trendSub}>{period === 'monthly' ? t('last_month') : t('last_week')}</Text>
         </View>
       </View>
 

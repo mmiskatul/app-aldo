@@ -671,6 +671,7 @@ export default function AnalyticsScreen() {
                 weeklyRevenue={localizedRevenueTrendPoints}
                 totalRevenue={revenueTrendByPeriod[activePeriod]?.revenue_total ?? 0}
                 changePercent={revenueTrendByPeriod[activePeriod]?.change_percent ?? 0}
+                period={activePeriod}
               />
             ) : null}
             {summaryStatsByPeriod[activePeriod] ? <StatsSelector stats={localizedSummaryStats} /> : null}

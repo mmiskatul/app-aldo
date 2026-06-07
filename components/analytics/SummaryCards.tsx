@@ -37,7 +37,7 @@ export default function SummaryCards({ metrics }: SummaryCardsProps) {
           {card.change_percent !== undefined ? (
             <Text style={[styles.trendText, { color: card.change_percent >= 0 ? '#10B981' : '#EF4444' }]}>
               {card.change_percent >= 0 ? '+' : ''}
-              {card.change_percent}%
+              {Math.round(card.change_percent * 10) / 10}%
             </Text>
           ) : null}
 
