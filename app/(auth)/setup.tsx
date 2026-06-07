@@ -175,6 +175,7 @@ const isSubscriptionSelectionRequiredError = (error: any) => {
 export default function SetupScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const appLanguage = useAppStore((state) => state.appLanguage);
   const setUser = useAppStore((state) => state.setUser);
   const tokens = useAppStore((state) => state.tokens);
   const [step, setStep] = useState(1);

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Linking,
   ScrollView,
@@ -13,10 +13,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import Header from '../../../components/ui/Header';
+import RouteStateView from '../../../components/ui/RouteStateView';
 import { DetailRouteSkeleton } from '../../../components/ui/RouteSkeletons';
+import { useCachedFocusRefresh } from '../../../hooks/useCachedFocusRefresh';
 import { getTicketById, TicketDetail, TicketMessage } from '../../../api/support';
+import { useAppStore } from '../../../store/useAppStore';
 import { getSupportPriorityPresentation, getSupportStatusPresentation } from '../../../utils/supportPresentation';
 import { useTranslation } from '../../../utils/i18n';
+
+const SUPPORT_TICKET_DETAIL_CACHE_TTL_MS = 60 * 1000;
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -66,27 +71,44 @@ export default function TicketDetailScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const cachedTicket = useAppStore((state) => (id ? state.supportTicketDetailCache[id] : undefined));
+  const supportTicketsFetchedAt = useAppStore((state) => state.supportTicketsScreenCache.fetchedAt);
+  const setSupportTicketDetailCacheItem = useAppStore((state) => state.setSupportTicketDetailCacheItem);
 
-  const [ticket, setTicket] = useState<TicketDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [ticket, setTicket] = useState<TicketDetail | null>(cachedTicket ?? null);
+  const [loading, setLoading] = useState(!cachedTicket);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTicket = useCallback(async () => {
+  const fetchTicket = useCallback(async (silent = false) => {
     if (!id) return;
-    setLoading(true);
+    if (!silent) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const res = await getTicketById(id);
-      console.log('[TicketDetail] Response:', JSON.stringify(res, null, 2));
       setTicket(res);
+      setSupportTicketDetailCacheItem(id, res);
     } catch (err: any) {
       setError(err?.response?.data?.message ?? err?.message ?? t('ticket_load_failed'));
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, setSupportTicketDetailCacheItem, t]);
 
-  useEffect(() => { fetchTicket(); }, [fetchTicket]);
+  useCachedFocusRefresh({
+    enabled: Boolean(id),
+    hasCache: Boolean(ticket),
+    fetchedAt: supportTicketsFetchedAt,
+    ttlMs: SUPPORT_TICKET_DETAIL_CACHE_TTL_MS,
+    refreshOnFocus: 'always',
+    loadOnEmpty: () => {
+      void fetchTicket(false);
+    },
+    refreshStale: () => {
+      void fetchTicket(true);
+    },
+  });
 
   if (loading) {
     return (
@@ -101,14 +123,16 @@ export default function TicketDetailScreen() {
     return (
       <View style={styles.safeArea}>
         <Header title={t('ticket_details')} showBack={true} />
-        <View style={styles.centered}>
-          <Feather name="alert-circle" size={moderateScale(48)} color="#FCA5A5" />
-          <Text style={styles.errorTitle}>{t('something_went_wrong')}</Text>
-          <Text style={styles.errorSub}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={fetchTicket} activeOpacity={0.8}>
-            <Text style={styles.retryText}>{t('try_again')}</Text>
-          </TouchableOpacity>
-        </View>
+        <RouteStateView
+          loading={false}
+          error={error ?? t('ticket_load_failed')}
+          hasData={false}
+          errorTitle={t('something_went_wrong')}
+          retryLabel={t('try_again')}
+          onRetry={() => void fetchTicket(false)}
+        >
+          <View />
+        </RouteStateView>
       </View>
     );
   }

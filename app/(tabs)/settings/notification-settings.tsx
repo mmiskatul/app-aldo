@@ -14,8 +14,8 @@ import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Header from '../../../components/ui/Header';
-import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
 import ProfilePlaceholderAvatar from '../../../components/ui/ProfilePlaceholderAvatar';
+import RouteStateView from '../../../components/ui/RouteStateView';
 import { useAppStore } from '../../../store/useAppStore';
 import { showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 import {
@@ -166,18 +166,14 @@ export default function NotificationSettingsScreen() {
         rightComponent={<AvatarRight />}
       />
 
-      {loading ? (
-        <ListRouteSkeleton withAction={false} itemCount={4} />
-      ) : error ? (
-        <View style={styles.centerState}>
-          <Feather name="alert-circle" size={moderateScale(42)} color="#EF4444" />
-          <Text style={styles.stateTitle}>{t('notification_unable_to_load_title')}</Text>
-          <Text style={styles.stateDescription}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchSettings}>
-            <Text style={styles.retryButtonText}>{t('try_again')}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
+      <RouteStateView
+        loading={loading}
+        error={error}
+        hasData={!loading && !error}
+        errorTitle={t('notification_unable_to_load_title')}
+        retryLabel={t('try_again')}
+        onRetry={fetchSettings}
+      >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
@@ -222,7 +218,7 @@ export default function NotificationSettingsScreen() {
             })}
           </View>
         </ScrollView>
-      )}
+      </RouteStateView>
     </View>
   );
 }

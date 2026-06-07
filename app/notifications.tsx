@@ -8,7 +8,6 @@ import {
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
 import { Redirect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
@@ -22,11 +21,13 @@ import {
 
 import apiClient from "../api/apiClient";
 import Header from "../components/ui/Header";
-import { ListRouteSkeleton } from "../components/ui/RouteSkeletons";
+import RouteStateView from "../components/ui/RouteStateView";
+import { useCachedFocusRefresh } from "../hooks/useCachedFocusRefresh";
 import { hasActiveSubscription, useAppStore } from "../store/useAppStore";
 import { hasCompletedOnboarding } from "../api/auth";
 import { getApiDisplayMessage, logApiError } from "../utils/apiErrors";
 import { API_REQUEST_TIMEOUT_MS } from "../utils/api";
+import { useTranslation } from "../utils/i18n";
 
 type NotificationItem = {
   kind: string;
@@ -156,6 +157,7 @@ function NotificationCard({
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const user = useAppStore((state) => state.user);
   const tokens = useAppStore((state) => state.tokens);
   const notificationsScreenCache = useAppStore((state) => state.notificationsScreenCache);
@@ -208,27 +210,21 @@ export default function NotificationsScreen() {
     }
   }, [notifications.length, setNotificationsScreenCache]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!user || !tokens?.access_token || !hasActiveSubscription(user) || !hasCompletedOnboarding(user)) {
-        return;
-      }
-
-      const hasCache = notifications.length > 0;
-      const isFresh =
-        typeof notificationsScreenCache.fetchedAt === "number" &&
-        Date.now() - notificationsScreenCache.fetchedAt < NOTIFICATIONS_CACHE_TTL_MS;
-
-      if (!hasLoadedRef.current && !hasCache) {
-        void fetchNotifications(false);
-        return;
-      }
-
-      if (!isFresh) {
-        void fetchNotifications(true);
-      }
-    }, [fetchNotifications, notifications.length, notificationsScreenCache.fetchedAt, tokens?.access_token, user])
-  );
+  useCachedFocusRefresh({
+    enabled: Boolean(user && tokens?.access_token && hasActiveSubscription(user) && hasCompletedOnboarding(user)),
+    hasCache: notifications.length > 0,
+    fetchedAt: notificationsScreenCache.fetchedAt,
+    ttlMs: NOTIFICATIONS_CACHE_TTL_MS,
+    refreshOnFocus: "always",
+    loadOnEmpty: () => {
+      hasLoadedRef.current = true;
+      void fetchNotifications(false);
+    },
+    refreshStale: () => {
+      hasLoadedRef.current = true;
+      void fetchNotifications(true);
+    },
+  });
 
   if (!user || !tokens?.access_token) {
     return <Redirect href="/(auth)" />;
@@ -246,9 +242,9 @@ export default function NotificationsScreen() {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Feather name="bell-off" size={moderateScale(46)} color="#D1D5DB" />
-      <Text style={styles.emptyTitle}>No notifications yet</Text>
+      <Text style={styles.emptyTitle}>{t("no_notifications_yet")}</Text>
       <Text style={styles.emptySubtitle}>
-        Cash, expenses, daily data, invoice, and inventory updates will appear here.
+        {t("notifications_empty_subtitle")}
       </Text>
     </View>
   );
@@ -256,30 +252,19 @@ export default function NotificationsScreen() {
   return (
     <View style={styles.safeArea}>
       <Header
-        title="Notifications"
+        title={t("notifications")}
         showBack={true}
       />
-
-      {loading ? (
-        <ListRouteSkeleton withAction={false} itemCount={4} />
-      ) : error ? (
-        <View style={styles.emptyContainer}>
-          <Feather
-            name="alert-circle"
-            size={moderateScale(46)}
-            color="#FCA5A5"
-          />
-          <Text style={styles.emptyTitle}>Something went wrong</Text>
-          <Text style={styles.emptySubtitle}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => void fetchNotifications()}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.retryText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
+      <RouteStateView
+        loading={loading}
+        error={error}
+        hasData={notifications.length > 0}
+        errorTitle={t("something_went_wrong")}
+        emptyTitle={t("no_notifications_yet")}
+        emptyDescription={t("notifications_empty_subtitle")}
+        retryLabel={t("try_again")}
+        onRetry={() => void fetchNotifications(false)}
+      >
         <FlatList
           data={notifications}
           keyExtractor={(item, index) =>
@@ -312,7 +297,7 @@ export default function NotificationsScreen() {
             />
           }
         />
-      )}
+      </RouteStateView>
     </View>
   );
 }

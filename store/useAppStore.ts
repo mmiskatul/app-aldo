@@ -360,6 +360,49 @@ export interface NotificationsScreenCache {
   fetchedAt: number | null;
 }
 
+export interface SupportTicketsCacheItem {
+  id: string;
+  ticket_number: string;
+  user_name: string;
+  restaurant_name: string;
+  issue_subject: string;
+  status: string;
+  priority: string;
+  date: string;
+}
+
+export interface SupportTicketDetailCacheItem {
+  id: string;
+  ticket_number: string;
+  subject: string;
+  status: string;
+  priority: string;
+  submitted_at: string;
+  resolved_at: string | null;
+  badges: { label: string; variant: string }[];
+  customer: {
+    user_name: string;
+    email: string;
+    phone: string;
+    location: string | null;
+    restaurant_name: string;
+  };
+  messages: {
+    author_name: string;
+    author_role: string;
+    body: string;
+    is_internal: boolean;
+    attachment_name: string | null;
+    attachment_url: string | null;
+    created_at: string;
+  }[];
+}
+
+export interface SupportTicketsScreenCache {
+  items: SupportTicketsCacheItem[];
+  fetchedAt: number | null;
+}
+
 export interface DailyDataListCacheItem {
   id: string;
   record_id?: string | null;
@@ -432,6 +475,8 @@ interface AppState {
   documentsScreenCache: DocumentsScreenCache;
   expensesScreenCache: ExpensesScreenCache;
   notificationsScreenCache: NotificationsScreenCache;
+  supportTicketsScreenCache: SupportTicketsScreenCache;
+  supportTicketDetailCache: Record<string, SupportTicketDetailCacheItem>;
   dailyDataScreenCache: DailyDataScreenCache;
   setUser: (user: User | null, tokens?: Tokens | null) => void;
   setTokens: (tokens: Tokens | null) => void;
@@ -460,6 +505,10 @@ interface AppState {
   clearExpensesScreenCache: () => void;
   setNotificationsScreenCache: (payload: NotificationsScreenCache) => void;
   clearNotificationsScreenCache: () => void;
+  setSupportTicketsScreenCache: (payload: SupportTicketsScreenCache) => void;
+  clearSupportTicketsScreenCache: () => void;
+  setSupportTicketDetailCacheItem: (ticketId: string, payload: SupportTicketDetailCacheItem) => void;
+  clearSupportTicketDetailCache: () => void;
   setDailyDataScreenCache: (payload: Partial<DailyDataScreenCache>) => void;
   clearDailyDataScreenCache: () => void;
   appLanguage: 'en' | 'it';
@@ -528,6 +577,11 @@ export const useAppStore = create<AppState>()(
         items: [],
         fetchedAt: null,
       },
+      supportTicketsScreenCache: {
+        items: [],
+        fetchedAt: null,
+      },
+      supportTicketDetailCache: {},
       dailyDataScreenCache: {
         itemsBySegment: {},
         fetchedAtBySegment: {},
@@ -655,6 +709,22 @@ export const useAppStore = create<AppState>()(
             fetchedAt: null,
           },
         }),
+      setSupportTicketsScreenCache: (payload) => set({ supportTicketsScreenCache: payload }),
+      clearSupportTicketsScreenCache: () =>
+        set({
+          supportTicketsScreenCache: {
+            items: [],
+            fetchedAt: null,
+          },
+        }),
+      setSupportTicketDetailCacheItem: (ticketId, payload) =>
+        set((state) => ({
+          supportTicketDetailCache: {
+            ...state.supportTicketDetailCache,
+            [ticketId]: payload,
+          },
+        })),
+      clearSupportTicketDetailCache: () => set({ supportTicketDetailCache: {} }),
       setDailyDataScreenCache: (payload) =>
         set((state) => ({
           dailyDataScreenCache: {
@@ -726,6 +796,11 @@ export const useAppStore = create<AppState>()(
             items: [],
             fetchedAt: null,
           },
+          supportTicketsScreenCache: {
+            items: [],
+            fetchedAt: null,
+          },
+          supportTicketDetailCache: {},
           dailyDataScreenCache: {
             itemsBySegment: {},
             fetchedAtBySegment: {},

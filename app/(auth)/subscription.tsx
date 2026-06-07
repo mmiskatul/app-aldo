@@ -26,7 +26,7 @@ const LOCALIZED_PLAN_NAME_KEYS: Record<string, "subscription_plan_core_name"> = 
   "Core Plan": "subscription_plan_core_name",
 };
 
-const LOCALIZED_PLAN_FEATURE_KEYS: Record<string, keyof ReturnType<typeof useTranslation>["t"] extends never ? never : any> = {
+const LOCALIZED_PLAN_FEATURE_KEYS: Record<string, string> = {
   "AI menu suggestions": "subscription_feature_ai_menu_suggestions",
   "Basic sales analytics": "subscription_feature_basic_sales_analytics",
   "Email support": "subscription_feature_email_support",

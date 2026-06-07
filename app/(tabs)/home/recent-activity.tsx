@@ -1,4 +1,3 @@
-import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import {
@@ -12,6 +11,7 @@ import { scale, verticalScale } from "react-native-size-matters";
 import apiClient from "../../../api/apiClient";
 import RecentActivity from "../../../components/home/RecentActivity";
 import Header from "../../../components/ui/Header";
+import { useCachedFocusRefresh } from "../../../hooks/useCachedFocusRefresh";
 import { useAppStore } from "../../../store/useAppStore";
 import { useTranslation } from "../../../utils/i18n";
 
@@ -39,10 +39,14 @@ interface RecentActivityResponse {
   items: ActivityItem[];
 }
 
+const RECENT_ACTIVITY_CACHE_TTL_MS = 60 * 1000;
+
 export default function RecentActivityScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const cachedRecentActivity = useAppStore((state) => state.homeScreenCache.recentActivity);
+  const recentActivityFetchedAt = useAppStore((state) => state.homeScreenCache.fetchedAt);
+  const setHomeScreenCache = useAppStore((state) => state.setHomeScreenCache);
 
   const [activities, setActivities] = useState<ActivityItem[] | null>(cachedRecentActivity);
   const [loading, setLoading] = useState(!cachedRecentActivity);
@@ -61,6 +65,7 @@ export default function RecentActivityScreen() {
         },
       });
       setActivities(response.data.items);
+      setHomeScreenCache({ recentActivity: response.data.items });
     } catch (error: any) {
       console.log("Recent activity screen error:", error.response?.data || error.message);
     } finally {
@@ -69,12 +74,20 @@ export default function RecentActivityScreen() {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      void fetchRecentActivity(hasLoadedRef.current);
+  useCachedFocusRefresh({
+    hasCache: Boolean(activities?.length),
+    fetchedAt: recentActivityFetchedAt,
+    ttlMs: RECENT_ACTIVITY_CACHE_TTL_MS,
+    refreshOnFocus: "always",
+    loadOnEmpty: () => {
       hasLoadedRef.current = true;
-    }, [fetchRecentActivity])
-  );
+      void fetchRecentActivity(false);
+    },
+    refreshStale: () => {
+      hasLoadedRef.current = true;
+      void fetchRecentActivity(true);
+    },
+  });
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

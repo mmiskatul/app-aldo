@@ -13,12 +13,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 
 import Header from '../../../components/ui/Header';
-import { ListRouteSkeleton } from '../../../components/ui/RouteSkeletons';
+import RouteStateView from '../../../components/ui/RouteStateView';
+import { useCachedFocusRefresh } from '../../../hooks/useCachedFocusRefresh';
 import { getUserTickets, TicketListItem } from '../../../api/support';
+import { useAppStore } from '../../../store/useAppStore';
 import { formatReadableDate } from '../../../utils/date';
 import { buildSettingsHref, normalizeOrigin } from '../../../utils/settingsNavigation';
 import { getSupportPriorityPresentation, getSupportStatusPresentation } from '../../../utils/supportPresentation';
 import { useTranslation } from '../../../utils/i18n';
+
+const SUPPORT_TICKETS_CACHE_TTL_MS = 60 * 1000;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -65,8 +69,11 @@ export default function TicketsScreen() {
   const { origin } = useLocalSearchParams<{ origin?: string | string[] }>();
   const settingsOrigin = normalizeOrigin(origin);
   const insets = useSafeAreaInsets();
-  const [tickets, setTickets] = useState<TicketListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const supportTicketsScreenCache = useAppStore((state) => state.supportTicketsScreenCache);
+  const setSupportTicketsScreenCache = useAppStore((state) => state.setSupportTicketsScreenCache);
+  const cachedTickets = supportTicketsScreenCache.items as TicketListItem[];
+  const [tickets, setTickets] = useState<TicketListItem[]>(cachedTickets);
+  const [loading, setLoading] = useState(cachedTickets.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,8 +82,11 @@ export default function TicketsScreen() {
     setError(null);
     try {
       const res = await getUserTickets();
-      console.log('[Tickets] Response:', JSON.stringify(res, null, 2));
       setTickets(res.items);
+      setSupportTicketsScreenCache({
+        items: res.items,
+        fetchedAt: Date.now(),
+      });
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? err?.message ?? t('tickets_load_failed');
       setError(msg);
@@ -84,11 +94,20 @@ export default function TicketsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [setSupportTicketsScreenCache, t]);
 
-  useEffect(() => {
-    fetchTickets();
-  }, [fetchTickets]);
+  useCachedFocusRefresh({
+    hasCache: tickets.length > 0,
+    fetchedAt: supportTicketsScreenCache.fetchedAt,
+    ttlMs: SUPPORT_TICKETS_CACHE_TTL_MS,
+    refreshOnFocus: 'always',
+    loadOnEmpty: () => {
+      void fetchTickets(false);
+    },
+    refreshStale: () => {
+      void fetchTickets(true);
+    },
+  });
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -106,19 +125,16 @@ export default function TicketsScreen() {
   return (
     <View style={styles.safeArea}>
       <Header title={t('my_tickets')} showBack={true} />
-
-      {loading ? (
-        <ListRouteSkeleton withAction={false} itemCount={4} />
-      ) : error ? (
-        <View style={styles.emptyContainer}>
-          <Feather name="alert-circle" size={moderateScale(48)} color="#FCA5A5" />
-          <Text style={styles.emptyTitle}>{t('something_went_wrong')}</Text>
-          <Text style={styles.emptySubtitle}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => fetchTickets()} activeOpacity={0.8}>
-            <Text style={styles.retryText}>{t('try_again')}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
+      <RouteStateView
+        loading={loading}
+        error={error}
+        hasData={tickets.length > 0}
+        errorTitle={t('something_went_wrong')}
+        emptyTitle={t('no_tickets_yet')}
+        emptyDescription={t('tickets_empty_subtitle')}
+        retryLabel={t('try_again')}
+        onRetry={() => void fetchTickets(false)}
+      >
         <FlatList
           data={tickets}
           keyExtractor={(item) => item.id}
@@ -144,7 +160,7 @@ export default function TicketsScreen() {
             />
           }
         />
-      )}
+      </RouteStateView>
     </View>
   );
 }

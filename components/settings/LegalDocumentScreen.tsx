@@ -4,18 +4,18 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PublicLegalDocument } from '../../api/settings';
+import { useCachedFocusRefresh } from '../../hooks/useCachedFocusRefresh';
 import { useAppStore } from '../../store/useAppStore';
 import { formatReadableDate } from '../../utils/date';
 import { useTranslation } from '../../utils/i18n';
 import Header from '../ui/Header';
+import RouteStateView from '../ui/RouteStateView';
 import { TextRouteSkeleton } from '../ui/RouteSkeletons';
 
 type LegalDocumentScreenProps = {
@@ -41,12 +41,12 @@ export default function LegalDocumentScreen({
   const insets = useSafeAreaInsets();
   const cachedDocument = useAppStore((state) => state.legalDocumentCache[cacheKey]);
   const setLegalDocumentCacheItem = useAppStore((state) => state.setLegalDocumentCacheItem);
-  const hasInitialCache = useRef(Boolean(cachedDocument)).current;
   const errorFallbackRef = useRef(errorFallback);
   const [document, setDocument] = useState<PublicLegalDocument | null>(cachedDocument ?? null);
   const [loading, setLoading] = useState(!cachedDocument);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetchedAt, setFetchedAt] = useState<number | null>(null);
 
   useEffect(() => {
     errorFallbackRef.current = errorFallback;
@@ -59,6 +59,7 @@ export default function LegalDocumentScreen({
       const data = await loadDocument();
       setDocument(data);
       setLegalDocumentCacheItem(cacheKey, data);
+      setFetchedAt(Date.now());
     } catch (err: any) {
       setError(
         err?.response?.data?.message ??
@@ -71,26 +72,34 @@ export default function LegalDocumentScreen({
     }
   }, [cacheKey, loadDocument, setLegalDocumentCacheItem]);
 
-  useEffect(() => {
-    void fetchDocument(hasInitialCache);
-  }, [fetchDocument, hasInitialCache]);
+  useCachedFocusRefresh({
+    hasCache: Boolean(document),
+    fetchedAt,
+    ttlMs: 5 * 60 * 1000,
+    loadOnEmpty: () => {
+      void fetchDocument();
+    },
+    refreshStale: () => {
+      void fetchDocument(true);
+    },
+    refreshOnFocus: 'always',
+  });
 
   return (
     <View style={styles.safeArea}>
       <Header title={headerTitle} showBack={true} />
 
-      {loading ? (
-        <TextRouteSkeleton />
-      ) : error ? (
-        <View style={styles.centerState}>
-          <Feather name="alert-circle" size={moderateScale(42)} color="#EF4444" />
-          <Text style={styles.stateTitle}>{errorTitle}</Text>
-          <Text style={styles.stateDescription}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => void fetchDocument()}>
-            <Text style={styles.retryButtonText}>{t('try_again')}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
+      <RouteStateView
+        loading={loading}
+        loadingFallback={<TextRouteSkeleton />}
+        error={error}
+        errorTitle={errorTitle}
+        hasData={Boolean(document)}
+        retryLabel={t('try_again')}
+        onRetry={() => {
+          void fetchDocument();
+        }}
+      >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
@@ -137,7 +146,7 @@ export default function LegalDocumentScreen({
               </View>
             ))}
         </ScrollView>
-      )}
+      </RouteStateView>
     </View>
   );
 }
@@ -174,36 +183,5 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14, 0.3),
     color: '#4B5563',
     lineHeight: 24,
-  },
-  centerState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: scale(24),
-  },
-  stateTitle: {
-    marginTop: verticalScale(12),
-    fontSize: moderateScale(18, 0.3),
-    fontWeight: '700',
-    color: '#111827',
-  },
-  stateDescription: {
-    marginTop: verticalScale(8),
-    fontSize: moderateScale(14, 0.3),
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  retryButton: {
-    marginTop: verticalScale(20),
-    backgroundColor: '#FA8C4C',
-    borderRadius: scale(12),
-    paddingHorizontal: scale(24),
-    paddingVertical: verticalScale(12),
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: moderateScale(14, 0.3),
-    fontWeight: '700',
   },
 });
