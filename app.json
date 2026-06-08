@@ -63,7 +63,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "apiUrl": "",
+      "apiUrl": "https://ristoai.onrender.com",
       "router": {
         "origin": false
       },
