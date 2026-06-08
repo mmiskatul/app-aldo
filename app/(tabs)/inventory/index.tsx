@@ -45,13 +45,6 @@ interface InventoryApiItem {
 
 interface InventoryListResponse {
   total_inventory_value?: number | string | null;
-  food_cost_entries?: {
-    id: string;
-    title: string;
-    amount: number;
-    expense_date: string;
-    created_at: string;
-  }[];
   usage_summary?: {
     total_quantity_used?: number;
     total_usage_cost?: number;
@@ -177,7 +170,6 @@ export default function InventoryScreen() {
   const [items, setItems] = useState<InventoryCardItem[]>(inventoryListCache);
   const [totalValue, setTotalValue] = useState(calculateInventoryValueFromCache(inventoryListCache));
   const [usageSummary, setUsageSummary] = useState<InventoryUsageSummary>(emptyUsageSummary);
-  const [foodCostEntries, setFoodCostEntries] = useState<NonNullable<InventoryListResponse['food_cost_entries']>>([]);
   const hasCachedInventory = inventoryListCache.length > 0;
   const hasLoadedInventory = inventoryListFetchedAt !== null;
   const [valueLoading, setValueLoading] = useState(!hasCachedInventory);
@@ -221,7 +213,6 @@ export default function InventoryScreen() {
       setItems(nextItems);
       setTotalValue(resolveInventoryTotalValue(response.data));
       setUsageSummary(response.data.usage_summary || emptyUsageSummary);
-      setFoodCostEntries(response.data.food_cost_entries || []);
       setValueLoading(false);
       if (query.trim().length === 0) {
         setInventoryListCache(nextItems);
@@ -479,38 +470,6 @@ export default function InventoryScreen() {
           </View>
         </View>
         <View style={styles.listWrap}>
-          <View style={styles.foodCostCard}>
-            <View style={styles.foodCostHeader}>
-              <View>
-                <Text style={styles.foodCostTitle}>Food Cost</Text>
-                <Text style={styles.foodCostSubtitle}>Direct food cost entries</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.foodCostButton}
-                onPress={() => router.push('/(tabs)/home/add-food-cost')}
-              >
-                <Feather name="plus" size={moderateScale(14)} color="#FFFFFF" />
-                <Text style={styles.foodCostButtonText}>Add Daily Food Cost</Text>
-              </TouchableOpacity>
-            </View>
-
-            {foodCostEntries.length > 0 ? (
-              foodCostEntries.slice(0, 5).map((entry) => (
-                <View key={entry.id} style={styles.foodCostRow}>
-                  <View style={styles.foodCostMeta}>
-                    <Text style={styles.foodCostRowTitle} numberOfLines={1}>{entry.title}</Text>
-                    <Text style={styles.foodCostRowDate}>{formatShortDate(entry.expense_date)}</Text>
-                  </View>
-                  <Text style={styles.foodCostRowAmount}>
-                    €{toSafeNumber(entry.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.statusEmptyText}>No food cost entries yet.</Text>
-            )}
-          </View>
-
           {loading ? (
             <>
               <InventoryCardSkeleton />
@@ -951,3 +910,4 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
 });
+
