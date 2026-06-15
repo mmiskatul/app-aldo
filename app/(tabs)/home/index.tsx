@@ -85,29 +85,7 @@ interface HomeSectionMetricResponse {
   items: MetricCard[];
 }
 
-interface DailyDataInventoryUsageEntry {
-  inventory_item_id: string;
-  quantity_used?: number | null;
-  unit_cost?: number | null;
-  total_cost?: number | null;
-}
 
-interface DailyDataMetricItem {
-  inventory_usage?: DailyDataInventoryUsageEntry[];
-}
-
-interface DailyDataMetricResponse {
-  items: DailyDataMetricItem[];
-}
-
-interface InventoryMetricItem {
-  id: string;
-  unit_price?: number | null;
-}
-
-interface InventoryMetricResponse {
-  items: InventoryMetricItem[];
-}
 
 interface ExpenseMetricItem {
   amount?: number | null;
@@ -214,26 +192,9 @@ const shiftDateByMonths = (date: Date, months: number) => {
 const previousReferenceDateForPeriod = (period: PeriodKey, referenceDate: Date) =>
   period === "weekly" ? shiftDateByDays(referenceDate, -7) : shiftDateByMonths(referenceDate, -1);
 
-const viewForPeriod = (period: PeriodKey) => period === "weekly" ? "week" : "month";
 
-const sumInventoryUsageCost = (
-  items: DailyDataMetricItem[],
-  inventoryUnitPriceById: Map<string, number>,
-) =>
-  items.reduce((total, record) => total + (record.inventory_usage || []).reduce((usageTotal, usageItem) => {
-    const explicitTotalCost = Number(usageItem.total_cost);
-    if (Number.isFinite(explicitTotalCost)) {
-      return usageTotal + explicitTotalCost;
-    }
 
-    const quantityUsed = Number(usageItem.quantity_used || 0);
-    const explicitUnitCost = Number(usageItem.unit_cost);
-    const resolvedUnitCost = Number.isFinite(explicitUnitCost)
-      ? explicitUnitCost
-      : Number(inventoryUnitPriceById.get(usageItem.inventory_item_id) || 0);
 
-    return usageTotal + (quantityUsed * resolvedUnitCost);
-  }, 0), 0);
 
 const calculateChangePercent = (currentValue: number, previousValue: number) => {
   if (previousValue === 0) {
@@ -243,23 +204,9 @@ const calculateChangePercent = (currentValue: number, previousValue: number) => 
   return ((currentValue - previousValue) / previousValue) * 100;
 };
 
-const mergeFoodCostMetric = (metrics: MetricCard[], foodCostMetric: MetricCard) => {
-  const existingIndex = metrics.findIndex((item) => item.label.trim().toLowerCase() === FOOD_COST_LABEL);
-  if (existingIndex === -1) {
-    return [...metrics, foodCostMetric];
-  }
 
-  return metrics.map((item, index) => index === existingIndex ? foodCostMetric : item);
-};
 
-const mergeMetric = (metrics: MetricCard[], nextMetric: MetricCard) => {
-  const existingIndex = metrics.findIndex((item) => item.label.trim().toLowerCase() === nextMetric.label.trim().toLowerCase());
-  if (existingIndex === -1) {
-    return [...metrics, nextMetric];
-  }
 
-  return metrics.map((item, index) => index === existingIndex ? nextMetric : item);
-};
 
 const sumExpenseAmount = (items: ExpenseMetricItem[], matcher: (item: ExpenseMetricItem) => boolean) =>
   items.reduce((total, item) => matcher(item) ? total + Number(item.amount || 0) : total, 0);
@@ -362,86 +309,9 @@ export default function TabsIndex() {
   const previousPeriodRef = useRef<PeriodKey>("weekly");
   const lastSupportingDataRefreshRef = useRef(0);
 
-  const calculateInventoryFoodCostMetric = useCallback(async (period: PeriodKey, currency = "EUR"): Promise<MetricCard> => {
-    const referenceDate = startOfDay(new Date());
-    const previousReferenceDate = previousReferenceDateForPeriod(period, referenceDate);
-    const paramsForDate = (date: Date) => ({
-      page: 1,
-      page_size: 100,
-      view: viewForPeriod(period),
-      reference_date: formatApiDate(date),
-    });
 
-    const [currentPeriodResponse, previousPeriodResponse, inventoryResponse] = await Promise.all([
-      apiClient.get<DailyDataMetricResponse>("/api/v1/restaurant/daily-data", {
-        params: paramsForDate(referenceDate),
-      }),
-      apiClient.get<DailyDataMetricResponse>("/api/v1/restaurant/daily-data", {
-        params: paramsForDate(previousReferenceDate),
-      }),
-      apiClient.get<InventoryMetricResponse>("/api/v1/restaurant/inventory", {
-        params: {
-          page: 1,
-          page_size: 200,
-        },
-      }),
-    ]);
 
-    const inventoryUnitPriceById = new Map<string, number>(
-      (inventoryResponse.data.items || []).map((item) => [item.id, Number(item.unit_price || 0)]),
-    );
-    const currentValue = sumInventoryUsageCost(currentPeriodResponse.data.items || [], inventoryUnitPriceById);
-    const previousValue = sumInventoryUsageCost(previousPeriodResponse.data.items || [], inventoryUnitPriceById);
 
-    return {
-      label: FOOD_COST_LABEL,
-      value: currentValue,
-      change_percent: calculateChangePercent(currentValue, previousValue),
-      currency,
-    };
-  }, []);
-
-  const calculateSeparatedExpenseMetrics = useCallback(async (period: PeriodKey, currency = "EUR") => {
-    const referenceDate = startOfDay(new Date());
-    const previousReferenceDate = previousReferenceDateForPeriod(period, referenceDate);
-    const periodKey = period === "weekly" ? "this_week" : "this_month";
-
-    const [currentExpensesResponse, previousExpensesResponse] = await Promise.all([
-      apiClient.get<ExpensesMetricResponse>("/api/v1/restaurant/expenses", {
-        params: {
-          reference_date: formatApiDate(referenceDate),
-        },
-      }),
-      apiClient.get<ExpensesMetricResponse>("/api/v1/restaurant/expenses", {
-        params: {
-          reference_date: formatApiDate(previousReferenceDate),
-        },
-      }),
-    ]);
-
-    const currentItems = currentExpensesResponse.data[periodKey]?.items || [];
-    const previousItems = previousExpensesResponse.data[periodKey]?.items || [];
-
-    const currentInventoryExpense = sumExpenseAmount(currentItems, isInventoryLinkedExpense);
-    const previousInventoryExpense = sumExpenseAmount(previousItems, isInventoryLinkedExpense);
-    const currentOtherExpense = sumExpenseAmount(currentItems, (item) => !isInventoryLinkedExpense(item));
-    const previousOtherExpense = sumExpenseAmount(previousItems, (item) => !isInventoryLinkedExpense(item));
-
-    return {
-      inventoryExpenseMetric: {
-        label: INVENTORY_EXPENSE_LABEL,
-        value: currentInventoryExpense,
-        change_percent: calculateChangePercent(currentInventoryExpense, previousInventoryExpense),
-        currency,
-      } satisfies MetricCard,
-      otherExpenseMetric: {
-        label: OTHER_EXPENSE_LABEL,
-        value: currentOtherExpense,
-        change_percent: calculateChangePercent(currentOtherExpense, previousOtherExpense),
-        currency,
-      } satisfies MetricCard,
-    };
-  }, []);
 
   const applyDerivedMetricsToMetrics = useCallback(async (period: PeriodKey, metrics: MetricCard[]) => {
     return orderHomeMetrics(metrics);
@@ -459,14 +329,12 @@ export default function TabsIndex() {
 
     if (analyticsRes.status === "fulfilled") {
       setAnalyticsData(analyticsRes.value.data);
-    } else {
-      console.log("Analytics preload error:", analyticsRes.reason?.response?.data || analyticsRes.reason?.message);
     }
 
     if (profileRes.status === "fulfilled") {
       setProfile(profileRes.value.data);
     } else {
-      console.log("Profile preload error:", profileRes.reason?.response?.data || profileRes.reason?.message);
+      console.log("Profile preload skipped.");
     }
     lastSupportingDataRefreshRef.current = now;
   }, [setAnalyticsData, setProfile]);

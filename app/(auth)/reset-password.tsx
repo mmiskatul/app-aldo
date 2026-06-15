@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 
 import OTPVerification from "../../components/ui/OTPVerification";
-import { getApiBaseUrl } from "../../utils/api";
+import { getApiBaseUrl, getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 import { useTranslation } from "../../utils/i18n";
 
@@ -48,27 +48,7 @@ export default function ResetPasswordScreen() {
 
       showSuccessMessage(response.data?.message || t("password_reset_code_resent"));
     } catch (error: any) {
-      console.log("Resend API Error:", error.response?.data || error.message);
-      const errData = error.response?.data;
-      let errorMessage = t("unexpected_error");
-
-      if (errData) {
-        if (typeof errData === "string") {
-          try {
-            const parsed = JSON.parse(errData);
-            errorMessage = parsed.error?.message || parsed.message || parsed.detail || errData;
-          } catch {
-            errorMessage = errData;
-          }
-        } else {
-          errorMessage =
-            errData.error?.message || errData.message || errData.detail || JSON.stringify(errData);
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      showErrorMessage(errorMessage);
+      showErrorMessage(getApiErrorMessage(error, t("unexpected_error")));
     } finally {
       setIsResending(false);
     }

@@ -27,30 +27,6 @@ import type { DailyDataListCacheItem } from "../../../store/useAppStore";
 import { getApiErrorMessage } from "../../../utils/api";
 import { useTranslation } from "../../../utils/i18n";
 
-interface InventorySuggestionItem {
-  id: string;
-  product_name: string;
-  stock_quantity: number;
-  unit_type: string;
-}
-
-interface InventoryUsageItem {
-  rowId: string;
-  inventoryItemId: string;
-  productName: string;
-  query: string;
-  quantityUsed: string;
-  availableQuantity: number;
-  unitType: string;
-}
-
-interface DailyDataInventoryUsageEntry {
-  inventory_item_id: string;
-  product_name: string;
-  quantity_used: number;
-  unit_type: string;
-}
-
 interface DailyDataEditResponse {
   id: string;
   business_date: string;
@@ -62,24 +38,14 @@ interface DailyDataEditResponse {
   cash_payments: number;
   bank_transfer_payments: number;
   expenses_in_cash: number;
-  lunch_covers: number;
-  dinner_covers: number;
   opening_cash: number;
   closing_cash: number;
   notes?: string;
-  stock_usage?: DailyDataInventoryUsageEntry[];
-  inventory_usage: DailyDataInventoryUsageEntry[];
 }
 
 const parseNumberInput = (value: string) => {
   const normalized = value.trim().replace(/,/g, ".");
   const parsed = parseFloat(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const parseIntegerInput = (value: string) => {
-  const normalized = value.trim();
-  const parsed = parseInt(normalized, 10);
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
@@ -89,14 +55,6 @@ const isValidNumberInput = (value: string) => {
     return true;
   }
   return /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized);
-};
-
-const isValidIntegerInput = (value: string) => {
-  const normalized = value.trim();
-  if (!normalized) {
-    return true;
-  }
-  return /^\d+$/.test(normalized);
 };
 
 const hasTextValue = (value: string) => value.trim().length > 0;
@@ -126,18 +84,7 @@ export default function AddDailyDataScreen() {
   const [isLoadingRecord, setIsLoadingRecord] = useState(false);
   const [isMethodsModalVisible, setIsMethodsModalVisible] = useState(false);
   const appliedEditRecordRef = useRef<string | null>(null);
-  const [inventoryItems, setInventoryItems] = useState<InventorySuggestionItem[]>([]);
-  const [inventoryUsage, setInventoryUsage] = useState<InventoryUsageItem[]>([
-    {
-      rowId: String(Date.now()),
-      inventoryItemId: "",
-      productName: "",
-      query: "",
-      quantityUsed: "",
-      availableQuantity: 0,
-      unitType: "",
-    },
-  ]);
+
 
   const [method1Data, setMethod1Data] = useState<Method1Data>({
     pos_payments: "",
@@ -145,8 +92,6 @@ export default function AddDailyDataScreen() {
     cash_in: "",
     cash_out: "",
     expenses_in_cash: "",
-    lunch_covers: "",
-    dinner_covers: "",
     opening_cash: "",
     closing_cash: "",
     notes: "",
@@ -157,8 +102,6 @@ export default function AddDailyDataScreen() {
     cash_payments: "",
     bank_transfer_payments: "",
     expenses_in_cash: "",
-    lunch_covers: "",
-    dinner_covers: "",
     opening_cash: "",
     closing_cash: "",
   });
@@ -190,8 +133,6 @@ export default function AddDailyDataScreen() {
       cash_in: formatNumberForInput(Number(record.cash_in || 0)),
       cash_out: formatNumberForInput(Number(record.cash_out || 0)),
       expenses_in_cash: formatNumberForInput(Number(record.expenses_in_cash || 0)),
-      lunch_covers: formatNumberForInput(Number(record.lunch_covers || 0)),
-      dinner_covers: formatNumberForInput(Number(record.dinner_covers || 0)),
       opening_cash: formatNumberForInput(Number(record.opening_cash || 0)),
       closing_cash: formatNumberForInput(Number(record.closing_cash || 0)),
       notes: record.notes || "",
@@ -201,41 +142,10 @@ export default function AddDailyDataScreen() {
       cash_payments: formatNumberForInput(Number(record.cash_payments || 0)),
       bank_transfer_payments: formatNumberForInput(Number(record.bank_transfer_payments || 0)),
       expenses_in_cash: formatNumberForInput(Number(record.expenses_in_cash || 0)),
-      lunch_covers: formatNumberForInput(Number(record.lunch_covers || 0)),
-      dinner_covers: formatNumberForInput(Number(record.dinner_covers || 0)),
       opening_cash: formatNumberForInput(Number(record.opening_cash || 0)),
       closing_cash: formatNumberForInput(Number(record.closing_cash || 0)),
     });
-    const stockUsage =
-      "stock_usage" in record && Array.isArray(record.stock_usage)
-        ? record.stock_usage
-        : undefined;
-    const usageEntries: DailyDataInventoryUsageEntry[] = stockUsage?.length
-      ? stockUsage
-      : (record.inventory_usage || []);
-    setInventoryUsage(
-      usageEntries?.length
-        ? usageEntries.map((item: DailyDataInventoryUsageEntry, index: number) => ({
-            rowId: `${item.inventory_item_id}-${index}`,
-            inventoryItemId: item.inventory_item_id,
-            productName: item.product_name,
-            query: item.product_name,
-            quantityUsed: formatNumberForInput(item.quantity_used),
-            availableQuantity: 0,
-            unitType: item.unit_type,
-          }))
-        : [
-            {
-              rowId: String(Date.now()),
-              inventoryItemId: "",
-              productName: "",
-              query: "",
-              quantityUsed: "",
-              availableQuantity: 0,
-              unitType: "",
-            },
-          ],
-    );
+
   };
 
   const cachedEditableRecord = useMemo(
@@ -251,23 +161,7 @@ export default function AddDailyDataScreen() {
     [cachedDateItems, editingRecordId],
   );
 
-  useEffect(() => {
-    const fetchInventoryItems = async () => {
-      try {
-        const response = await apiClient.get("/api/v1/restaurant/inventory", {
-          params: {
-            page: 1,
-            page_size: 100,
-          },
-        });
-        setInventoryItems(response.data.items || []);
-      } catch (error: any) {
-        console.log("Daily inventory suggestions error:", error?.response?.data || error?.message);
-      }
-    };
 
-    void fetchInventoryItems();
-  }, []);
 
   useEffect(() => {
     if (!editingRecordId) {
@@ -308,103 +202,18 @@ export default function AddDailyDataScreen() {
     void fetchRecord();
   }, [cachedEditableRecord, editingRecordId, t]);
 
-  useEffect(() => {
-    if (!inventoryItems.length) {
-      return;
-    }
 
-    setInventoryUsage((current) =>
-      current.map((item) => {
-        if (!item.inventoryItemId) {
-          return item;
-        }
-        const matchedItem = inventoryItems.find((inventoryItem) => inventoryItem.id === item.inventoryItemId);
-        if (!matchedItem) {
-          return item;
-        }
-        return {
-          ...item,
-          productName: matchedItem.product_name,
-          query: item.query || matchedItem.product_name,
-          availableQuantity: Number(matchedItem.stock_quantity || 0),
-          unitType: matchedItem.unit_type,
-        };
-      }),
-    );
-  }, [inventoryItems]);
-
-  const usedInventoryPayload = useMemo(
-    () =>
-      inventoryUsage
-        .filter((item) => item.inventoryItemId && parseNumberInput(item.quantityUsed) > 0)
-        .map((item) => ({
-          inventory_item_id: item.inventoryItemId,
-          quantity_used: parseNumberInput(item.quantityUsed),
-        })),
-    [inventoryUsage],
-  );
-
-  const updateUsageRow = (rowId: string, updates: Partial<InventoryUsageItem>) => {
-    setInventoryUsage((current) =>
-      current.map((item) => (item.rowId === rowId ? { ...item, ...updates } : item)),
-    );
-  };
-
-  const selectInventoryItem = (rowId: string, item: InventorySuggestionItem) => {
-    updateUsageRow(rowId, {
-      inventoryItemId: item.id,
-      productName: item.product_name,
-      query: item.product_name,
-      availableQuantity: Number(item.stock_quantity || 0),
-      unitType: item.unit_type,
-    });
-  };
-
-  const addUsageRow = () => {
-    setInventoryUsage((current) => [
-      ...current,
-      {
-        rowId: `${Date.now()}-${current.length}`,
-        inventoryItemId: "",
-        productName: "",
-        query: "",
-        quantityUsed: "",
-        availableQuantity: 0,
-        unitType: "",
-      },
-    ]);
-  };
-
-  const removeUsageRow = (rowId: string) => {
-    setInventoryUsage((current) =>
-      current.length === 1
-        ? [
-            {
-              rowId: String(Date.now()),
-              inventoryItemId: "",
-              productName: "",
-              query: "",
-              quantityUsed: "",
-              availableQuantity: 0,
-              unitType: "",
-            },
-          ]
-        : current.filter((item) => item.rowId !== rowId),
-    );
-  };
 
   const validateNumberFields = (
-    fields: { label: string; value: string; integer?: boolean }[],
+    fields: { label: string; value: string }[],
   ) => {
-    const invalidField = fields.find((field) =>
-      field.integer ? !isValidIntegerInput(field.value) : !isValidNumberInput(field.value),
-    );
+    const invalidField = fields.find((field) => !isValidNumberInput(field.value));
 
     if (!invalidField) {
       return null;
     }
 
-    return `${invalidField.label} must be a valid ${invalidField.integer ? "whole number" : "non-negative number"}.`;
+    return `${invalidField.label} must be a valid non-negative number.`;
   };
 
   const validateCurrentMethod = () => {
@@ -412,13 +221,9 @@ export default function AddDailyDataScreen() {
       return validateNumberFields([
         { label: "POS Payments", value: method1Data.pos_payments },
         { label: "Cash Withdrawals", value: method1Data.cash_withdrawals },
-        { label: "Cash In", value: method1Data.cash_in },
-        { label: "Cash Out", value: method1Data.cash_out },
-        { label: "Expenses in Cash", value: method1Data.expenses_in_cash },
-        { label: "Lunch Coperti", value: method1Data.lunch_covers, integer: true },
-        { label: "Dinner Coperti", value: method1Data.dinner_covers, integer: true },
-        { label: "Opening Cash", value: method1Data.opening_cash },
-        { label: "Closing Cash", value: method1Data.closing_cash },
+        { label: "Cash expenses paid from the cash drawer", value: method1Data.expenses_in_cash },
+        { label: "Initial Cash", value: method1Data.opening_cash },
+        { label: "Final Cash", value: method1Data.closing_cash },
       ]);
     }
 
@@ -426,9 +231,7 @@ export default function AddDailyDataScreen() {
       { label: "POS Payments", value: method2Data.pos_payments },
       { label: "Cash Payments", value: method2Data.cash_payments },
       { label: "Invoices Paid by Bank Transfer", value: method2Data.bank_transfer_payments },
-      { label: "Expenses in Cash", value: method2Data.expenses_in_cash },
-      { label: "Lunch Coperti", value: method2Data.lunch_covers, integer: true },
-      { label: "Dinner Coperti", value: method2Data.dinner_covers, integer: true },
+      { label: "Cash expenses paid from the cash drawer", value: method2Data.expenses_in_cash },
       { label: "Opening Cash", value: method2Data.opening_cash },
       { label: "Closing Cash", value: method2Data.closing_cash },
     ]);
@@ -440,11 +243,7 @@ export default function AddDailyDataScreen() {
         ? [
             method1Data.pos_payments,
             method1Data.cash_withdrawals,
-            method1Data.cash_in,
-            method1Data.cash_out,
             method1Data.expenses_in_cash,
-            method1Data.lunch_covers,
-            method1Data.dinner_covers,
             method1Data.opening_cash,
             method1Data.closing_cash,
             method1Data.notes,
@@ -454,18 +253,11 @@ export default function AddDailyDataScreen() {
             method2Data.cash_payments,
             method2Data.bank_transfer_payments,
             method2Data.expenses_in_cash,
-            method2Data.lunch_covers,
-            method2Data.dinner_covers,
             method2Data.opening_cash,
             method2Data.closing_cash,
           ];
 
-    const hasFilledMethodField = selectedFields.some(hasTextValue);
-    const hasFilledInventoryField = inventoryUsage.some(
-      (item) => hasTextValue(item.query) || hasTextValue(item.quantityUsed),
-    );
-
-    return hasFilledMethodField || hasFilledInventoryField;
+    return selectedFields.some(hasTextValue);
   };
 
   const handleSave = async () => {
@@ -480,43 +272,21 @@ export default function AddDailyDataScreen() {
       return;
     }
 
-    const invalidUsage = inventoryUsage.find((item) => {
-      if (!item.query.trim() && !item.quantityUsed.trim()) {
-        return false;
-      }
-      return !item.inventoryItemId || parseNumberInput(item.quantityUsed) <= 0;
-    });
-    if (invalidUsage) {
-      showErrorMessage(t("select_inventory_item"));
-      return;
-    }
 
-    const overUsedItem = inventoryUsage.find(
-      (item) =>
-        item.inventoryItemId &&
-        parseNumberInput(item.quantityUsed) > Number(item.availableQuantity || 0),
-    );
-    if (overUsedItem) {
-      showErrorMessage(t("used_quantity_exceeds_stock"));
-      return;
-    }
 
     setIsSaving(true);
     try {
       const payload = {
         method: selectedMethod === "method1" ? "method_1" : "method_2",
-        stock_usage: usedInventoryPayload,
         ...(selectedMethod === "method1"
           ? {
               method_one: {
                 business_date: currentBusinessDate,
                 pos_payments: parseNumberInput(method1Data.pos_payments),
                 cash_withdrawals: parseNumberInput(method1Data.cash_withdrawals),
-                cash_in: parseNumberInput(method1Data.cash_in),
-                cash_out: parseNumberInput(method1Data.cash_out),
+                cash_in: 0,
+                cash_out: 0,
                 expenses_in_cash: parseNumberInput(method1Data.expenses_in_cash),
-                lunch_covers: parseIntegerInput(method1Data.lunch_covers),
-                dinner_covers: parseIntegerInput(method1Data.dinner_covers),
                 opening_cash: parseNumberInput(method1Data.opening_cash),
                 closing_cash: parseNumberInput(method1Data.closing_cash),
                 notes: method1Data.notes,
@@ -529,8 +299,6 @@ export default function AddDailyDataScreen() {
                 cash_payments: parseNumberInput(method2Data.cash_payments),
                 bank_transfer_payments: parseNumberInput(method2Data.bank_transfer_payments),
                 expenses_in_cash: parseNumberInput(method2Data.expenses_in_cash),
-                lunch_covers: parseIntegerInput(method2Data.lunch_covers),
-                dinner_covers: parseIntegerInput(method2Data.dinner_covers),
                 opening_cash: parseNumberInput(method2Data.opening_cash),
                 closing_cash: parseNumberInput(method2Data.closing_cash),
               },
@@ -614,93 +382,7 @@ export default function AddDailyDataScreen() {
                 />
               )}
 
-              <View style={styles.inventoryUsageCard}>
-                <Text style={styles.inventoryUsageTitle}>{t("inventory_used")}</Text>
-                <Text style={styles.inventoryUsageSubtitle}>{t("inventory_used_subtitle")}</Text>
 
-                {inventoryUsage.map((usageItem) => {
-                  const query = usageItem.query.trim().toLowerCase();
-                  const suggestions =
-                    query.length >= 2 && usageItem.query !== usageItem.productName
-                      ? inventoryItems
-                          .filter((item) => item.product_name.toLowerCase().includes(query))
-                          .slice(0, 4)
-                      : [];
-                  const quantityUsed = parseNumberInput(usageItem.quantityUsed);
-                  const remainingQuantity = Math.max(Number(usageItem.availableQuantity || 0) - quantityUsed, 0);
-
-                  return (
-                    <View key={usageItem.rowId} style={styles.usageRowCard}>
-                      <View style={styles.usageRowHeader}>
-                        <Text style={styles.usageLabel}>{t("product_used")}</Text>
-                        <TouchableOpacity onPress={() => removeUsageRow(usageItem.rowId)} hitSlop={styles.iconHitSlop}>
-                          <Feather name="x" size={moderateScale(16)} color="#9CA3AF" />
-                        </TouchableOpacity>
-                      </View>
-                      <TextInput
-                        style={styles.usageInput}
-                        value={usageItem.query}
-                        onChangeText={(text) =>
-                          updateUsageRow(usageItem.rowId, {
-                            query: text,
-                            inventoryItemId: "",
-                            productName: "",
-                            availableQuantity: 0,
-                            unitType: "",
-                          })
-                        }
-                        placeholder={t("select_inventory_item")}
-                        placeholderTextColor="#9CA3AF"
-                      />
-
-                      {suggestions.length > 0 ? (
-                        <View style={styles.suggestionBox}>
-                          {suggestions.map((item) => (
-                            <TouchableOpacity
-                              key={item.id}
-                              style={styles.suggestionItem}
-                              onPress={() => selectInventoryItem(usageItem.rowId, item)}
-                            >
-                              <Text style={styles.suggestionName}>{item.product_name}</Text>
-                              <Text style={styles.suggestionMeta}>
-                                {t("available")}: {Number(item.stock_quantity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {item.unit_type}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      ) : null}
-
-                      <View style={styles.quantityRow}>
-                        <View style={styles.quantityInputWrap}>
-                          <Text style={styles.usageLabel}>{t("quantity_used")}</Text>
-                          <TextInput
-                            style={styles.usageInput}
-                            value={usageItem.quantityUsed}
-                            onChangeText={(text) => updateUsageRow(usageItem.rowId, { quantityUsed: text })}
-                            placeholder="0"
-                            placeholderTextColor="#9CA3AF"
-                            keyboardType="numeric"
-                          />
-                        </View>
-                        <View style={styles.availableBox}>
-                          <Text style={styles.availableLabel}>{t("available")}</Text>
-                          <Text style={styles.availableValue}>
-                            {Number(usageItem.availableQuantity || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} {usageItem.unitType}
-                          </Text>
-                          <Text style={styles.remainingText}>
-                            {t("remaining")}: {remainingQuantity.toLocaleString(undefined, { maximumFractionDigits: 2 })} {usageItem.unitType}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })}
-
-                <TouchableOpacity style={styles.addUsageButton} onPress={addUsageRow}>
-                  <Feather name="plus" size={moderateScale(16)} color="#FA8C4C" />
-                  <Text style={styles.addUsageText}>{t("add_used_item")}</Text>
-                </TouchableOpacity>
-              </View>
             </ScrollView>
 
             <View style={[styles.bottomFooter, { paddingBottom: footerBottomInset }]}>

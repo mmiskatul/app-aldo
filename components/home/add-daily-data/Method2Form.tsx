@@ -9,8 +9,6 @@ export interface Method2Data {
   cash_payments: string;
   bank_transfer_payments: string;
   expenses_in_cash: string;
-  lunch_covers: string;
-  dinner_covers: string;
   opening_cash: string;
   closing_cash: string;
 }
@@ -23,21 +21,6 @@ interface Props {
 
 export default function Method2Form({ data, onChange, onInfoPress }: Props) {
   const { t } = useTranslation();
-
-  const toAmount = (value: string) => {
-    const parsed = Number.parseFloat(value.trim().replace(/,/g, "."));
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-
-  const openingCash = toAmount(data.opening_cash);
-  const cashPayments = toAmount(data.cash_payments);
-  const expensesInCash = toAmount(data.expenses_in_cash);
-  const closingCash = toAmount(data.closing_cash);
-  const expectedClosingCash = openingCash + cashPayments - expensesInCash;
-  const cashDifference = closingCash - expectedClosingCash;
-  const cashDifferenceColor =
-    cashDifference === 0 ? "#111827" : cashDifference > 0 ? "#16A34A" : "#DC2626";
-  const formattedCashDifference = `${cashDifference < 0 ? "-" : ""}€${Math.abs(cashDifference).toFixed(2)}`;
 
   return (
     <View style={styles.container}>
@@ -65,7 +48,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>{t("pos_payments")} (+)</Text>
         <View style={styles.inputContainer}>
-          <Text style={styles.prefixSign}>€</Text>
+          <Text style={styles.prefixSign}>â‚¬</Text>
           <TextInput
             style={styles.input}
             placeholder="0.00"
@@ -80,7 +63,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>{t("cash_payments")} (+)</Text>
         <View style={styles.inputContainer}>
-          <Text style={styles.prefixSign}>€</Text>
+          <Text style={styles.prefixSign}>â‚¬</Text>
           <TextInput
             style={styles.input}
             placeholder="0.00"
@@ -95,7 +78,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>{t("bank_transfer_payments")} (+)</Text>
         <View style={styles.inputContainer}>
-          <Text style={styles.prefixSign}>€</Text>
+          <Text style={styles.prefixSign}>â‚¬</Text>
           <TextInput
             style={styles.input}
             placeholder="0.00"
@@ -107,79 +90,12 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
         </View>
       </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>{t("expenses_in_cash")} (-)</Text>
-        <View style={styles.inputContainer}>
-          <Text style={styles.prefixSign}>€</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="0.00"
-            placeholderTextColor="#9CA3AF"
-            keyboardType="numeric"
-            value={data.expenses_in_cash}
-            onChangeText={(val) => onChange("expenses_in_cash", val)}
-          />
-        </View>
-      </View>
-
-      <View style={[styles.sectionHeader, { marginTop: verticalScale(16) }]}>
-        <View style={styles.titleRow}>
-          <Feather
-            name="users"
-            size={moderateScale(18)}
-            color="#FA8C4C"
-            style={styles.sectionIcon}
-          />
-          <Text style={styles.sectionTitle}>{t("covers_section")}</Text>
-        </View>
-      </View>
-
       <View style={styles.row}>
         <View style={[styles.inputGroup, { flex: 1, marginRight: scale(8) }]}>
-          <Text style={styles.label}>{t("lunch_coperti")}</Text>
+          <Text style={styles.label}>{t("initial_cash")} (-)</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={[styles.input, { paddingLeft: scale(16) }]}
-              placeholder="0"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="numeric"
-              value={data.lunch_covers}
-              onChangeText={(val) => onChange("lunch_covers", val)}
-            />
-          </View>
-        </View>
-        <View style={[styles.inputGroup, { flex: 1, marginLeft: scale(8) }]}>
-          <Text style={styles.label}>{t("dinner_coperti")}</Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[styles.input, { paddingLeft: scale(16) }]}
-              placeholder="0"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="numeric"
-              value={data.dinner_covers}
-              onChangeText={(val) => onChange("dinner_covers", val)}
-            />
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.balanceCard}>
-        <View style={styles.balanceHeader}>
-          <View style={styles.balanceIconBg}>
-            <Feather name="inbox" size={moderateScale(16)} color="#FA8C4C" />
-          </View>
-          <Text style={styles.sectionTitle}>{t("cash_register_balance")}</Text>
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.labelDark}>{t("opening_cash")}</Text>
-          <Text style={styles.subLabel}>
-            {t("opening_cash_description")}
-          </Text>
-          <View style={styles.inputContainerBgWhite}>
-            <Text style={styles.prefixSign}>€</Text>
-            <TextInput
-              style={styles.input}
               placeholder="0.00"
               placeholderTextColor="#9CA3AF"
               keyboardType="numeric"
@@ -188,16 +104,11 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
             />
           </View>
         </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.labelDark}>{t("closing_cash")}</Text>
-          <Text style={styles.subLabel}>
-            {t("closing_cash_description")}
-          </Text>
-          <View style={styles.inputContainerBgWhite}>
-            <Text style={styles.prefixSign}>€</Text>
+        <View style={[styles.inputGroup, { flex: 1, marginLeft: scale(8) }]}>
+          <Text style={styles.label}>{t("final_cash")} (+)</Text>
+          <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { paddingLeft: scale(16) }]}
               placeholder="0.00"
               placeholderTextColor="#9CA3AF"
               keyboardType="numeric"
@@ -206,17 +117,20 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
             />
           </View>
         </View>
+      </View>
 
-        <View style={styles.differenceCard}>
-          <View style={styles.differenceTextGroup}>
-            <Text style={styles.differenceLabel}>{t("daily_cash_difference")}</Text>
-            <Text style={styles.differenceSubLabel}>
-              {t("daily_cash_difference_subtitle")}
-            </Text>
-          </View>
-          <Text style={[styles.differenceValue, { color: cashDifferenceColor }]}>
-            {formattedCashDifference}
-          </Text>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>{t("cash_expenses_paid_from_drawer")} (-)</Text>
+        <View style={styles.inputContainer}>
+          <Text style={styles.prefixSign}>â‚¬</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="0.00"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numeric"
+            value={data.expenses_in_cash}
+            onChangeText={(val) => onChange("expenses_in_cash", val)}
+          />
         </View>
       </View>
     </View>
@@ -263,29 +177,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: verticalScale(8),
   },
-  labelDark: {
-    fontSize: moderateScale(13, 0.3),
-    color: "#111827",
-    fontWeight: "600",
-    marginBottom: verticalScale(4),
-  },
-  subLabel: {
-    fontSize: moderateScale(11, 0.3),
-    color: "#6B7280",
-    marginBottom: verticalScale(8),
-    lineHeight: 16,
-  },
   inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: scale(12),
-    height: verticalScale(54),
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: scale(16),
-  },
-  inputContainerBgWhite: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
@@ -310,56 +202,5 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-  },
-  balanceCard: {
-    backgroundColor: "#FFF8F3",
-    borderRadius: scale(16),
-    padding: scale(16),
-    marginTop: verticalScale(8),
-    borderWidth: 1,
-    borderColor: "#FCE7D6",
-  },
-  balanceHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: verticalScale(16),
-  },
-  balanceIconBg: {
-    backgroundColor: "#FFFFFF",
-    padding: scale(6),
-    borderRadius: scale(8),
-    marginRight: scale(8),
-    borderWidth: 1,
-    borderColor: "#FCE7D6",
-  },
-  differenceCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
-    borderRadius: scale(12),
-    borderWidth: 1,
-    borderColor: "#FCE7D6",
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(12),
-  },
-  differenceTextGroup: {
-    flex: 1,
-    paddingRight: scale(12),
-  },
-  differenceLabel: {
-    fontSize: moderateScale(13, 0.3),
-    color: "#111827",
-    fontWeight: "800",
-    marginBottom: verticalScale(3),
-  },
-  differenceSubLabel: {
-    fontSize: moderateScale(11, 0.3),
-    color: "#6B7280",
-    lineHeight: 15,
-  },
-  differenceValue: {
-    fontSize: moderateScale(16, 0.3),
-    fontWeight: "900",
   },
 });

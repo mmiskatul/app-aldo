@@ -20,7 +20,7 @@ import OTPVerification from "../../components/ui/OTPVerification";
 // @ts-ignore
 import SecurityIcon from "../../assets/images/Security Icon.svg";
 import { useAppStore } from "../../store/useAppStore";
-import { getApiBaseUrl } from "../../utils/api";
+import { getApiBaseUrl, getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 import { useTranslation } from "../../utils/i18n";
 
@@ -37,13 +37,6 @@ export default function VerifyIdentityScreen() {
   const email = pendingRegistration?.email;
   const apiUrl = getApiBaseUrl();
 
-  const getApiErrorMessage = (error: any, fallback: string) =>
-    error.response?.data?.error?.message ||
-    error.response?.data?.message ||
-    error.response?.data?.detail ||
-    error.message ||
-    fallback;
-
   const handleResendCode = async () => {
     if (!email) {
       showErrorMessage(t("missing_email_restart_signup"));
@@ -54,7 +47,6 @@ export default function VerifyIdentityScreen() {
       const response = await axios.post(`${apiUrl}/api/v1/auth/restaurant/resend-verification`, {
         email,
       });
-      console.log("Resend API Response:", response.data);
       showSuccessMessage(
         response.data?.debug_verification_code
           ? `Verification code: ${response.data.debug_verification_code}`
@@ -63,7 +55,6 @@ export default function VerifyIdentityScreen() {
       setCode(["", "", "", ""]);
       return true;
     } catch (error: any) {
-      console.log("Resend API Error:", error.response?.data || error.message);
       showErrorMessage(getApiErrorMessage(error, t("unexpected_error")));
       return false;
     }
@@ -99,7 +90,6 @@ export default function VerifyIdentityScreen() {
       router.replace("/(auth)/subscription" as any);
       
     } catch (error: any) {
-      console.log("Verify API Error:", error.response?.data || error.message);
       const errorMessage = getApiErrorMessage(
         error,
         t("verify_unexpected_error")

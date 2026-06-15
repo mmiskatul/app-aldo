@@ -57,7 +57,7 @@ export default function RevenueTrendChart({
                 />
               </View>
               <Text style={[styles.axisLabel, isActive ? styles.axisLabelActive : null]}>
-                {item.label.slice(0, 1).toUpperCase()}
+                {period === 'monthly' ? item.label : item.label.slice(0, 1).toUpperCase()}
               </Text>
             </View>
           );

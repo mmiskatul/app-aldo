@@ -389,7 +389,21 @@ export default function AnalyticsScreen() {
       case 'this week revenue':
         return t('this_week_revenue');
       case 'last week revenue':
-        return `${t('last_week')} ${t('revenue')}`;
+        return t('last_week_revenue');
+      case 'covers':
+        return t('covers_short');
+      case 'avg rev':
+        return t('avg_rev');
+      case 'staff cost':
+        return t('staff_cost');
+      case 'w1':
+        return t('w1');
+      case 'w2':
+        return t('w2');
+      case 'w3':
+        return t('w3');
+      case 'w4':
+        return t('w4');
       case 'this month revenue':
         return t('this_month_revenue');
       case 'last month revenue':

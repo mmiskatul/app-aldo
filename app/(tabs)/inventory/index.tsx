@@ -45,21 +45,8 @@ interface InventoryApiItem {
 
 interface InventoryListResponse {
   total_inventory_value?: number | string | null;
-  usage_summary?: {
-    total_quantity_used?: number;
-    total_usage_cost?: number;
-    top_items?: {
-      inventory_item_id: string;
-      product_name: string;
-      quantity_used: number;
-      unit_type: string;
-      total_cost: number;
-    }[];
-  };
   items: InventoryApiItem[];
 }
-
-type InventoryUsageSummary = NonNullable<InventoryListResponse['usage_summary']>;
 
 const INVENTORY_CACHE_TTL_MS = 60 * 1000;
 
@@ -79,11 +66,7 @@ const resolveInventoryTotalValue = (payload: InventoryListResponse) => {
   return backendTotal > 0 ? backendTotal : calculateInventoryValue(payload.items);
 };
 
-const emptyUsageSummary: InventoryUsageSummary = {
-  total_quantity_used: 0,
-  total_usage_cost: 0,
-  top_items: [],
-};
+
 
 const iconForCategory = (category: string) => {
   const normalized = category.toLowerCase();
@@ -166,10 +149,8 @@ export default function InventoryScreen() {
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showAllStatusItems, setShowAllStatusItems] = useState(false);
-  const [showAllUsageItems, setShowAllUsageItems] = useState(false);
   const [items, setItems] = useState<InventoryCardItem[]>(inventoryListCache);
   const [totalValue, setTotalValue] = useState(calculateInventoryValueFromCache(inventoryListCache));
-  const [usageSummary, setUsageSummary] = useState<InventoryUsageSummary>(emptyUsageSummary);
   const hasCachedInventory = inventoryListCache.length > 0;
   const hasLoadedInventory = inventoryListFetchedAt !== null;
   const [valueLoading, setValueLoading] = useState(!hasCachedInventory);
@@ -212,7 +193,6 @@ export default function InventoryScreen() {
 
       setItems(nextItems);
       setTotalValue(resolveInventoryTotalValue(response.data));
-      setUsageSummary(response.data.usage_summary || emptyUsageSummary);
       setValueLoading(false);
       if (query.trim().length === 0) {
         setInventoryListCache(nextItems);
@@ -314,7 +294,7 @@ export default function InventoryScreen() {
     [filtered],
   );
   const visibleAvailableItems = showAllStatusItems ? availableItems : availableItems.slice(0, 3);
-  const visibleUsageItems = showAllUsageItems ? (usageSummary.top_items || []) : (usageSummary.top_items || []).slice(0, 3);
+
   const emptyInventoryTitle = t('no_inventory_items_found', {
     defaultValue: appLanguage === 'it' ? 'Nessun articolo di inventario trovato' : 'No inventory items found',
   });
@@ -383,23 +363,6 @@ export default function InventoryScreen() {
             </View>
           </View>
 
-          <View style={styles.statusCard}>
-            <View style={styles.summaryCardHeader}>
-              <Text style={styles.summaryCardTitle}>{t('total_usage_cost')}</Text>
-            </View>
-            {valueLoading ? (
-              <View style={styles.summaryCardAmountSkeleton} />
-            ) : (
-              <Text style={styles.summaryCardAmount} numberOfLines={1} adjustsFontSizeToFit>
-                €{toSafeNumber(usageSummary.total_usage_cost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </Text>
-            )}
-            <View style={styles.summaryCardFooter}>
-              <Feather name="trending-down" size={moderateScale(11)} color="#FA8C4C" />
-              <Text style={styles.summaryCardFooterText}> {toSafeNumber(usageSummary.total_quantity_used).toLocaleString(undefined, { maximumFractionDigits: 2 })}</Text>
-              <Text style={styles.summaryCardFooterSub}> {t('quantity_used').toLowerCase()}</Text>
-            </View>
-          </View>
         </View>
 
         <View style={styles.previewCardsRow}>
@@ -439,35 +402,6 @@ export default function InventoryScreen() {
             )}
           </View>
 
-          <View style={styles.previewCard}>
-            <View style={styles.summaryCardHeader}>
-              <Text style={styles.summaryCardTitle}>{t('usage_summary')}</Text>
-              <Text style={styles.summaryCardSubtitle}>{t('recent_usage')}</Text>
-            </View>
-
-            {visibleUsageItems.length > 0 ? (
-              <View style={styles.usageRows}>
-                {visibleUsageItems.map((item) => (
-                  <View key={item.inventory_item_id} style={styles.usageRow}>
-                    <View style={styles.statusProductMeta}>
-                      <View style={styles.usageRankDot} />
-                      <Text style={styles.statusProductName} numberOfLines={1}>{item.product_name}</Text>
-                      <Text style={styles.statusQuantity} numberOfLines={1}>
-                        {toSafeNumber(item.quantity_used).toLocaleString(undefined, { maximumFractionDigits: 2 })} {item.unit_type}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-                {(usageSummary.top_items || []).length > 3 ? (
-                  <TouchableOpacity style={styles.seeMoreButton} onPress={() => setShowAllUsageItems((current) => !current)}>
-                    <Text style={styles.seeMoreText}>{showAllUsageItems ? t('show_less') : t('see_more')}</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            ) : (
-              <Text style={styles.statusEmptyText}>{t('no_usage_recorded')}</Text>
-            )}
-          </View>
         </View>
         <View style={styles.listWrap}>
           {loading ? (

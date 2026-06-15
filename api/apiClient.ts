@@ -260,7 +260,7 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       } catch (refreshError: unknown) {
         const normalizedRefreshError = refreshError as ApiErrorRecord;
-        console.log("[apiClient] Refresh failed:", normalizedRefreshError.response?.data || normalizedRefreshError.message);
+        console.log("[apiClient] Refresh failed.");
         processQueue(refreshError, null);
         clearStaleSession();
         return Promise.reject(refreshError);

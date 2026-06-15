@@ -23,20 +23,9 @@ import SplashLogo from "../../assets/images/splash-logo.svg";
 import AuthLanguageSelector from "../../components/auth/AuthLanguageSelector";
 import Input from "../../components/ui/Input";
 import { useAppStore } from "../../store/useAppStore";
-import { getApiBaseUrl } from "../../utils/api";
+import { getApiBaseUrl, getApiErrorMessage } from "../../utils/api";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 import { useTranslation } from "../../utils/i18n";
-
-const getApiErrorMessage = (error: any, fallback: string) => {
-  const errData = error.response?.data;
-  if (!errData) {
-    return error.message || fallback;
-  }
-  if (typeof errData === "string") {
-    return errData;
-  }
-  return errData.error?.message || errData.message || errData.detail || fallback;
-};
 
 export default function AuthSignupScreen() {
   const { t } = useTranslation();
@@ -80,7 +69,6 @@ export default function AuthSignupScreen() {
       );
 
       const data = response.data;
-      console.log("Signup API Response:", data);
       setPendingRegistration(normalizedPayload);
 
       showSuccessMessage(
@@ -91,7 +79,6 @@ export default function AuthSignupScreen() {
       router.push("/(auth)/verify" as any);
       
     } catch (error: any) {
-      console.log("Signup API Error:", error.response?.data || error.message);
       const errorMessage = getApiErrorMessage(
         error,
         t("signup_failed_fallback")

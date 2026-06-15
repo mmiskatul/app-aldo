@@ -55,10 +55,7 @@ export default function TabLayout() {
         }
         setUser(currentUser, tokens);
       } catch (error: any) {
-        console.log(
-          "[auth bootstrap] session invalid:",
-          error?.response?.data || error?.message
-        );
+        console.log("[auth bootstrap] session invalid.");
         if (!isMounted) {
           return;
         }

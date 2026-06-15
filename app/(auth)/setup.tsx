@@ -466,12 +466,7 @@ export default function SetupScreen() {
         router.replace("/(tabs)/home" as any);
       }
     } catch (error: any) {
-      console.error("Error saving onboarding:", {
-        url: getRequestDebugUrl(error),
-        code: error?.code,
-        message: error?.message,
-        response: error?.response?.data,
-      });
+      console.error("Error saving onboarding.");
       showErrorMessage(getApiErrorMessage(error, t("onboarding_save_failed")));
     } finally {
       setSubmitting(false);

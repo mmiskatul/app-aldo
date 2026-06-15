@@ -47,18 +47,12 @@ export default function AuthLoginScreen() {
 
     setIsLoading(true);
     try {
-      console.log(
-        "[login] POST",
-        `${apiClient.defaults.baseURL || ""}/api/v1/auth/restaurant/login`
-      );
       const response = await apiClient.post(
         "/api/v1/auth/restaurant/login",
         { email: normalizedEmail, password }
       );
 
       const data = response.data;
-
-      console.log("Login API Response:", JSON.stringify(data, null, 2));
 
       // Save user and tokens to store
       setUser(data.user, data.tokens);
@@ -72,8 +66,6 @@ export default function AuthLoginScreen() {
         router.replace("/(tabs)/home" as any);
       }
     } catch (error: any) {
-      console.log("Login API Error:", error.response?.data || error.message);
-
       const errorMessage = getApiErrorMessage(
         error,
         t("login_failed_fallback")

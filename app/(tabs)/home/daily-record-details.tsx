@@ -33,25 +33,6 @@ interface DailyDataSection {
   fields: SectionDataField[];
 }
 
-interface InventoryUsageDetail {
-  inventory_item_id: string;
-  product_name: string;
-  quantity_used: number;
-  unit_type: string;
-  unit_cost?: number | null;
-  total_cost?: number | null;
-}
-
-interface InventoryListItem {
-  id: string;
-  stock_quantity: number;
-  unit_type: string;
-}
-
-interface InventoryListResponse {
-  items: InventoryListItem[];
-}
-
 interface DailyRecordDetail {
   id?: string;
   business_date: string;
@@ -61,7 +42,6 @@ interface DailyRecordDetail {
   invoice_document_total: number;
   total_covers: number;
   avg_revenue_per_cover: number;
-  inventory_usage?: InventoryUsageDetail[];
   method_sections: DailyDataSection[];
 }
 
@@ -207,14 +187,13 @@ export default function DailyRecordDetailsScreen() {
       invoice_document_total: 0,
       total_covers: Number(matchedItem.total_covers || 0),
       avg_revenue_per_cover: Number(matchedItem.avg_revenue_per_cover || 0),
-      inventory_usage: matchedItem.inventory_usage || [],
       method_sections: matchedItem.method_sections || [],
     };
   }, [cachedDateItems, resolvedRecordId]);
   const [record, setRecord] = useState<DailyRecordDetail | null>(cachedRecord);
   const [loading, setLoading] = useState(!cachedRecord);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-  const [remainingInventoryByItemId, setRemainingInventoryByItemId] = useState<Record<string, number>>({});
+
   const [showGroupedHeader, setShowGroupedHeader] = useState(
     typeof dataId === "string" && /^(date|week|month):/.test(dataId),
   );
@@ -292,52 +271,7 @@ export default function DailyRecordDetailsScreen() {
     void fetchRecord();
   }, [cachedRecord, fromDataId, resolvedRecordId, resolvedReferenceDate, selectedSegment]);
 
-  useEffect(() => {
-    const inventoryIds = Array.from(
-      new Set((record?.inventory_usage || []).map((item) => item.inventory_item_id).filter(Boolean)),
-    );
 
-    if (inventoryIds.length === 0) {
-      setRemainingInventoryByItemId({});
-      return;
-    }
-
-    let isActive = true;
-
-    const loadInventoryRemaining = async () => {
-      try {
-        const response = await apiClient.get<InventoryListResponse>("/api/v1/restaurant/inventory", {
-          params: {
-            page: 1,
-            page_size: 200,
-          },
-        });
-
-        if (!isActive) {
-          return;
-        }
-
-        const nextRemaining = (response.data.items || []).reduce<Record<string, number>>((acc, item) => {
-          if (inventoryIds.includes(item.id)) {
-            acc[item.id] = Number(item.stock_quantity || 0);
-          }
-          return acc;
-        }, {});
-
-        setRemainingInventoryByItemId(nextRemaining);
-      } catch {
-        if (isActive) {
-          setRemainingInventoryByItemId({});
-        }
-      }
-    };
-
-    void loadInventoryRemaining();
-
-    return () => {
-      isActive = false;
-    };
-  }, [record?.inventory_usage]);
 
   const summary = useMemo(() => {
     const expenses = (record?.total_expenses ?? 0) + (record?.invoice_document_total ?? 0);
@@ -350,37 +284,8 @@ export default function DailyRecordDetailsScreen() {
   }, [locale, record]);
 
   const displaySections = useMemo<DailyDataSection[]>(() => {
-    const sections = [...(record?.method_sections || [])];
-    const inventoryUsage = record?.inventory_usage || [];
-
-    if (inventoryUsage.length > 0) {
-      sections.push({
-        key: "inventory_usage",
-        title: t("inventory_used"),
-        fields: inventoryUsage.map((item, index) => ({
-          key: `${item.inventory_item_id || item.product_name}-${index}`,
-          label: item.product_name || t("product_used"),
-          value: [
-            `${t("quantity_used")}: ${Number(item.quantity_used || 0).toLocaleString(locale, {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            })} ${item.unit_type}`.trim(),
-            typeof remainingInventoryByItemId[item.inventory_item_id] === "number"
-              ? `${t("remaining")}: ${Number(remainingInventoryByItemId[item.inventory_item_id] || 0).toLocaleString(locale, {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 2,
-                })} ${item.unit_type}`.trim()
-              : null,
-          ]
-            .filter(Boolean)
-            .join(" | "),
-          value_type: "text" as const,
-        })),
-      });
-    }
-
-    return sections;
-  }, [locale, record?.inventory_usage, record?.method_sections, remainingInventoryByItemId, t]);
+    return record?.method_sections || [];
+  }, [record?.method_sections]);
 
   const handleExport = async (format: "pdf" | "excel") => {
     if (!record) {

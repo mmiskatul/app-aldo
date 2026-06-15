@@ -258,8 +258,8 @@ export const prefetchAppTabData = async (force = false) => {
           supplierAlertsByPeriod: nextSupplierAlertsByPeriod,
           fetchedAt: Date.now(),
         });
-      })().catch((error: any) => {
-        console.log("Bootstrap analytics prefetch error:", error?.response?.data || error?.message);
+      })().catch(() => {
+        console.log("Bootstrap analytics prefetch skipped.");
       }));
     }
 

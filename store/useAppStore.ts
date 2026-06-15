@@ -445,14 +445,6 @@ export interface DailyDataListCacheItem {
   opening_cash?: number | null;
   closing_cash?: number | null;
   notes?: string | null;
-  inventory_usage?: {
-    inventory_item_id: string;
-    product_name: string;
-    quantity_used: number;
-    unit_type: string;
-    unit_cost?: number;
-    total_cost?: number;
-  }[];
   method_sections?: {
     key: string;
     title: string;

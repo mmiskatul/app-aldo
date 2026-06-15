@@ -145,7 +145,7 @@ export const getApiErrorMessage = (
   apiUrl: string = getApiBaseUrl()
 ): string => {
   if (isNetworkLikeApiError(error)) {
-    return `Can't reach the backend at ${apiUrl}. Check EXPO_PUBLIC_API_URL and make sure the FastAPI server is running.`;
+    return "Can't connect right now. Please check your internet connection and try again.";
   }
 
   const status = Number(error?.response?.status || 0);
@@ -159,11 +159,11 @@ export const getApiErrorMessage = (
     contentType.includes("text/html") ||
     contentType.includes("text/plain")
   ) {
-    return `The app is calling ${apiUrl}, but that URL does not look like the FastAPI backend. Check EXPO_PUBLIC_API_URL and make sure it points to the API server.`;
+    return "The service is temporarily unavailable. Please try again later.";
   }
 
   if ((status === 404 || status === 405) && !structuredErrorMessage) {
-    return `The app is calling ${apiUrl}, but that URL does not look like the FastAPI backend. Check EXPO_PUBLIC_API_URL and make sure it points to the API server.`;
+    return "The service is temporarily unavailable. Please try again later.";
   }
 
   const missingFields = error?.response?.data?.error?.details?.missing_fields;

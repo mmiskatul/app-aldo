@@ -16,7 +16,7 @@ const formatStatValue = (label: string, value: any) => {
     return value.toLocaleString();
   }
 
-  if (normalizedLabel.includes('avg') || normalizedLabel.includes('media')) {
+  if (normalizedLabel.includes('avg') || normalizedLabel.includes('media') || normalizedLabel.includes('medio')) {
     return `€${value.toLocaleString()}`;
   }
 
