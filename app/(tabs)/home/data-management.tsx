@@ -26,6 +26,7 @@ import { useTranslation } from "../../../utils/i18n";
 import { useAppStore } from "../../../store/useAppStore";
 import { formatApiDate, formatEuropeanDate } from "../../../utils/date";
 import { generateDailyDataExcelExport, generateDailyDataPdfExport } from "../../../utils/exportData";
+import { logApiError } from "../../../utils/apiErrors";
 
 interface DailyDataListItem {
   id: string;
@@ -82,10 +83,16 @@ export default function DataManagementScreen() {
   const setCashOverviewData = useAppStore((state) => state.setCashOverviewData);
   const dailyDataScreenCache = useAppStore((state) => state.dailyDataScreenCache);
   const setDailyDataScreenCache = useAppStore((state) => state.setDailyDataScreenCache);
-  const clearDailyDataScreenCache = useAppStore((state) => state.clearDailyDataScreenCache);
   const [selectedSegment, setSelectedSegment] = useState<DataHistorySegment>("date");
-  const initialDateItems = dailyDataScreenCache.itemsBySegment.date || [];
-  const initialDateFetchedAt = dailyDataScreenCache.fetchedAtBySegment.date;
+  const initialReferenceDateKey = formatApiDate(new Date());
+  const initialDateItems =
+    dailyDataScreenCache.referenceDateKeyBySegment.date === initialReferenceDateKey
+      ? (dailyDataScreenCache.itemsBySegment.date || [])
+      : [];
+  const initialDateFetchedAt =
+    dailyDataScreenCache.referenceDateKeyBySegment.date === initialReferenceDateKey
+      ? dailyDataScreenCache.fetchedAtBySegment.date
+      : undefined;
   const [items, setItems] = useState<DailyDataListItem[]>(initialDateItems);
   const [loading, setLoading] = useState(
     typeof initialDateFetchedAt !== "number" && initialDateItems.length === 0,
@@ -99,11 +106,78 @@ export default function DataManagementScreen() {
     [selectedReferenceDate],
   );
 
+  const hydrateFromCache = useCallback((segment: DataHistorySegment, referenceDateKey: string) => {
+    const currentCache = useAppStore.getState().dailyDataScreenCache;
+    const cachedItems = currentCache.itemsBySegment[segment] || [];
+    const cachedFetchedAt = currentCache.fetchedAtBySegment[segment];
+    const cachedReferenceDateKey = currentCache.referenceDateKeyBySegment[segment];
+
+    if (
+      cachedReferenceDateKey === referenceDateKey &&
+      cachedItems.length > 0 &&
+      isDailyDataCacheFresh(cachedFetchedAt)
+    ) {
+      setItems(cachedItems);
+      setLoading(false);
+      setRefreshing(false);
+      return true;
+    }
+
+    return false;
+  }, []);
+
+  const writeSegmentCache = useCallback((
+    segment: DataHistorySegment,
+    referenceDateKey: string,
+    nextItems: DailyDataListItem[],
+  ) => {
+    const currentCache = useAppStore.getState().dailyDataScreenCache;
+    setDailyDataScreenCache({
+      itemsBySegment: {
+        ...currentCache.itemsBySegment,
+        [segment]: nextItems,
+      },
+      fetchedAtBySegment: {
+        ...currentCache.fetchedAtBySegment,
+        [segment]: Date.now(),
+      },
+      referenceDateKeyBySegment: {
+        ...currentCache.referenceDateKeyBySegment,
+        [segment]: referenceDateKey,
+      },
+    });
+  }, [setDailyDataScreenCache]);
+
+  const clearNonDateSegmentCaches = useCallback(() => {
+    const currentCache = useAppStore.getState().dailyDataScreenCache;
+    setDailyDataScreenCache({
+      itemsBySegment: {
+        ...currentCache.itemsBySegment,
+        week: [],
+        month: [],
+      },
+      fetchedAtBySegment: {
+        ...currentCache.fetchedAtBySegment,
+        week: 0,
+        month: 0,
+      },
+      referenceDateKeyBySegment: {
+        ...currentCache.referenceDateKeyBySegment,
+        week: "",
+        month: "",
+      },
+    });
+  }, [setDailyDataScreenCache]);
+
   const fetchDailyData = useCallback(async (
     segment: DataHistorySegment,
     silent = false,
     referenceDateKey = selectedReferenceDateKey,
   ) => {
+    if (hydrateFromCache(segment, referenceDateKey) && !silent) {
+      return;
+    }
+
     if (!silent) {
       setLoading(true);
     }
@@ -119,41 +193,23 @@ export default function DataManagementScreen() {
       });
       const nextItems = response.data.items || [];
       setItems(nextItems);
-      const currentCache = useAppStore.getState().dailyDataScreenCache;
-      setDailyDataScreenCache({
-        itemsBySegment: {
-          ...currentCache.itemsBySegment,
-          [segment]: nextItems,
-        },
-        fetchedAtBySegment: {
-          ...currentCache.fetchedAtBySegment,
-          [segment]: Date.now(),
-        },
-      });
+      writeSegmentCache(segment, referenceDateKey, nextItems);
     } catch (error: any) {
-      console.error("Error fetching daily data:", error.response?.data || error.message);
+      logApiError("Daily data dashboard fetch", error);
       setItems([]);
-      const currentCache = useAppStore.getState().dailyDataScreenCache;
-      setDailyDataScreenCache({
-        itemsBySegment: {
-          ...currentCache.itemsBySegment,
-          [segment]: [],
-        },
-        fetchedAtBySegment: {
-          ...currentCache.fetchedAtBySegment,
-          [segment]: Date.now(),
-        },
-      });
+      writeSegmentCache(segment, referenceDateKey, []);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedReferenceDateKey, setDailyDataScreenCache]);
+  }, [hydrateFromCache, selectedReferenceDateKey, writeSegmentCache]);
 
   useEffect(() => {
-    setItems([]);
+    if (!hydrateFromCache(selectedSegment, selectedReferenceDateKey)) {
+      setItems([]);
+    }
     void fetchDailyData(selectedSegment, false, selectedReferenceDateKey);
-  }, [fetchDailyData, selectedReferenceDateKey, selectedSegment]);
+  }, [fetchDailyData, hydrateFromCache, selectedReferenceDateKey, selectedSegment]);
 
   const parseDeleteTarget = useCallback((target: string) => {
     const separatorIndex = target.indexOf(":");
@@ -188,8 +244,17 @@ export default function DataManagementScreen() {
     }
 
     const { deleteMode, deleteId } = parseDeleteTarget(deleteTarget);
+    const previousItems = items;
+    const previousCache = useAppStore.getState().dailyDataScreenCache;
+    const nextItems =
+      deleteMode === "record"
+        ? items.filter((item) => item.record_id !== deleteId && item.id !== deleteId)
+        : items.filter((item) => item.business_date !== deleteId);
 
     setIsDeleting(true);
+    setItems(nextItems);
+    writeSegmentCache(selectedSegment, selectedReferenceDateKey, nextItems);
+    clearNonDateSegmentCaches();
     try {
       showInfoMessage(deleteMode === "record" ? t("deleting_daily_data_record") : t("deleting_daily_data_collection"));
       if (deleteMode === "record") {
@@ -203,16 +268,17 @@ export default function DataManagementScreen() {
       }
       setDeleteTarget(null);
       clearHomeScreenCache();
-      clearDailyDataScreenCache();
       setCashOverviewData(null);
       void fetchDailyData(selectedSegment, true, selectedReferenceDateKey);
     } catch (error: any) {
-      console.error("Error deleting daily data collection:", error.response?.data || error.message);
+      setItems(previousItems);
+      setDailyDataScreenCache(previousCache);
+      logApiError("Daily data dashboard delete", error);
       showErrorMessage(deleteMode === "record" ? t("daily_data_delete_failed") : t("daily_data_collection_delete_failed"));
     } finally {
       setIsDeleting(false);
     }
-  }, [clearDailyDataScreenCache, clearHomeScreenCache, deleteTarget, fetchDailyData, isDeleting, parseDeleteTarget, selectedReferenceDateKey, selectedSegment, setCashOverviewData]);
+  }, [clearHomeScreenCache, clearNonDateSegmentCaches, deleteTarget, fetchDailyData, isDeleting, items, parseDeleteTarget, selectedReferenceDateKey, selectedSegment, setCashOverviewData, setDailyDataScreenCache, t, writeSegmentCache]);
 
   const metrics = useMemo(() => {
     const totalRevenue = items.reduce((sum, item) => sum + Number(item.total_revenue || 0), 0);

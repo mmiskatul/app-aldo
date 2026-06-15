@@ -460,6 +460,7 @@ export interface DailyDataListCacheItem {
 export interface DailyDataScreenCache {
   itemsBySegment: Partial<Record<'date' | 'week' | 'month', DailyDataListCacheItem[]>>;
   fetchedAtBySegment: Partial<Record<'date' | 'week' | 'month', number>>;
+  referenceDateKeyBySegment: Partial<Record<'date' | 'week' | 'month', string>>;
 }
 
 interface AppState {
@@ -612,6 +613,7 @@ export const useAppStore = create<AppState>()(
       dailyDataScreenCache: {
         itemsBySegment: {},
         fetchedAtBySegment: {},
+        referenceDateKeyBySegment: {},
       },
       setUser: (user, tokens = null) => set({ user, tokens }),
       setTokens: (tokens: Tokens | null) => set({ tokens }),
@@ -781,6 +783,7 @@ export const useAppStore = create<AppState>()(
           dailyDataScreenCache: {
             itemsBySegment: {},
             fetchedAtBySegment: {},
+            referenceDateKeyBySegment: {},
           },
         }),
       appLanguage: DEFAULT_APP_LANGUAGE,
@@ -857,6 +860,7 @@ export const useAppStore = create<AppState>()(
           dailyDataScreenCache: {
             itemsBySegment: {},
             fetchedAtBySegment: {},
+            referenceDateKeyBySegment: {},
           },
         }),
     }),

@@ -139,7 +139,10 @@ export default function DataHistoryList({
                 ) : null}
                 {selectedSegment === 'date' ? (
                   <TouchableOpacity
-                    style={styles.actionIcon}
+                    style={[
+                      styles.deleteActionButton,
+                      !entry.canDelete && styles.deleteActionButtonDisabled,
+                    ]}
                     onPress={() => {
                       if (entry.canDelete) {
                         onDelete(`${entry.deleteMode || 'date'}:${entry.deleteId || entry.id}`);
@@ -153,6 +156,14 @@ export default function DataHistoryList({
                       size={moderateScale(16)}
                       color={entry.canDelete ? '#EF4444' : '#CBD5E1'}
                     />
+                    <Text
+                      style={[
+                        styles.deleteActionText,
+                        !entry.canDelete && styles.deleteActionTextDisabled,
+                      ]}
+                    >
+                      {t('delete')}
+                    </Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -255,6 +266,30 @@ const styles = StyleSheet.create({
   actionIcon: {
     marginLeft: scale(16),
     padding: scale(4),
+  },
+  deleteActionButton: {
+    marginLeft: scale(14),
+    paddingHorizontal: scale(10),
+    minHeight: verticalScale(30),
+    borderRadius: scale(999),
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(6),
+  },
+  deleteActionButtonDisabled: {
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  deleteActionText: {
+    fontSize: moderateScale(11, 0.3),
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  deleteActionTextDisabled: {
+    color: '#94A3B8',
   },
   dataGrid: {
     flexDirection: 'row',

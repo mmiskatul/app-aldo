@@ -8,6 +8,7 @@ import {
 } from "../api/settings";
 import { useAppStore } from "../store/useAppStore";
 import { isCacheFresh } from "./cache";
+import { formatApiDate } from "./date";
 import {
   normalizeAnalyticsInsight,
   normalizeAnalyticsOverview,
@@ -88,6 +89,30 @@ type InventoryResponse = {
   }>;
 };
 
+type DailyDataListResponse = {
+  items: Array<{
+    id: string;
+    record_id?: string | null;
+    business_date: string;
+    total_revenue: number;
+    total_expenses: number;
+    total_covers: number;
+    avg_revenue_per_cover: number;
+    method?: string | null;
+    profit?: number | null;
+    method_sections?: {
+      key: string;
+      title: string;
+      fields: {
+        key: string;
+        label: string;
+        value: number | string | null;
+        value_type: "currency" | "integer" | "text";
+      }[];
+    }[];
+  }>;
+};
+
 const iconForCategory = (category: string) => {
   const normalized = category.toLowerCase();
   if (normalized.includes("sauce")) return "🧴";
@@ -155,6 +180,7 @@ export const prefetchAppTabData = async (force = false) => {
     const store = useAppStore.getState();
 
     const tasks: Promise<void>[] = [];
+    const todayKey = formatApiDate(new Date());
 
     if (force || shouldPrefetch(store.homeScreenCache.fetchedAt)) {
       tasks.push((async () => {
@@ -196,6 +222,42 @@ export const prefetchAppTabData = async (force = false) => {
         });
       })().catch((error: any) => {
         console.log("Bootstrap home prefetch error:", error?.response?.data || error?.message);
+      }));
+    }
+
+    const dailyDataCache = store.dailyDataScreenCache;
+    if (
+      force ||
+      !isCacheFresh(dailyDataCache.fetchedAtBySegment.date ?? null, PREFETCH_TTL_MS) ||
+      dailyDataCache.referenceDateKeyBySegment.date !== todayKey
+    ) {
+      tasks.push((async () => {
+        const response = await apiClient.get<DailyDataListResponse>("/api/v1/restaurant/daily-data", {
+          params: {
+            page: 1,
+            page_size: 60,
+            view: "date",
+            reference_date: todayKey,
+          },
+        });
+        const nextItems = response.data.items || [];
+        const currentCache = useAppStore.getState().dailyDataScreenCache;
+        useAppStore.getState().setDailyDataScreenCache({
+          itemsBySegment: {
+            ...currentCache.itemsBySegment,
+            date: nextItems,
+          },
+          fetchedAtBySegment: {
+            ...currentCache.fetchedAtBySegment,
+            date: Date.now(),
+          },
+          referenceDateKeyBySegment: {
+            ...currentCache.referenceDateKeyBySegment,
+            date: todayKey,
+          },
+        });
+      })().catch(() => {
+        console.log("Bootstrap daily data prefetch error.");
       }));
     }
 
