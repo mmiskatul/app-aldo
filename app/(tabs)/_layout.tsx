@@ -8,7 +8,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import * as HugeiconsModule from "@hugeicons/react-native";
 import { Redirect, Tabs, useRouter, useSegments } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
 import StartupSplash from "../../components/app/StartupSplash";
@@ -31,6 +31,7 @@ export default function TabLayout() {
   const [isSessionChecking, setIsSessionChecking] = useState(false);
   const isRestrictedAccess = getRestrictedAccessStatus(user) !== null;
   const currentLeaf = (segments as string[])[2];
+  const validatedTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!hasHydrated) {
@@ -39,6 +40,11 @@ export default function TabLayout() {
 
     if (!tokens?.access_token) {
       setIsSessionChecking(false);
+      return;
+    }
+
+    // Avoid duplicate validation for the same access token to prevent infinite update loop
+    if (validatedTokenRef.current === tokens.access_token) {
       return;
     }
 
@@ -53,6 +59,7 @@ export default function TabLayout() {
         if (!isMounted) {
           return;
         }
+        validatedTokenRef.current = tokens.access_token;
         setUser(currentUser, tokens);
       } catch (error: any) {
         console.log("[auth bootstrap] session invalid.");
@@ -73,6 +80,7 @@ export default function TabLayout() {
       isMounted = false;
     };
   }, [hasHydrated, logout, setUser, tokens, user]);
+
 
   useEffect(() => {
     if (!hasHydrated || !user || !tokens?.access_token) {
