@@ -12,6 +12,8 @@ export interface Method1Data {
   expenses_in_cash: string;
   opening_cash: string;
   closing_cash: string;
+  lunch_covers: string;
+  dinner_covers: string;
   notes: string;
 }
 
@@ -93,6 +95,35 @@ export default function Method1Form({ data, onChange, onInfoPress }: Props) {
           value={data.notes}
           onChangeText={(val) => onChange('notes', val)}
         />
+      </View>
+
+      <View style={styles.row}>
+        <View style={[styles.inputGroup, { flex: 1, marginRight: scale(8) }]}>
+          <Text style={styles.label}>{t('lunch_coperti')}</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, { paddingLeft: scale(16) }]}
+              placeholder="0"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="number-pad"
+              value={data.lunch_covers}
+              onChangeText={(val) => onChange('lunch_covers', val)}
+            />
+          </View>
+        </View>
+        <View style={[styles.inputGroup, { flex: 1, marginLeft: scale(8) }]}>
+          <Text style={styles.label}>{t('dinner_coperti')}</Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[styles.input, { paddingLeft: scale(16) }]}
+              placeholder="0"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="number-pad"
+              value={data.dinner_covers}
+              onChangeText={(val) => onChange('dinner_covers', val)}
+            />
+          </View>
+        </View>
       </View>
     </View>
   );

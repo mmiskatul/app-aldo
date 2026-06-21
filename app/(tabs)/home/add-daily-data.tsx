@@ -31,6 +31,8 @@ interface DailyDataEditResponse {
   id: string;
   business_date: string;
   method: "method_1" | "method_2";
+  lunch_covers: number;
+  dinner_covers: number;
   pos_payments: number;
   cash_withdrawals: number;
   cash_in: number;
@@ -49,12 +51,29 @@ const parseNumberInput = (value: string) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const parseIntegerInput = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return 0;
+  }
+  const parsed = parseInt(normalized, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const isValidNumberInput = (value: string) => {
   const normalized = value.trim().replace(/,/g, ".");
   if (!normalized) {
     return true;
   }
   return /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized);
+};
+
+const isValidIntegerInput = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return true;
+  }
+  return /^\d+$/.test(normalized);
 };
 
 const hasTextValue = (value: string) => value.trim().length > 0;
@@ -94,6 +113,8 @@ export default function AddDailyDataScreen() {
     expenses_in_cash: "",
     opening_cash: "",
     closing_cash: "",
+    lunch_covers: "",
+    dinner_covers: "",
     notes: "",
   });
 
@@ -104,6 +125,8 @@ export default function AddDailyDataScreen() {
     expenses_in_cash: "",
     opening_cash: "",
     closing_cash: "",
+    lunch_covers: "",
+    dinner_covers: "",
   });
 
   const handleMethod1Change = (key: keyof Method1Data, val: string) => {
@@ -135,6 +158,8 @@ export default function AddDailyDataScreen() {
       expenses_in_cash: formatNumberForInput(Number(record.expenses_in_cash || 0)),
       opening_cash: formatNumberForInput(Number(record.opening_cash || 0)),
       closing_cash: formatNumberForInput(Number(record.closing_cash || 0)),
+      lunch_covers: formatNumberForInput(Number(record.lunch_covers || 0)),
+      dinner_covers: formatNumberForInput(Number(record.dinner_covers || 0)),
       notes: record.notes || "",
     });
     setMethod2Data({
@@ -144,6 +169,8 @@ export default function AddDailyDataScreen() {
       expenses_in_cash: formatNumberForInput(Number(record.expenses_in_cash || 0)),
       opening_cash: formatNumberForInput(Number(record.opening_cash || 0)),
       closing_cash: formatNumberForInput(Number(record.closing_cash || 0)),
+      lunch_covers: formatNumberForInput(Number(record.lunch_covers || 0)),
+      dinner_covers: formatNumberForInput(Number(record.dinner_covers || 0)),
     });
 
   };
@@ -204,10 +231,11 @@ export default function AddDailyDataScreen() {
 
 
 
-  const validateNumberFields = (
+  const validateFields = (
     fields: { label: string; value: string }[],
+    validator: (value: string) => boolean = isValidNumberInput,
   ) => {
-    const invalidField = fields.find((field) => !isValidNumberInput(field.value));
+    const invalidField = fields.find((field) => !validator(field.value));
 
     if (!invalidField) {
       return null;
@@ -218,16 +246,28 @@ export default function AddDailyDataScreen() {
 
   const validateCurrentMethod = () => {
     if (selectedMethod === "method1") {
-      return validateNumberFields([
+      const decimalError = validateFields([
         { label: "POS Payments", value: method1Data.pos_payments },
         { label: "Cash Withdrawals", value: method1Data.cash_withdrawals },
         { label: "Cash expenses paid from the cash drawer", value: method1Data.expenses_in_cash },
         { label: "Initial Cash", value: method1Data.opening_cash },
         { label: "Final Cash", value: method1Data.closing_cash },
       ]);
+
+      if (decimalError) {
+        return decimalError;
+      }
+
+      return validateFields(
+        [
+          { label: "Lunch Covers", value: method1Data.lunch_covers },
+          { label: "Dinner Covers", value: method1Data.dinner_covers },
+        ],
+        isValidIntegerInput,
+      );
     }
 
-    return validateNumberFields([
+    const decimalError = validateFields([
       { label: "POS Payments", value: method2Data.pos_payments },
       { label: "Cash Payments", value: method2Data.cash_payments },
       { label: "Invoices Paid by Bank Transfer", value: method2Data.bank_transfer_payments },
@@ -235,6 +275,18 @@ export default function AddDailyDataScreen() {
       { label: "Opening Cash", value: method2Data.opening_cash },
       { label: "Closing Cash", value: method2Data.closing_cash },
     ]);
+
+    if (decimalError) {
+      return decimalError;
+    }
+
+    return validateFields(
+      [
+        { label: "Lunch Covers", value: method2Data.lunch_covers },
+        { label: "Dinner Covers", value: method2Data.dinner_covers },
+      ],
+      isValidIntegerInput,
+    );
   };
 
   const hasAtLeastOneFilledField = () => {
@@ -246,6 +298,8 @@ export default function AddDailyDataScreen() {
             method1Data.expenses_in_cash,
             method1Data.opening_cash,
             method1Data.closing_cash,
+            method1Data.lunch_covers,
+            method1Data.dinner_covers,
             method1Data.notes,
           ]
         : [
@@ -255,6 +309,8 @@ export default function AddDailyDataScreen() {
             method2Data.expenses_in_cash,
             method2Data.opening_cash,
             method2Data.closing_cash,
+            method2Data.lunch_covers,
+            method2Data.dinner_covers,
           ];
 
     return selectedFields.some(hasTextValue);
@@ -289,6 +345,8 @@ export default function AddDailyDataScreen() {
                 expenses_in_cash: parseNumberInput(method1Data.expenses_in_cash),
                 opening_cash: parseNumberInput(method1Data.opening_cash),
                 closing_cash: parseNumberInput(method1Data.closing_cash),
+                lunch_covers: parseIntegerInput(method1Data.lunch_covers),
+                dinner_covers: parseIntegerInput(method1Data.dinner_covers),
                 notes: method1Data.notes,
               },
             }
@@ -301,6 +359,8 @@ export default function AddDailyDataScreen() {
                 expenses_in_cash: parseNumberInput(method2Data.expenses_in_cash),
                 opening_cash: parseNumberInput(method2Data.opening_cash),
                 closing_cash: parseNumberInput(method2Data.closing_cash),
+                lunch_covers: parseIntegerInput(method2Data.lunch_covers),
+                dinner_covers: parseIntegerInput(method2Data.dinner_covers),
               },
             }),
       };
