@@ -29,7 +29,7 @@ export default function Method2Form({ data, onChange, onInfoPress }: Props) {
       <View style={styles.sectionHeader}>
         <View style={styles.titleRow}>
           <Feather
-            name="credit-card"
+            name="dollar-sign"
             size={moderateScale(18)}
             color="#FA8C4C"
             style={styles.sectionIcon}

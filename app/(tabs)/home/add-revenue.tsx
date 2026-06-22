@@ -28,6 +28,8 @@ export default function AddRevenueScreen() {
 
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
+  const [lunchCovers, setLunchCovers] = useState("");
+  const [dinnerCovers, setDinnerCovers] = useState("");
   const [revenueDate, setRevenueDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
 
@@ -43,6 +45,8 @@ export default function AddRevenueScreen() {
       await apiClient.post("/api/v1/restaurant/revenue-entries", {
         title: title.trim(),
         amount: Number(amount),
+        lunch_covers: Number.parseInt(lunchCovers || "0", 10) || 0,
+        dinner_covers: Number.parseInt(dinnerCovers || "0", 10) || 0,
         revenue_date: formatApiDate(revenueDate),
       });
       clearHomeScreenCache();
@@ -88,6 +92,31 @@ export default function AddRevenueScreen() {
             </View>
           </View>
 
+          <View style={styles.coverRow}>
+            <View style={[styles.inputGroup, styles.coverColumn]}>
+              <Text style={styles.label}>Lunch Covers</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="0"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="number-pad"
+                value={lunchCovers}
+                onChangeText={setLunchCovers}
+              />
+            </View>
+            <View style={[styles.inputGroup, styles.coverColumn]}>
+              <Text style={styles.label}>Dinner Covers</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="0"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="number-pad"
+                value={dinnerCovers}
+                onChangeText={setDinnerCovers}
+              />
+            </View>
+          </View>
+
           <DatePicker label="Date" value={revenueDate} onChange={setRevenueDate} />
         </ScrollView>
 
@@ -128,6 +157,13 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     gap: verticalScale(8),
+  },
+  coverRow: {
+    flexDirection: "row",
+    gap: scale(12),
+  },
+  coverColumn: {
+    flex: 1,
   },
   label: {
     fontSize: moderateScale(13, 0.3),
