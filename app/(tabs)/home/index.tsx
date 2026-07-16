@@ -517,7 +517,7 @@ export default function TabsIndex() {
         setVatLoading(false);
       }
     }
-  }, []);
+  }, [setHomeScreenCache]);
 
   const fetchRevenueSection = useCallback(async (period: PeriodKey, options?: { silent?: boolean }) => {
     const silent = options?.silent ?? false;
@@ -582,7 +582,7 @@ export default function TabsIndex() {
         setRecentActivityLoading(false);
       }
     }
-  }, []);
+  }, [setHomeScreenCache]);
 
   const waitForDelay = useCallback((delayMs: number) => {
     return new Promise<void>((resolve) => {
@@ -645,26 +645,38 @@ export default function TabsIndex() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [fetchHomeOverview, fetchRecentActivitySection, hydrateSupportingData, recentActivity, setHomeScreenCache]);
+  }, [fetchHomeOverview, fetchRecentActivitySection, hydrateSupportingData, setHomeScreenCache]);
+
+  const hasSubscriptionRef = useRef(hasSubscription);
+  hasSubscriptionRef.current = hasSubscription;
+
+  const activePeriodRef = useRef(activePeriod);
+  activePeriodRef.current = activePeriod;
+
+  const homeScreenCacheRef = useRef(homeScreenCache);
+  homeScreenCacheRef.current = homeScreenCache;
+
+  const fetchHomeDataRef = useRef(fetchHomeData);
+  fetchHomeDataRef.current = fetchHomeData;
 
   useFocusEffect(
     useCallback(() => {
-      if (!hasSubscription) {
+      if (!hasSubscriptionRef.current) {
         return () => {};
       }
       hasFocusedRef.current = true;
-      previousPeriodRef.current = activePeriod;
-      const hasCachedShell = !!homeScreenCache.shellData;
+      previousPeriodRef.current = activePeriodRef.current;
+      const hasCachedShell = !!homeScreenCacheRef.current.shellData;
 
       if (!hasCachedShell) {
-        void fetchHomeData(activePeriod, false, true);
+        void fetchHomeDataRef.current(activePeriodRef.current, false, true);
         return () => {};
       }
 
-      void fetchHomeData(activePeriod, true, false);
+      void fetchHomeDataRef.current(activePeriodRef.current, true, false);
       return () => {
       };
-    }, [activePeriod, fetchHomeData, hasSubscription, homeScreenCache.shellData])
+    }, [])
   );
 
   useEffect(() => {
@@ -673,19 +685,23 @@ export default function TabsIndex() {
     }
     previousPeriodRef.current = activePeriod;
     void fetchTopPrioritySections(activePeriod);
-  }, [activePeriod, fetchTopPrioritySections, hasSubscription, loading]);
 
-  useEffect(() => {
-    if (hasSubscription && !loading) {
-      void fetchTopPrioritySections(activePeriod);
-      if (triggeredSectionsRef.current.revenue && !revenueByPeriod[activePeriod]) {
-        void fetchRevenueSection(activePeriod);
-      }
-      if (triggeredSectionsRef.current.insight && !(activePeriod in insightByPeriod)) {
-        void fetchInsightSection(activePeriod);
-      }
+    if (triggeredSectionsRef.current.revenue && !revenueByPeriod[activePeriod]) {
+      void fetchRevenueSection(activePeriod);
     }
-  }, [activePeriod, fetchInsightSection, fetchRevenueSection, fetchTopPrioritySections, hasSubscription, insightByPeriod, loading, revenueByPeriod]);
+    if (triggeredSectionsRef.current.insight && !(activePeriod in insightByPeriod)) {
+      void fetchInsightSection(activePeriod);
+    }
+  }, [
+    activePeriod,
+    fetchTopPrioritySections,
+    hasSubscription,
+    loading,
+    revenueByPeriod,
+    insightByPeriod,
+    fetchRevenueSection,
+    fetchInsightSection,
+  ]);
 
   useEffect(() => {
     if (!hasSubscription) {

@@ -24,7 +24,7 @@ export const useCachedFocusRefresh = ({
 }: UseCachedFocusRefreshOptions) => {
   const loadOnEmptyRef = React.useRef(loadOnEmpty);
   const refreshStaleRef = React.useRef(refreshStale);
-  const lastActionKeyRef = React.useRef<string | null>(null);
+  const hasRunRef = React.useRef(false);
 
   React.useEffect(() => {
     loadOnEmptyRef.current = loadOnEmpty;
@@ -34,51 +34,49 @@ export const useCachedFocusRefresh = ({
     refreshStaleRef.current = refreshStale;
   }, [refreshStale]);
 
-  React.useEffect(() => {
-    if (!enabled) {
-      lastActionKeyRef.current = null;
-      return;
-    }
+  // Maintain refs for options to read the latest values on focus transition
+  const enabledRef = React.useRef(enabled);
+  enabledRef.current = enabled;
 
-    if (!hasCache) {
-      lastActionKeyRef.current = null;
-      return;
-    }
+  const hasCacheRef = React.useRef(hasCache);
+  hasCacheRef.current = hasCache;
 
-    lastActionKeyRef.current = null;
-  }, [enabled, fetchedAt, hasCache]);
+  const fetchedAtRef = React.useRef(fetchedAt);
+  fetchedAtRef.current = fetchedAt;
+
+  const ttlMsRef = React.useRef(ttlMs);
+  ttlMsRef.current = ttlMs;
+
+  const refreshOnFocusRef = React.useRef(refreshOnFocus);
+  refreshOnFocusRef.current = refreshOnFocus;
 
   useFocusEffect(
     React.useCallback(() => {
-      if (!enabled) {
+      if (!enabledRef.current) {
         return undefined;
       }
 
-      if (!hasCache) {
-        const actionKey = `empty:${String(fetchedAt)}`;
-        if (lastActionKeyRef.current !== actionKey) {
-          lastActionKeyRef.current = actionKey;
-          loadOnEmptyRef.current();
-        }
-        return () => {
-          lastActionKeyRef.current = null;
-        };
+      if (hasRunRef.current) {
+        return undefined;
       }
 
-      const shouldRefresh =
-        refreshOnFocus === 'always' || !isCacheFresh(fetchedAt, ttlMs);
+      hasRunRef.current = true;
 
-      if (shouldRefresh) {
-        const actionKey = `${refreshOnFocus}:${String(fetchedAt)}`;
-        if (lastActionKeyRef.current !== actionKey) {
-          lastActionKeyRef.current = actionKey;
+      if (!hasCacheRef.current) {
+        loadOnEmptyRef.current();
+      } else {
+        const shouldRefresh =
+          refreshOnFocusRef.current === 'always' ||
+          !isCacheFresh(fetchedAtRef.current, ttlMsRef.current);
+        if (shouldRefresh) {
           refreshStaleRef.current();
         }
       }
 
       return () => {
-        lastActionKeyRef.current = null;
+        hasRunRef.current = false;
       };
-    }, [enabled, fetchedAt, hasCache, refreshOnFocus, ttlMs]),
+    }, [])
   );
 };
+
