@@ -23,7 +23,7 @@
         "backgroundColor": "#FFFFFF"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.aldo.app"
+      "package": "com.ristoai.app"
     },
     "web": {
       "output": "static",
@@ -42,8 +42,14 @@
         "expo-localization",
         {
           "supportedLocales": {
-            "ios": ["en", "it"],
-            "android": ["en", "it"]
+            "ios": [
+              "en",
+              "it"
+            ],
+            "android": [
+              "en",
+              "it"
+            ]
           }
         }
       ],
@@ -68,7 +74,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "8f8a9471-3ed4-4df8-8e6e-e0a0a6e9af0e"
+        "projectId": "2ed6d18e-3954-4428-a5cc-afbbe2d094e1"
       }
     }
   }
