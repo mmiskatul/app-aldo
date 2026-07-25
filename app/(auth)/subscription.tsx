@@ -5,10 +5,13 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
+import { PurchasesPackage } from "react-native-purchases";
 
 import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
-import { BillingCycle, UserSubscriptionPlan, getUserSubscriptionPlans, selectUserSubscriptionPlan } from "../../api/settings";
+import { BillingCycle, UserSubscriptionPlan, getUserSubscriptionPlans } from "../../api/settings";
 import { useAppStore } from "../../store/useAppStore";
+import { useSubscription } from "../../store/SubscriptionContext";
+import { REVENUECAT_CONSTANTS } from "../../constants/revenuecat";
 import { showErrorMessage, showSuccessMessage } from "../../utils/feedback";
 import { useTranslation } from "../../utils/i18n";
 
@@ -42,7 +45,17 @@ export default function SubscriptionScreen() {
   const [plans, setPlans] = useState<UserSubscriptionPlan[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<CurrentSubscriptionState | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submittingPlanId, setSubmittingPlanId] = useState<string | null>(null);
+
+  const {
+    isPro,
+    currentOffering,
+    isPurchasing,
+    isRestoring,
+    purchasePackage,
+    restorePurchases,
+    refreshSubscription,
+  } = useSubscription();
+
   const tokens = useAppStore((state) => state.tokens);
   const setUser = useAppStore((state) => state.setUser);
 
@@ -67,8 +80,9 @@ export default function SubscriptionScreen() {
   }, [i18n, i18n.language]);
 
   const hasActiveSubscription =
-    currentSubscription?.selection_required === false &&
-    ["active", "trial"].includes(String(currentSubscription?.status || ""));
+    isPro ||
+    (currentSubscription?.selection_required === false &&
+      ["active", "trial"].includes(String(currentSubscription?.status || "")));
 
   const resolvePlanName = (name?: string | null) => {
     if (!name) {
@@ -84,43 +98,60 @@ export default function SubscriptionScreen() {
     return localizedKey ? t(localizedKey as any) : feature;
   };
 
-  const isCurrentPlanForCycle = (plan: UserSubscriptionPlan) => (
-    Boolean(plan.is_current) &&
-    currentSubscription?.billing_cycle === billingCycle &&
-    ["active", "trial"].includes(String(currentSubscription?.status || ""))
+  const monthlyPackage = currentOffering?.availablePackages.find(
+    (p) => p.identifier === REVENUECAT_CONSTANTS.PACKAGE_MONTHLY || p.packageType === "MONTHLY"
+  );
+  const annualPackage = currentOffering?.availablePackages.find(
+    (p) => p.identifier === REVENUECAT_CONSTANTS.PACKAGE_YEARLY || p.packageType === "ANNUAL"
   );
 
-  const handleSelectPlan = async (plan: UserSubscriptionPlan) => {
-    if (isCurrentPlanForCycle(plan)) {
+  const activeRcPackage = billingCycle === "1_year" ? annualPackage : monthlyPackage;
+
+  const handlePurchase = async (pkgToPurchase?: PurchasesPackage | null) => {
+    if (isPro) {
+      router.replace("/(tabs)/home" as any);
       return;
     }
 
-    setSubmittingPlanId(plan.id);
-    try {
-      const response = await selectUserSubscriptionPlan(billingCycle, false, plan.id);
-      setCurrentSubscription(response.subscription);
-      const refreshedUser = await getCurrentUser();
-      setUser(refreshedUser, tokens);
-      showSuccessMessage(t("subscription_activated_successfully"));
-      router.replace((hasCompletedOnboarding(refreshedUser) ? "/(tabs)/home" : "/(auth)/setup") as any);
-    } catch (error: any) {
-      showErrorMessage(
-        error?.response?.data?.message || error?.message || t("subscription_activate_failed"),
-      );
-    } finally {
-      setSubmittingPlanId(null);
+    if (!pkgToPurchase) {
+      showErrorMessage(t("subscription_no_plan_available"), t("subscription_activate_failed"));
+      return;
+    }
+
+    const success = await purchasePackage(pkgToPurchase);
+    if (success) {
+      try {
+        const refreshedUser = await getCurrentUser();
+        setUser(refreshedUser, tokens);
+        showSuccessMessage(t("subscription_activated_successfully"));
+        router.replace((hasCompletedOnboarding(refreshedUser) ? "/(tabs)/home" : "/(auth)/setup") as any);
+      } catch {
+        router.replace("/(tabs)/home" as any);
+      }
+    }
+  };
+
+  const handleRestore = async () => {
+    const success = await restorePurchases();
+    if (success) {
+      try {
+        const refreshedUser = await getCurrentUser();
+        setUser(refreshedUser, tokens);
+        router.replace((hasCompletedOnboarding(refreshedUser) ? "/(tabs)/home" : "/(auth)/setup") as any);
+      } catch {
+        router.replace("/(tabs)/home" as any);
+      }
     }
   };
 
   const renderPlanCard = (plan: UserSubscriptionPlan) => {
     const features = plan.features ?? [];
-    const price = billingCycle === "1_year" ? plan.annual_price ?? 0 : plan.monthly_price ?? 0;
-    const currentForCycle = isCurrentPlanForCycle(plan);
-    const submitting = submittingPlanId === plan.id;
+    const fallbackPrice = billingCycle === "1_year" ? plan.annual_price ?? 0 : plan.monthly_price ?? 0;
+    const priceDisplay = activeRcPackage ? activeRcPackage.product.priceString : `\u20AC${fallbackPrice}`;
 
     return (
-      <View key={plan.id} style={[styles.cardContainer, currentForCycle && styles.currentCardContainer]}>
-        {plan.is_best_plan && !currentForCycle ? (
+      <View key={plan.id} style={[styles.cardContainer, isPro && styles.currentCardContainer]}>
+        {plan.is_best_plan && !isPro ? (
           <LinearGradient
             colors={["#160c03", "#c78b1e"]}
             start={{ x: 0, y: 0.5 }}
@@ -133,7 +164,7 @@ export default function SubscriptionScreen() {
           </LinearGradient>
         ) : null}
 
-        {currentForCycle ? (
+        {isPro ? (
           <View style={styles.currentBadge}>
             <Text style={styles.currentBadgeText} numberOfLines={1}>
               {t("subscription_current_plan_badge")}
@@ -141,10 +172,10 @@ export default function SubscriptionScreen() {
           </View>
         ) : null}
 
-        <Text style={styles.planTitle}>{resolvePlanName(plan.name)}</Text>
+        <Text style={styles.planTitle}>{activeRcPackage?.product.title || resolvePlanName(plan.name)}</Text>
 
         <View style={styles.priceContainer}>
-          <Text style={styles.priceAmount}>{"\u20AC"}{price}</Text>
+          <Text style={styles.priceAmount}>{priceDisplay}</Text>
           <Text style={styles.pricePeriod}>
             {billingCycle === "1_month" ? t("subscription_per_month") : t("subscription_per_year")}
           </Text>
@@ -170,18 +201,18 @@ export default function SubscriptionScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.startButton, currentForCycle && styles.currentButton]}
-          onPress={() => { void handleSelectPlan(plan); }}
-          disabled={currentForCycle || submittingPlanId !== null}
+          style={[styles.startButton, isPro && styles.currentButton]}
+          onPress={() => { void handlePurchase(activeRcPackage); }}
+          disabled={isPurchasing}
         >
-          {submitting ? (
+          {isPurchasing ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text
-              style={[styles.startButtonText, currentForCycle && styles.currentButtonText]}
+              style={[styles.startButtonText, isPro && styles.currentButtonText]}
               numberOfLines={1}
             >
-              {currentForCycle
+              {isPro
                 ? t("subscription_current_plan_button")
                 : hasActiveSubscription
                   ? t("subscription_switch_plan")
@@ -238,6 +269,18 @@ export default function SubscriptionScreen() {
                 <Text style={styles.footerCancelText}>{t("subscription_no_plan_available")}</Text>
               </View>
             )}
+
+            <TouchableOpacity
+              style={styles.secondaryRestoreButton}
+              onPress={() => { void handleRestore(); }}
+              disabled={isRestoring}
+            >
+              {isRestoring ? (
+                <ActivityIndicator color="#FA8C4C" />
+              ) : (
+                <Text style={styles.secondaryRestoreText}>Restore Purchases</Text>
+              )}
+            </TouchableOpacity>
 
             {hasActiveSubscription ? (
               <TouchableOpacity
@@ -344,7 +387,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 5,
-    marginBottom: verticalScale(30),
+    marginBottom: verticalScale(24),
   },
   currentCardContainer: {
     borderColor: "#16A34A",
@@ -393,16 +436,17 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(16),
   },
   priceAmount: {
-    fontSize: moderateScale(38, 0.3),
+    fontSize: moderateScale(32, 0.3),
     fontWeight: "800",
     color: "#111827",
-    lineHeight: moderateScale(42, 0.3),
+    lineHeight: moderateScale(38, 0.3),
   },
   pricePeriod: {
     fontSize: moderateScale(15, 0.3),
     fontWeight: "500",
     color: "#6B7280",
-    marginBottom: verticalScale(6),
+    marginBottom: verticalScale(4),
+    marginLeft: scale(4),
   },
   trialText: {
     color: "#FA8C4C",
@@ -451,6 +495,21 @@ const styles = StyleSheet.create({
     borderRadius: scale(14),
     padding: scale(18),
     marginBottom: verticalScale(24),
+  },
+  secondaryRestoreButton: {
+    height: verticalScale(48),
+    borderRadius: scale(14),
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F9FAFB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: verticalScale(16),
+  },
+  secondaryRestoreText: {
+    color: "#374151",
+    fontSize: moderateScale(14, 0.3),
+    fontWeight: "700",
   },
   secondaryContinueButton: {
     height: verticalScale(52),

@@ -13,6 +13,8 @@ import TopSnackbar from '../components/ui/TopSnackbar';
 import { hasActiveSubscription, useAppStore } from '../store/useAppStore';
 import { i18n, setI18nLanguage, useTranslation } from '../utils/i18n';
 
+import { SubscriptionProvider, useSubscription } from '../store/SubscriptionContext';
+
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 void SystemUI.setBackgroundColorAsync("#FFFFFF").catch(() => undefined);
 
@@ -28,15 +30,31 @@ export const unstable_settings = {
   initialRouteName: 'index',
 };
 
+function UserSessionSync() {
+  const user = useAppStore((state) => state.user);
+  const { syncUserSession, clearUserSession } = useSubscription();
+
+  useEffect(() => {
+    if (user?.id) {
+      void syncUserSession(user.id);
+    } else {
+      void clearUserSession();
+    }
+  }, [user?.id]);
+
+  return null;
+}
+
 function GlobalSubscriptionOverlay() {
   const router = useRouter();
   const segments = useSegments();
   const { t } = useTranslation();
   const user = useAppStore((state) => state.user);
   const tokens = useAppStore((state) => state.tokens);
+  const { isPro } = useSubscription();
 
   const isAuthenticated = Boolean(user && tokens?.access_token);
-  const hasSubscription = hasActiveSubscription(user);
+  const hasSubscription = isPro || hasActiveSubscription(user);
   const routeGroup = (segments as string[])[0];
   const routeLeaf = (segments as string[]).at(-1);
   const isSubscriptionScreen =
@@ -85,22 +103,25 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider value={navigationTheme}>
-        <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
-          <Stack screenOptions={{ contentStyle: { backgroundColor: "#FFFFFF" } }}>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="analytics-alerts" options={{ headerShown: false, animation: 'slide_from_right' }} />
-            <Stack.Screen name="notifications" options={{ headerShown: false, animation: 'slide_from_right' }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: i18n.t('modal_title') }} />
-          </Stack>
-          <PushNotificationRegistrar />
-          <GlobalSubscriptionOverlay />
-          <TopSnackbar />
-          <StatusBar style="dark" />
-        </View>
-      </ThemeProvider>
+      <SubscriptionProvider>
+        <ThemeProvider value={navigationTheme}>
+          <View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+            <UserSessionSync />
+            <Stack screenOptions={{ contentStyle: { backgroundColor: "#FFFFFF" } }}>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="analytics-alerts" options={{ headerShown: false, animation: 'slide_from_right' }} />
+              <Stack.Screen name="notifications" options={{ headerShown: false, animation: 'slide_from_right' }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal', title: i18n.t('modal_title') }} />
+            </Stack>
+            <PushNotificationRegistrar />
+            <GlobalSubscriptionOverlay />
+            <TopSnackbar />
+            <StatusBar style="dark" />
+          </View>
+        </ThemeProvider>
+      </SubscriptionProvider>
     </SafeAreaProvider>
   );
 }

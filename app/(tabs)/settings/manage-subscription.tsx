@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { moderateScale, scale, verticalScale } from 'react-native-size-matters';
+import { PurchasesPackage } from 'react-native-purchases';
 
 import Header from '../../../components/ui/Header';
 import { getCurrentUser } from '../../../api/auth';
@@ -12,9 +13,10 @@ import {
   cancelUserSubscription,
   getRestaurantSubscriptionSettings,
   getUserSubscriptionPlans,
-  selectUserSubscriptionPlan,
 } from '../../../api/settings';
 import { useAppStore } from '../../../store/useAppStore';
+import { useSubscription } from '../../../store/SubscriptionContext';
+import { REVENUECAT_CONSTANTS } from '../../../constants/revenuecat';
 import { formatReadableDate, formatSubscriptionStatus } from '../../../utils/date';
 import { showDialog, showErrorMessage, showSuccessMessage } from '../../../utils/feedback';
 import { useTranslation } from '../../../utils/i18n';
@@ -22,27 +24,24 @@ import { isCacheFresh } from '../../../utils/cache';
 
 const SETTINGS_SUBSCRIPTION_CACHE_TTL_MS = 5 * 60 * 1000;
 
-const LOCALIZED_PLAN_NAME_KEYS: Record<string, string> = {
-  'Core Plan': 'subscription_plan_core_name',
-};
-
-const LOCALIZED_PLAN_FEATURE_KEYS: Record<string, string> = {
-  'AI menu suggestions': 'subscription_feature_ai_menu_suggestions',
-  'Basic sales analytics': 'subscription_feature_basic_sales_analytics',
-  'Email support': 'subscription_feature_email_support',
-  'Advanced AI insights': 'subscription_feature_advanced_ai_insights',
-  'Revenue analytics': 'subscription_feature_revenue_analytics',
-  'Enterprise reports': 'subscription_feature_enterprise_reports',
-};
-
 export default function ManageSubscriptionScreen() {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [activatingPlanId, setActivatingPlanId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('1_month');
-  const [plans, setPlans] = useState<UserSubscriptionPlan[]>([]);
+  const [, setPlans] = useState<UserSubscriptionPlan[]>([]);
   const [subscription, setSubscription] = useState<RestaurantSubscriptionSettings | null>(null);
+
+  const {
+    isPro,
+    currentOffering,
+    isPurchasing,
+    isRestoring,
+    purchasePackage,
+    restorePurchases,
+    refreshSubscription,
+  } = useSubscription();
+
   const user = useAppStore((state) => state.user);
   const tokens = useAppStore((state) => state.tokens);
   const setUser = useAppStore((state) => state.setUser);
@@ -73,7 +72,7 @@ export default function ManageSubscriptionScreen() {
     } finally {
       setLoading(false);
     }
-  }, [i18n]);
+  }, [i18n, setSettingsSubscriptionCache]);
 
   useEffect(() => {
     if (settingsSubscriptionCache.subscription) {
@@ -93,67 +92,25 @@ export default function ManageSubscriptionScreen() {
   }, [loadSubscriptionData, settingsSubscriptionCache]);
 
   const hasActiveSubscription =
-    subscription?.selection_required === false &&
-    ['active', 'trial'].includes(String(subscription?.status || ''));
+    isPro ||
+    (subscription?.selection_required === false &&
+      ['active', 'trial'].includes(String(subscription?.status || '')));
 
-  const isCurrentPlanForCycle = (plan: UserSubscriptionPlan) => (
-    Boolean(plan.is_current) &&
-    subscription?.billing_cycle === billingCycle &&
-    ['active', 'trial'].includes(String(subscription?.status || ''))
-  );
-
-  const currentPlan = hasActiveSubscription ? plans.find((plan) => plan.is_current) : undefined;
-  const currentPlanPrice = subscription?.billing_cycle === '1_year'
-    ? currentPlan?.annual_price ?? 0
-    : currentPlan?.monthly_price ?? 0;
-  const switchablePlans = plans.filter((plan) => !isCurrentPlanForCycle(plan));
-
-  const getLocalizedPlanName = (name?: string | null) => {
-    if (!name) {
-      return t('subscription_no_plan_selected');
-    }
-    const key = LOCALIZED_PLAN_NAME_KEYS[name.trim()];
-    return key ? t(key as any) : name;
-  };
-
-  const getLocalizedFeature = (feature: string) => {
-    const key = LOCALIZED_PLAN_FEATURE_KEYS[feature.trim()];
-    return key ? t(key as any) : feature;
-  };
-
-  const getLocalizedBillingCycleLabel = (value: string | null | undefined) => {
-    if (value === '1_year') return t('subscription_yearly');
-    if (value === '1_month') return t('subscription_monthly');
-    return t('subscription_not_selected');
-  };
-
-  const getLocalizedStatusLabel = (value: string | null | undefined) => {
-    const normalized = String(value || '').toLowerCase();
-    if (!normalized) return t('subscription_status_not_active');
-    if (normalized === 'active') return t('subscription_status_active');
-    if (normalized === 'trial') return t('subscription_status_trial');
-    if (normalized === 'canceled') return t('subscription_status_canceled');
-    if (normalized === 'expired') return t('subscription_status_expired');
-    if (normalized === 'suspended') return t('subscription_status_suspended');
-    return formatSubscriptionStatus(value);
-  };
-
-  const handleActivatePlan = async (plan: UserSubscriptionPlan) => {
-    if (isCurrentPlanForCycle(plan)) {
-      return;
-    }
-
-    setActivatingPlanId(plan.id);
-    try {
-      const response = await selectUserSubscriptionPlan(billingCycle, false, plan.id);
-      showSuccessMessage(response.message || t('subscription_plan_activated_successfully'));
+  const handlePurchaseRcPackage = async (pkg: PurchasesPackage) => {
+    const success = await purchasePackage(pkg);
+    if (success) {
       const refreshedUser = await getCurrentUser();
       setUser(refreshedUser, tokens);
       await loadSubscriptionData();
-    } catch (error: any) {
-      showErrorMessage(error?.message || t('subscription_activate_failed'));
-    } finally {
-      setActivatingPlanId(null);
+    }
+  };
+
+  const handleRestoreRcPurchases = async () => {
+    const success = await restorePurchases();
+    if (success) {
+      const refreshedUser = await getCurrentUser();
+      setUser(refreshedUser, tokens);
+      await loadSubscriptionData();
     }
   };
 
@@ -189,6 +146,7 @@ export default function ManageSubscriptionScreen() {
       }
       clearHomeScreenCache();
       clearAnalyticsScreenCache();
+      await refreshSubscription();
     } catch (error: any) {
       showErrorMessage(error?.message || t('subscription_cancel_failed'));
     } finally {
@@ -207,58 +165,14 @@ export default function ManageSubscriptionScreen() {
     );
   };
 
-  const renderPlanCard = (plan: UserSubscriptionPlan) => {
-    const currentForCycle = isCurrentPlanForCycle(plan);
-    const activating = activatingPlanId === plan.id;
-    const currentPrice = billingCycle === '1_year' ? plan.annual_price ?? 0 : plan.monthly_price ?? 0;
+  const monthlyPackage = currentOffering?.availablePackages.find(
+    (p) => p.identifier === REVENUECAT_CONSTANTS.PACKAGE_MONTHLY || p.packageType === 'MONTHLY'
+  );
+  const annualPackage = currentOffering?.availablePackages.find(
+    (p) => p.identifier === REVENUECAT_CONSTANTS.PACKAGE_YEARLY || p.packageType === 'ANNUAL'
+  );
 
-    return (
-      <View key={plan.id} style={[styles.planCard, currentForCycle && styles.currentPlanCard]}>
-        <View style={styles.planHeaderRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.planName}>{getLocalizedPlanName(plan.name || null)}</Text>
-          </View>
-          {plan.is_best_plan && !currentForCycle ? (
-            <View style={styles.bestBadge}>
-              <Text style={styles.bestBadgeText}>{t('subscription_best_value')}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        <View style={styles.priceRow}>
-          <Text style={styles.priceAmount}>{`\u20AC${currentPrice}`}</Text>
-          <Text style={styles.pricePeriod}>{billingCycle === '1_year' ? t('subscription_per_year') : t('subscription_per_month')}</Text>
-        </View>
-
-        <View style={styles.featuresWrap}>
-          {(plan.features || []).map((feature) => (
-            <View key={feature} style={styles.featureRow}>
-              <MaterialCommunityIcons
-                name="check-decagram-outline"
-                size={moderateScale(18)}
-                color="#D97706"
-              />
-              <Text style={styles.featureText}>{getLocalizedFeature(feature)}</Text>
-            </View>
-          ))}
-        </View>
-
-        <TouchableOpacity
-          style={[styles.primaryButton, currentForCycle && styles.disabledPrimaryButton]}
-          onPress={() => { void handleActivatePlan(plan); }}
-          disabled={currentForCycle || activatingPlanId !== null}
-        >
-          {activating ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={[styles.primaryButtonText, currentForCycle && styles.disabledPrimaryButtonText]}>
-              {currentForCycle ? t('subscription_current_plan_button') : hasActiveSubscription ? t('subscription_switch_plan') : t('subscription_activate_plan')}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const selectedRcPackage = billingCycle === '1_year' ? annualPackage : monthlyPackage;
 
   return (
     <View style={styles.safeArea}>
@@ -278,31 +192,18 @@ export default function ManageSubscriptionScreen() {
                 </View>
                 <View style={styles.cardHeaderCopy}>
                   <Text style={styles.sectionEyebrow}>{t('subscription_current_section')}</Text>
-                  <Text style={styles.title}>{getLocalizedPlanName(subscription?.plan_name || null)}</Text>
+                  <Text style={styles.title}>
+                    {isPro ? 'RistoAI Premium' : (subscription?.plan_name || t('subscription_no_plan_selected'))}
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.infoGrid}>
-                {currentPlan ? (
-                  <View style={styles.currentPlanSummary}>
-                    <View style={styles.currentBadge}>
-                      <Text style={styles.currentBadgeText}>{t('subscription_current_plan_badge')}</Text>
-                    </View>
-                    <View style={styles.priceRowCompact}>
-                      <Text style={styles.priceAmountCompact}>{`\u20AC${currentPlanPrice}`}</Text>
-                      <Text style={styles.pricePeriod}>
-                        {subscription?.billing_cycle === '1_year' ? t('subscription_per_year') : t('subscription_per_month')}
-                      </Text>
-                    </View>
-                  </View>
-                ) : null}
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>{t('subscription_status_label')}</Text>
-                  <Text style={styles.infoValue}>{getLocalizedStatusLabel(subscription?.status ?? null)}</Text>
-                </View>
-                <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>{t('subscription_billing_label')}</Text>
-                  <Text style={styles.infoValue}>{getLocalizedBillingCycleLabel(subscription?.billing_cycle ?? null)}</Text>
+                  <Text style={styles.infoValue}>
+                    {isPro ? 'Active (RevenueCat Pro)' : formatSubscriptionStatus(subscription?.status)}
+                  </Text>
                 </View>
                 <View style={styles.infoItem}>
                   <Text style={styles.infoLabel}>{t('subscription_started_label')}</Text>
@@ -316,9 +217,9 @@ export default function ManageSubscriptionScreen() {
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.sectionEyebrow}>{t('subscription_switch_section')}</Text>
+              <Text style={styles.sectionEyebrow}>In-App Subscription Plans</Text>
               <Text style={styles.helperText}>
-                {t('subscription_switch_helper')}
+                Choose a plan below to subscribe via Google Play / App Store.
               </Text>
 
               <View style={styles.toggleContainer}>
@@ -340,9 +241,56 @@ export default function ManageSubscriptionScreen() {
                 </TouchableOpacity>
               </View>
 
-              {switchablePlans.length > 0 ? switchablePlans.map(renderPlanCard) : (
-                <Text style={styles.helperText}>{t('subscription_no_other_plan_for_cycle')}</Text>
+              {selectedRcPackage ? (
+                <View style={styles.planCard}>
+                  <View style={styles.planHeaderRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.planName}>{selectedRcPackage.product.title || 'RistoAI Premium'}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.priceRow}>
+                    <Text style={styles.priceAmount}>{selectedRcPackage.product.priceString}</Text>
+                    <Text style={styles.pricePeriod}>
+                      {billingCycle === '1_year' ? t('subscription_per_year') : t('subscription_per_month')}
+                    </Text>
+                  </View>
+
+                  <Text style={[styles.helperText, { marginBottom: verticalScale(14) }]}>
+                    {selectedRcPackage.product.description || 'Full access to AI menu insights, analytics, and business tools.'}
+                  </Text>
+
+                  <TouchableOpacity
+                    style={[styles.primaryButton, isPro && styles.disabledPrimaryButton]}
+                    onPress={() => { void handlePurchaseRcPackage(selectedRcPackage); }}
+                    disabled={isPro || isPurchasing}
+                  >
+                    {isPurchasing ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={[styles.primaryButtonText, isPro && styles.disabledPrimaryButtonText]}>
+                        {isPro ? 'Subscribed' : 'Subscribe Now'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={[styles.helperText, { marginTop: verticalScale(10) }]}>
+                  Loading offerings from App Store / Play Store...
+                </Text>
               )}
+
+              <TouchableOpacity
+                style={[styles.dangerButton, { marginTop: verticalScale(16), borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }]}
+                onPress={() => { void handleRestoreRcPurchases(); }}
+                disabled={isRestoring}
+              >
+                {isRestoring ? (
+                  <ActivityIndicator color="#374151" />
+                ) : (
+                  <Text style={[styles.dangerButtonText, { color: '#374151' }]}>Restore Purchases</Text>
+                )}
+              </TouchableOpacity>
             </View>
 
             {hasActiveSubscription ? (
@@ -432,16 +380,6 @@ const styles = StyleSheet.create({
     padding: scale(16),
     marginTop: verticalScale(14),
   },
-  currentPlanCard: {
-    borderColor: '#16A34A',
-    backgroundColor: '#F0FDF4',
-  },
-  currentPlanSummary: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E5E7EB',
-    paddingTop: verticalScale(12),
-    paddingBottom: verticalScale(10),
-  },
   planHeaderRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -452,32 +390,6 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(20, 0.3),
     fontWeight: '800',
     color: '#111827',
-  },
-  currentBadge: {
-    alignSelf: 'flex-start',
-    marginTop: verticalScale(8),
-    backgroundColor: '#DCFCE7',
-    borderRadius: scale(999),
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(4),
-  },
-  currentBadgeText: {
-    color: '#166534',
-    fontSize: moderateScale(10, 0.3),
-    fontWeight: '800',
-    letterSpacing: 0.7,
-  },
-  bestBadge: {
-    backgroundColor: '#111827',
-    borderRadius: scale(999),
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(5),
-  },
-  bestBadgeText: {
-    color: '#FFFFFF',
-    fontSize: moderateScale(9, 0.3),
-    fontWeight: '800',
-    letterSpacing: 0.8,
   },
   infoGrid: {
     gap: verticalScale(12),
@@ -532,18 +444,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginBottom: verticalScale(16),
   },
-  priceRowCompact: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginTop: verticalScale(8),
-  },
   priceAmount: {
     fontSize: moderateScale(32, 0.3),
-    fontWeight: '800',
-    color: '#111827',
-  },
-  priceAmountCompact: {
-    fontSize: moderateScale(28, 0.3),
     fontWeight: '800',
     color: '#111827',
   },
@@ -552,21 +454,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginLeft: scale(4),
     marginBottom: verticalScale(4),
-  },
-  featuresWrap: {
-    gap: verticalScale(10),
-    marginBottom: verticalScale(18),
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  featureText: {
-    flex: 1,
-    marginLeft: scale(10),
-    color: '#374151',
-    fontSize: moderateScale(14, 0.3),
-    lineHeight: moderateScale(20, 0.3),
   },
   helperText: {
     fontSize: moderateScale(14, 0.3),
