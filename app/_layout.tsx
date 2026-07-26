@@ -54,7 +54,8 @@ function GlobalSubscriptionOverlay() {
   const { isPro } = useSubscription();
 
   const isAuthenticated = Boolean(user && tokens?.access_token);
-  const hasSubscription = isPro || hasActiveSubscription(user);
+  const backendHasSubscription = hasActiveSubscription(user);
+  const hasSubscription = isPro || backendHasSubscription;
   const routeGroup = (segments as string[])[0];
   const routeLeaf = (segments as string[]).at(-1);
   const isSubscriptionScreen =

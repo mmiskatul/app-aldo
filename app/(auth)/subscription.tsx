@@ -108,9 +108,19 @@ export default function SubscriptionScreen() {
   const activeRcPackage = billingCycle === "1_year" ? annualPackage : monthlyPackage;
 
   const handlePurchase = async (pkgToPurchase?: PurchasesPackage | null) => {
-    if (isPro) {
-      router.replace("/(tabs)/home" as any);
-      return;
+    try {
+      const freshInfo = await Purchases.getCustomerInfo();
+      const hasActiveRcPro = typeof freshInfo.entitlements.active[REVENUECAT_CONSTANTS.ENTITLEMENT_ID] !== 'undefined';
+      if (hasActiveRcPro || isPro) {
+        await selectUserSubscriptionPlan(billingCycle, false);
+        const refreshedUser = await getCurrentUser();
+        setUser(refreshedUser, tokens);
+        showSuccessMessage(t("subscription_activated_successfully"));
+        router.replace((hasCompletedOnboarding(refreshedUser) ? "/(tabs)/home" : "/(auth)/setup") as any);
+        return;
+      }
+    } catch (e) {
+      console.warn('[SubscriptionScreen] Error checking RevenueCat customer info on continue:', e);
     }
 
     if (!pkgToPurchase) {

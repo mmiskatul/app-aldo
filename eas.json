@@ -24,10 +24,6 @@
     }
   },
   "submit": {
-    "production": {
-      "android": {
-        "track": "alpha"
-      }
-    }
+    "production": {}
   }
 }

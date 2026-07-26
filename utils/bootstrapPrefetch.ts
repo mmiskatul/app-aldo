@@ -176,6 +176,15 @@ export const prefetchAppTabData = async (force = false) => {
     return inFlightPrefetch;
   }
 
+  const storeState = useAppStore.getState();
+  const user = storeState.user;
+  const isCanceledOrInactive = user && (user.subscription_status === 'canceled' || user.subscription_status === 'expired' || user.subscription_selection_required === true);
+
+  // Do not spam prefetch requests if the backend requires subscription selection
+  if (isCanceledOrInactive && !force) {
+    return;
+  }
+
   inFlightPrefetch = (async () => {
     const store = useAppStore.getState();
 

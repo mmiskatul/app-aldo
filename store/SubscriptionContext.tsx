@@ -7,6 +7,7 @@ import Purchases, {
   LOG_LEVEL,
 } from 'react-native-purchases';
 import { REVENUECAT_CONSTANTS } from '@/constants/revenuecat';
+import { useAppStore } from '../store/useAppStore';
 import { showErrorMessage, showSuccessMessage } from '../utils/feedback';
 
 interface SubscriptionContextType {
@@ -124,17 +125,45 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
 
       const hasPro = typeof updatedInfo.entitlements.active[REVENUECAT_CONSTANTS.ENTITLEMENT_ID] !== 'undefined';
       if (hasPro) {
+        await syncBackendSubscription(pkg.packageType === 'ANNUAL' ? '1_year' : 'monthly');
         showSuccessMessage('Thank you for subscribing to RistoAI Premium!');
         return true;
       }
       return false;
     } catch (e: any) {
-      if (!e.userCancelled) {
-        showErrorMessage(e.message || 'An error occurred during purchase.', 'Purchase Failed');
+      const errStr = String(e?.message || '') + String(e?.underlyingErrorMessage || '') + String(e?.code || '');
+      // If item is already owned in Google Play / App Store, sync & restore automatically
+      if (
+        e?.code === 'ProductAlreadyPurchasedError' ||
+        e?.code === 6 ||
+        e?.code === '6' ||
+        errStr.includes('ITEM_ALREADY_OWNED') ||
+        errStr.includes('already active') ||
+        errStr.includes('already owned')
+      ) {
+        return await restorePurchases();
+      }
+      if (!e?.userCancelled) {
+        showErrorMessage(e?.message || 'An error occurred during purchase.', 'Purchase Failed');
       }
       return false;
     } finally {
       setIsPurchasing(false);
+    }
+  };
+
+  const syncBackendSubscription = async (billingCycle: 'monthly' | '1_year' = 'monthly') => {
+    try {
+      const { selectUserSubscriptionPlan } = await import('../api/settings');
+      const { getCurrentUser } = await import('../api/auth');
+      await selectUserSubscriptionPlan(billingCycle, false);
+      const refreshedUser = await getCurrentUser();
+      const currentTokens = useAppStore.getState().tokens;
+      if (refreshedUser) {
+        useAppStore.getState().setUser(refreshedUser, currentTokens);
+      }
+    } catch (err) {
+      console.warn('[SubscriptionContext] Error syncing backend subscription:', err);
     }
   };
 
@@ -145,8 +174,13 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
       setCustomerInfo(restoredInfo);
       checkEntitlement(restoredInfo);
 
-      const hasPro = typeof restoredInfo.entitlements.active[REVENUECAT_CONSTANTS.ENTITLEMENT_ID] !== 'undefined';
-      if (hasPro) {
+      const hasProEntitlement = typeof restoredInfo.entitlements.active[REVENUECAT_CONSTANTS.ENTITLEMENT_ID] !== 'undefined';
+      const hasActiveSub = (restoredInfo.activeSubscriptions || []).length > 0;
+      const isRestoredPro = hasProEntitlement || hasActiveSub;
+
+      if (isRestoredPro) {
+        setIsPro(true);
+        await syncBackendSubscription('monthly');
         showSuccessMessage('Your RistoAI Premium subscription has been successfully restored!');
         return true;
       } else {
