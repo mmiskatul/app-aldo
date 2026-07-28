@@ -73,6 +73,8 @@ export default function OTPVerification({
             onChangeText={(text) => handleCodeChange(text, index)}
             onKeyPress={(e) => handleKeyPress(e, index)}
             keyboardType="number-pad"
+            inputMode="numeric"
+            textContentType="oneTimeCode"
             maxLength={1}
             selectTextOnFocus
           />

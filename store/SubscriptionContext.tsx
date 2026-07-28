@@ -8,6 +8,8 @@ import Purchases, {
 } from 'react-native-purchases';
 import { REVENUECAT_CONSTANTS } from '@/constants/revenuecat';
 import { useAppStore } from '../store/useAppStore';
+import { selectUserSubscriptionPlan } from '../api/settings';
+import { getCurrentUser } from '../api/auth';
 import { showErrorMessage, showSuccessMessage } from '../utils/feedback';
 
 interface SubscriptionContextType {
@@ -119,13 +121,18 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
   const purchasePackage = async (pkg: PurchasesPackage): Promise<boolean> => {
     try {
       setIsPurchasing(true);
+      const configured = await ensureConfigured();
+      if (!configured) {
+        showErrorMessage('RevenueCat SDK configuration failed. Please check API key.', 'Purchase Failed');
+        return false;
+      }
       const { customerInfo: updatedInfo } = await Purchases.purchasePackage(pkg);
       setCustomerInfo(updatedInfo);
       checkEntitlement(updatedInfo);
 
       const hasPro = typeof updatedInfo.entitlements.active[REVENUECAT_CONSTANTS.ENTITLEMENT_ID] !== 'undefined';
       if (hasPro) {
-        await syncBackendSubscription(pkg.packageType === 'ANNUAL' ? '1_year' : 'monthly');
+        await syncBackendSubscription(pkg.packageType === 'ANNUAL' ? '1_year' : '1_month');
         showSuccessMessage('Thank you for subscribing to RistoAI Premium!');
         return true;
       }
@@ -152,10 +159,8 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
     }
   };
 
-  const syncBackendSubscription = async (billingCycle: 'monthly' | '1_year' = 'monthly') => {
+  const syncBackendSubscription = async (billingCycle: '1_month' | '1_year' = '1_month') => {
     try {
-      const { selectUserSubscriptionPlan } = await import('../api/settings');
-      const { getCurrentUser } = await import('../api/auth');
       await selectUserSubscriptionPlan(billingCycle, false);
       const refreshedUser = await getCurrentUser();
       const currentTokens = useAppStore.getState().tokens;
@@ -167,9 +172,34 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
     }
   };
 
+  const ensureConfigured = async (): Promise<boolean> => {
+    try {
+      const isConfigured = await Purchases.isConfigured();
+      if (isConfigured) return true;
+
+      const apiKey =
+        Platform.OS === 'ios'
+          ? process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY
+          : process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY;
+
+      if (apiKey) {
+        Purchases.configure({ apiKey });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const restorePurchases = async (): Promise<boolean> => {
     try {
       setIsRestoring(true);
+      const configured = await ensureConfigured();
+      if (!configured) {
+        showErrorMessage('RevenueCat SDK configuration failed. Please check API key.', 'Restore Error');
+        return false;
+      }
       const restoredInfo = await Purchases.restorePurchases();
       setCustomerInfo(restoredInfo);
       checkEntitlement(restoredInfo);
@@ -180,7 +210,7 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
 
       if (isRestoredPro) {
         setIsPro(true);
-        await syncBackendSubscription('monthly');
+        await syncBackendSubscription('1_month');
         showSuccessMessage('Your RistoAI Premium subscription has been successfully restored!');
         return true;
       } else {
