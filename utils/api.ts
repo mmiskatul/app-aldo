@@ -1,7 +1,7 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-export const API_REQUEST_TIMEOUT_MS = 15_000;
+export const API_REQUEST_TIMEOUT_MS = 30_000;
 const DEFAULT_API_URL = "https://ristoai.onrender.com";
 
 const LOCAL_HOSTS = new Set(["0.0.0.0", "127.0.0.1", "localhost"]);

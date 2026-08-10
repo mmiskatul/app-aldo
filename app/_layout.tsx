@@ -4,7 +4,7 @@ import * as SystemUI from 'expo-system-ui';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StatusBar as RNStatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import PushNotificationRegistrar from '../components/app/PushNotificationRegistrar';
@@ -93,6 +93,13 @@ export default function RootLayout() {
   const hasHydrated = useAppStore((state) => state.hasHydrated);
 
   useEffect(() => {
+    RNStatusBar.setBarStyle('dark-content', true);
+    if (Platform.OS === 'android') {
+      RNStatusBar.setBackgroundColor('#FFFFFF', true);
+    }
+  }, []);
+
+  useEffect(() => {
     void setI18nLanguage(appLanguage);
   }, [appLanguage]);
 
@@ -119,7 +126,7 @@ export default function RootLayout() {
             <PushNotificationRegistrar />
             <GlobalSubscriptionOverlay />
             <TopSnackbar />
-            <StatusBar style="dark" />
+            <StatusBar style="dark" backgroundColor="#FFFFFF" translucent />
           </View>
         </ThemeProvider>
       </SubscriptionProvider>

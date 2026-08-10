@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -62,10 +62,20 @@ export default function ChatScreen() {
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const scrollToBottom = React.useCallback(() => {
+    setTimeout(
+      () => scrollViewRef.current?.scrollToEnd({ animated: true }),
+      200,
+    );
+  }, []);
+
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
+      () => {
+        setKeyboardVisible(true);
+        scrollToBottom();
+      }
     );
     const keyboardDidHideListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
@@ -76,14 +86,7 @@ export default function ChatScreen() {
       keyboardDidHideListener.remove();
       keyboardDidShowListener.remove();
     };
-  }, []);
-
-  const scrollToBottom = React.useCallback(() => {
-    setTimeout(
-      () => scrollViewRef.current?.scrollToEnd({ animated: true }),
-      200,
-    );
-  }, []);
+  }, [scrollToBottom]);
 
   const fetchChatMessages = React.useCallback(async (silent = false) => {
     if (!silent) {
@@ -353,9 +356,8 @@ export default function ChatScreen() {
     <View style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-        enabled={Platform.OS === "ios"}
       >
         <Header
           title={t('chat_title')}

@@ -202,7 +202,8 @@ export const prefetchAppTabData = async (force = false) => {
             include_featured_insight: false,
             include_recent_activity: true,
           },
-        });
+          skipConnectionErrorModal: true,
+        } as any);
         const data = response.data;
         const fetchedAt = Date.now();
         useAppStore.getState().setHomeScreenCache({
@@ -248,7 +249,8 @@ export const prefetchAppTabData = async (force = false) => {
             view: "date",
             reference_date: todayKey,
           },
-        });
+          skipConnectionErrorModal: true,
+        } as any);
         const nextItems = response.data.items || [];
         const currentCache = useAppStore.getState().dailyDataScreenCache;
         useAppStore.getState().setDailyDataScreenCache({
@@ -278,10 +280,12 @@ export const prefetchAppTabData = async (force = false) => {
             Promise.all([
               apiClient.get<AnalyticsOverviewResponse>("/api/v1/restaurant/analytics/overview", {
                 params: { period, include_insight: false },
-              }),
+                skipConnectionErrorModal: true,
+              } as any),
               apiClient.get("/api/v1/restaurant/analytics/business-insight", {
                 params: { period },
-              }),
+                skipConnectionErrorModal: true,
+              } as any),
             ]).then(([overview, insight]) => ({ period, overview: overview.data, insight: insight.data })),
           ),
         );
@@ -338,7 +342,8 @@ export const prefetchAppTabData = async (force = false) => {
       tasks.push((async () => {
         const response = await apiClient.get<InventoryResponse>("/api/v1/restaurant/inventory", {
           params: { page: 1, page_size: 50 },
-        });
+          skipConnectionErrorModal: true,
+        } as any);
         const nextItems = response.data.items.map((item) => ({
           id: item.id,
           name: item.product_name,
@@ -377,7 +382,8 @@ export const prefetchAppTabData = async (force = false) => {
       tasks.push((async () => {
         const response = await apiClient.get("/api/v1/restaurant/documents", {
           params: { page: 1, page_size: 50 },
-        });
+          skipConnectionErrorModal: true,
+        } as any);
         const normalized = normalizeDocumentsResponse(response.data);
         useAppStore.getState().setDocumentsScreenCache({
           documents: normalized.items,
@@ -391,7 +397,9 @@ export const prefetchAppTabData = async (force = false) => {
 
     if (force || shouldPrefetch(store.chatMessagesFetchedAt)) {
       tasks.push((async () => {
-        const response = await apiClient.get("/api/v1/restaurant/chat/messages");
+        const response = await apiClient.get("/api/v1/restaurant/chat/messages", {
+          skipConnectionErrorModal: true,
+        } as any);
         useAppStore.getState().setChatMessagesCache(response.data.messages || []);
       })().catch((error: any) => {
         console.log("Bootstrap chat prefetch error:", error?.response?.data || error?.message);
@@ -400,7 +408,9 @@ export const prefetchAppTabData = async (force = false) => {
 
     if (force || shouldPrefetch(store.profileFetchedAt)) {
       tasks.push((async () => {
-        const response = await apiClient.get("/api/v1/restaurant/settings/profile");
+        const response = await apiClient.get("/api/v1/restaurant/settings/profile", {
+          skipConnectionErrorModal: true,
+        } as any);
         useAppStore.getState().setProfile(response.data);
       })().catch((error: any) => {
         console.log("Bootstrap profile prefetch error:", error?.response?.data || error?.message);
@@ -459,7 +469,9 @@ export const prefetchAppTabData = async (force = false) => {
 
     if (force || shouldPrefetch(store.cashOverviewData?.fetched_at ?? null)) {
       tasks.push((async () => {
-        const response = await apiClient.get("/api/v1/restaurant/cash/overview");
+        const response = await apiClient.get("/api/v1/restaurant/cash/overview", {
+          skipConnectionErrorModal: true,
+        } as any);
         useAppStore.getState().setCashOverviewData({
           ...normalizeCashOverviewData(response.data),
           fetched_at: Date.now(),

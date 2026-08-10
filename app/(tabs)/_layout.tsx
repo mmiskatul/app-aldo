@@ -9,6 +9,7 @@ import {
 import * as HugeiconsModule from "@hugeicons/react-native";
 import { Redirect, Tabs, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useState, useRef } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { moderateScale, scale, verticalScale } from "react-native-size-matters";
 import { getCurrentUser, hasCompletedOnboarding } from "../../api/auth";
 import StartupSplash from "../../components/app/StartupSplash";
@@ -20,6 +21,7 @@ const hugeiconsAny = HugeiconsModule as any;
 const HugeiconsIcon = hugeiconsAny.HugeiconsIcon || hugeiconsAny.default?.HugeiconsIcon || hugeiconsAny;
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const router = useRouter();
   const segments = useSegments();
@@ -113,6 +115,8 @@ export default function TabLayout() {
   const isRootScreen = segments.length <= 2 || (segments.length === 3 && (segments as any[])[2] === 'index');
   const shouldHideTabBar = isRestrictedAccess || !isRootScreen;
 
+  const bottomInset = insets.bottom > 0 ? insets.bottom : verticalScale(4);
+
   return (
     <Tabs
       screenOptions={{
@@ -121,13 +125,15 @@ export default function TabLayout() {
         tabBarInactiveTintColor: "#6B7280",
         tabBarHideOnKeyboard: true,
         tabBarStyle: shouldHideTabBar ? { display: 'none', height: 0, opacity: 0 } : {
-          position: "absolute", // Needed for border radii to sit above content seamlessly
+          position: "absolute",
+          bottom: bottomInset,
+          left: scale(8),
+          right: scale(8),
           backgroundColor: "#FFF0E5",
-          borderTopLeftRadius: scale(20),
-          borderTopRightRadius: scale(20),
+          borderRadius: scale(20),
           height: verticalScale(60),
-          paddingBottom: verticalScale(8),
-          paddingTop: verticalScale(8),
+          paddingBottom: verticalScale(6),
+          paddingTop: verticalScale(6),
           borderTopWidth: 0,
           elevation: 10,
           shadowColor: "#000",

@@ -21,10 +21,13 @@ type ApiErrorRecord = {
   message?: string;
   config?: {
     url?: string;
+    method?: string;
     headers?: Record<string, string>;
     _retry?: boolean;
     skipSubscriptionRedirect?: boolean;
     skipOnboardingRedirect?: boolean;
+    skipConnectionErrorModal?: boolean;
+    showConnectionErrorModal?: boolean;
   };
 };
 
@@ -175,7 +178,15 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
     const normalizedError = error as ApiErrorRecord;
-    if (isNetworkLikeApiError(error)) {
+    const method = String(normalizedError.config?.method || "get").toLowerCase();
+    const isExplicitModalRequested = Boolean(normalizedError.config?.showConnectionErrorModal);
+    const isSkipModalRequested = Boolean(normalizedError.config?.skipConnectionErrorModal);
+
+    if (
+      isNetworkLikeApiError(error) &&
+      !isSkipModalRequested &&
+      (method !== "get" || isExplicitModalRequested)
+    ) {
       showConnectionError();
     }
 
