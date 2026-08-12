@@ -102,10 +102,10 @@ export default function ManageSubscriptionScreen() {
   // Formatted Renewal Date / Expiration Date (RevenueCat strictly)
   const renewalDate = activeEntitlement?.expirationDate
     ? new Date(activeEntitlement.expirationDate).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      })
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
     : 'N/A';
 
   const handlePurchaseRcPackage = async (pkg: PurchasesPackage) => {
@@ -234,7 +234,7 @@ export default function ManageSubscriptionScreen() {
                 <View style={styles.planSide}>
                   <Text style={styles.planSideTitle}>Monthly</Text>
                   <Text style={styles.priceMain} numberOfLines={1} adjustsFontSizeToFit>
-                    {monthlyPackage?.product.priceString || 'BDT 4,800.00'}
+                    {monthlyPackage?.product.priceString || ''}
                   </Text>
                   <Text style={styles.priceSub}>/month</Text>
                 </View>
@@ -282,72 +282,112 @@ export default function ManageSubscriptionScreen() {
                 onPress={() => setSelectedCycle('1_month')}
               >
                 <Text style={[styles.toggleText, selectedCycle === '1_month' && styles.toggleTextActive]}>
-                  Monthly Plan
+                  Monthly
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.toggleButton, selectedCycle === '1_year' && styles.toggleButtonActive]}
                 onPress={() => setSelectedCycle('1_year')}
               >
-                <Text style={[styles.toggleText, selectedCycle === '1_year' && styles.toggleTextActive]}>
-                  Yearly Plan {savingsPercent > 0 ? `(Save ${savingsPercent}%)` : ''}
-                </Text>
+                <View style={styles.toggleRowContent}>
+                  <Text style={[styles.toggleText, selectedCycle === '1_year' && styles.toggleTextActive]}>
+                    Yearly
+                  </Text>
+                  {savingsPercent > 0 ? (
+                    <View style={styles.savingsPill}>
+                      <Text style={styles.savingsPillText}>Save {savingsPercent}%</Text>
+                    </View>
+                  ) : null}
+                </View>
               </TouchableOpacity>
             </View>
 
+
             {/* Selected Package Card Details */}
-            {selectedCycle === '1_month' ? (
-              <View style={styles.selectedPlanCard}>
-                <Text style={styles.selectedPlanTitle}>Monthly Plan</Text>
-                <View style={styles.priceRowClean}>
-                  <Text style={styles.selectedPlanPrice} numberOfLines={1} adjustsFontSizeToFit>
-                    {monthlyPackage?.product.priceString || 'BDT 4,800.00'}
-                  </Text>
-                  <Text style={styles.selectedPlanPeriod}>/month</Text>
-                </View>
-                <Text style={styles.planDesc}>Billed monthly. Cancel anytime in Google Play Store settings.</Text>
-                <TouchableOpacity
-                  style={styles.upgradeButton}
-                  onPress={() => { if (monthlyPackage) void handlePurchaseRcPackage(monthlyPackage); }}
-                  disabled={isPurchasing || !monthlyPackage}
-                >
-                  {isPurchasing ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.upgradeButtonText}>Subscribe Monthly</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={[styles.selectedPlanCard, { borderColor: '#FA8C4C', backgroundColor: '#FFF7ED' }]}>
-                <View style={styles.badgeRow}>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{badgeLabel}</Text>
+            {(() => {
+              const isMonthlyTrial = !isCanceledButActive && !isPro && (monthlyPackage?.product.introPrice ? monthlyPackage.product.introPrice.price === 0 : true);
+              const isYearlyTrial = !isCanceledButActive && !isPro && (annualPackage?.product.introPrice ? annualPackage.product.introPrice.price === 0 : true);
+
+              const monthlyPriceStr = monthlyPackage?.product.priceString || '';
+              const annualPriceStr = annualPackage?.product.priceString || '';
+              const monthlyEquivalentStr = annualPackage
+                ? `${annualPackage.product.currencyCode || ''} ${(annualPackage.product.price / 12).toFixed(2)}`.trim()
+                : '';
+
+              if (selectedCycle === '1_month') {
+                return (
+                  <View style={styles.selectedPlanCard}>
+                    <Text style={styles.selectedPlanTitle}>Monthly Plan</Text>
+                    <View style={styles.priceRowClean}>
+                      <Text style={styles.selectedPlanPrice} numberOfLines={1} adjustsFontSizeToFit>
+                        {monthlyPriceStr}
+                      </Text>
+                      <Text style={styles.selectedPlanPeriod}>/ month</Text>
+                    </View>
+                    {isMonthlyTrial ? (
+                      <Text style={styles.trialNoticeText}>Free Trial • $0.00 Charged Today</Text>
+                    ) : null}
+                    <Text style={styles.planDesc}>
+                      {isMonthlyTrial
+                        ? `First 7 days are 100% free.${monthlyPriceStr ? ` Auto-renews at ${monthlyPriceStr}/month after trial ends.` : ''} Cancel anytime.`
+                        : `Billed monthly${monthlyPriceStr ? ` at ${monthlyPriceStr}` : ''}. Cancel anytime.`}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.upgradeButton}
+                      onPress={() => { if (monthlyPackage) void handlePurchaseRcPackage(monthlyPackage); }}
+                      disabled={isPurchasing || !monthlyPackage}
+                    >
+                      {isPurchasing ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.upgradeButtonText}>
+                          {isMonthlyTrial ? 'Start 7-Day Free Trial ($0)' : isCanceledButActive ? 'Renew Monthly Plan' : 'Subscribe Monthly'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
                   </View>
-                </View>
-                <Text style={[styles.selectedPlanTitle, { color: '#FA8C4C' }]}>Yearly Plan</Text>
-                <View style={styles.priceRowClean}>
-                  <Text style={[styles.selectedPlanPrice, { color: '#FA8C4C' }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {annualPackage?.product.priceString || 'BDT 48,000.00'}
-                  </Text>
-                  <Text style={[styles.selectedPlanPeriod, { color: '#FA8C4C' }]}>/year</Text>
-                </View>
-                <Text style={styles.planDesc}>
-                  Only BDT {annualPackage ? (annualPackage.product.price / 12).toFixed(2) : '4,000.00'} / month. Billed annually.
-                </Text>
-                <TouchableOpacity
-                  style={styles.upgradeButton}
-                  onPress={() => { if (annualPackage) void handlePurchaseRcPackage(annualPackage); }}
-                  disabled={isPurchasing || !annualPackage}
-                >
-                  {isPurchasing ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.upgradeButtonText}>Subscribe Yearly</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
+                );
+              } else {
+                return (
+                  <View style={[styles.selectedPlanCard, { borderColor: '#FA8C4C', backgroundColor: '#FFF7ED' }]}>
+                    <Text style={[styles.selectedPlanTitle, { color: '#FA8C4C' }]}>Yearly Plan</Text>
+
+                    <View style={styles.priceRowClean}>
+                      <Text style={[styles.selectedPlanPrice, { color: '#FA8C4C' }]} numberOfLines={1} adjustsFontSizeToFit>
+                        {annualPriceStr}
+                      </Text>
+                      <Text style={[styles.selectedPlanPeriod, { color: '#FA8C4C' }]}>/ year</Text>
+                    </View>
+                    {isYearlyTrial ? (
+                      <Text style={[styles.trialNoticeText, { color: '#EA580C' }]}>Free Trial • $0.00 Charged Today</Text>
+                    ) : null}
+                    <Text style={styles.planDesc}>
+                      {isYearlyTrial
+                        ? `First 7 days are 100% free.${annualPriceStr ? ` Billed annually at ${annualPriceStr}${monthlyEquivalentStr ? ` (${monthlyEquivalentStr}/mo)` : ''} after trial.` : ''} Cancel anytime.`
+                        : `Billed annually${annualPriceStr ? ` at ${annualPriceStr}${monthlyEquivalentStr ? ` (${monthlyEquivalentStr}/mo)` : ''}` : ''}. Cancel anytime.`}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.upgradeButton}
+                      onPress={() => { if (annualPackage) void handlePurchaseRcPackage(annualPackage); }}
+                      disabled={isPurchasing || !annualPackage}
+                    >
+                      {isPurchasing ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.upgradeButtonText}>
+                          {isYearlyTrial ? 'Start 7-Day Free Trial ($0)' : isCanceledButActive ? 'Renew Yearly Plan' : 'Subscribe Yearly'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                );
+              }
+            })()}
+
+
+
+
+
           </View>
         )}
 
@@ -613,7 +653,24 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  toggleRowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: scale(4),
+  },
+  savingsPill: {
+    backgroundColor: '#FFEDD5',
+    paddingHorizontal: scale(6),
+    paddingVertical: verticalScale(2),
+    borderRadius: scale(8),
+  },
+  savingsPillText: {
+    fontSize: moderateScale(10, 0.3),
+    fontWeight: '700',
+    color: '#EA580C',
+  },
   toggleText: {
+
     fontSize: moderateScale(13, 0.3),
     fontWeight: '600',
     color: '#6B7280',
@@ -657,7 +714,14 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
   },
+  trialNoticeText: {
+    fontSize: moderateScale(12, 0.3),
+    fontWeight: '700',
+    color: '#059669',
+    marginBottom: verticalScale(6),
+  },
   planDesc: {
+
     fontSize: moderateScale(13, 0.3),
     color: '#6B7280',
     marginBottom: verticalScale(14),
