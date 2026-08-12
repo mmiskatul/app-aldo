@@ -185,12 +185,6 @@ export default function TabLayout() {
             />
           ),
         }}
-        listeners={{
-          tabPress: (event) => {
-            event.preventDefault();
-            router.replace("/(tabs)/inventory" as any);
-          },
-        }}
       />
       <Tabs.Screen
         name="documents"
@@ -203,12 +197,6 @@ export default function TabLayout() {
               color={color}
             />
           ),
-        }}
-        listeners={{
-          tabPress: (event) => {
-            event.preventDefault();
-            router.replace("/(tabs)/documents" as any);
-          },
         }}
       />
       <Tabs.Screen
@@ -235,12 +223,6 @@ export default function TabLayout() {
               color={color}
             />
           ),
-        }}
-        listeners={{
-          tabPress: (event) => {
-            event.preventDefault();
-            router.replace("/(tabs)/settings" as any);
-          },
         }}
       />
     </Tabs>
